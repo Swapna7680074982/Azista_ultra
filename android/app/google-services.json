@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "668570514198",
+    "project_id": "azistaultra",
+    "storage_bucket": "azistaultra.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:668570514198:android:dc090f98be9e8af5a2d637",
+        "android_client_info": {
+          "package_name": "com.hhcl.azistaultra"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKZtJ465HeP2cUc7H4EeAxrLBeGc_szmo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
