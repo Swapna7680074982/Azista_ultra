@@ -3,8 +3,7 @@ import 'package:azista_ultra/constants/app_strings.dart';
 import 'package:azista_ultra/constants/image_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import '../Homes/HomeScreen.dart';
+import '../Homes/main_shell_screen.dart';
 import 'login_provider.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -89,30 +88,38 @@ class LoginScreen extends StatelessWidget {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.button,
                             ),
-                            onPressed: provider.isLoading
-                                ? null
-                                : () async {
-                              final success = await provider.login(
-                                phoneController.text.trim(),
-                                passwordController.text.trim(),
+                            // onPressed: provider.isLoading
+                            //     ? null
+                            //     : () async {
+                            //   final success = await provider.login(
+                            //     phoneController.text.trim(),
+                            //     passwordController.text.trim(),
+                            //   );
+                            //
+                            //   if (success) {
+                            //     Navigator.pushReplacement(
+                            //       context,
+                            //       MaterialPageRoute(
+                            //         builder: (context) => const MainShellScreen(),
+                            //       ),
+                            //     );
+                            //   } else {
+                            //     ScaffoldMessenger.of(context).showSnackBar(
+                            //       SnackBar(
+                            //         content: Text(
+                            //           provider.error ?? "Login Failed",
+                            //         ),
+                            //       ),
+                            //     );
+                            //   }
+                            // },
+                            onPressed: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const MainShellScreen(),
+                                ),
                               );
-
-                              if (success) {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const HomeScreen(),
-                                  ),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      provider.error ?? "Login Failed",
-                                    ),
-                                  ),
-                                );
-                              }
                             },
                             child: provider.isLoading
                                 ? const CircularProgressIndicator(
