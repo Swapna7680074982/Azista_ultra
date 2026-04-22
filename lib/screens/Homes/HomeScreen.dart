@@ -4,6 +4,7 @@ import '../../constants/app_colors.dart';
 import '../../permissions/AccessValidator.dart';
 import '../../permissions/AppStateProvider.dart';
 import '../attendance/Attendancescreen.dart';
+import '../distribution_list/DistributorStockScreen.dart';
 import 'widgets/DonutChart.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -133,24 +134,34 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Container(
-                  height: 45,
-                  width: 65,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      "GO",
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: AppColors.white,
-                        fontWeight: FontWeight.bold,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DistributorStockScreen(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    height: 45,
+                    width: 65,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        "GO",
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: AppColors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
-                ),
+                )
               ],
             ),
           ),
