@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import '../Distribution/distribution_network_screen.dart';
+import '../Distribution_networking/distribution_network_screen.dart';
 import 'HomeScreen.dart';
 import 'custom_bottom_nav.dart';
 import 'main_tab_provider.dart';
