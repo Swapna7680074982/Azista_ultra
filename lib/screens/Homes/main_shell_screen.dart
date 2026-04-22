@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../Distribution/distribution_network_screen.dart';
 import 'HomeScreen.dart';
 import 'custom_bottom_nav.dart';
 import 'main_tab_provider.dart';
@@ -19,7 +20,7 @@ class MainShellScreen extends StatelessWidget {
               HomeScreen(),
               Center(child: Text("Marketing")),
               Center(child: Text("Near Me")),
-              Center(child: Text("Dist Net")),
+              DistributionNetworkScreen(),
               Center(child: Text("Sync")),
             ],
           ),

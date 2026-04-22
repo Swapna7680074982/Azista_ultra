@@ -215,11 +215,13 @@ class ActionBox extends StatelessWidget {
   final IconData icon;
   final String text;
   final VoidCallback? onTap;
+  final bool enabled;
 
   const ActionBox(
       this.icon,
       this.text, {
         this.onTap,
+        this.enabled = true,
         super.key,
       });
 
@@ -233,41 +235,48 @@ class ActionBox extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: Colors.grey.shade300,
-                width: 1,
+
+          child: Opacity(
+            opacity: enabled ? 1 : 0.5,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: Colors.grey.shade300,
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withAlpha(5),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  )
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.black.withAlpha(5),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
-                )
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  color: AppColors.primary,
-                  size: 34, 
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  text,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    color: enabled
+                        ? AppColors.primary
+                        : Colors.grey,
+                    size: 34,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  Text(
+                    text,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: enabled ? Colors.black : Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

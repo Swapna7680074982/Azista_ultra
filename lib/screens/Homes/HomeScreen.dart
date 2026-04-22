@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
+import '../../permissions/AccessValidator.dart';
+import '../../permissions/AppStateProvider.dart';
 import '../attendance/Attendancescreen.dart';
 import 'widgets/DonutChart.dart';
 
@@ -11,10 +14,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool isOnline = true;
-
   @override
   Widget build(BuildContext context) {
+    final appState = Provider.of<AppStateProvider>(context);
     return Scaffold(
       backgroundColor: AppColors.white,
 
@@ -42,17 +44,15 @@ class _HomeScreenState extends State<HomeScreen> {
           Transform.scale(
             scale: 0.75,
             child: Switch(
-              value: isOnline,
+              value: appState.isOnline,
               onChanged: (val) {
-                setState(() {
-                  isOnline = val;
-                });
+                appState.setOnline(val);
               },
 
               activeThumbColor: AppColors.button,
-              activeTrackColor:AppColors.button.withValues(alpha: 0.35),
+              activeTrackColor: AppColors.button.withValues(alpha: 0.35),
               inactiveThumbColor: AppColors.white,
-              inactiveTrackColor: AppColors.white.withValues(alpha:0.4),
+              inactiveTrackColor: AppColors.white.withValues(alpha: 0.4),
 
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
@@ -80,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       shape: BoxShape.circle,
                     ),
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -96,18 +96,39 @@ class _HomeScreenState extends State<HomeScreen> {
                 Expanded(
                   child: Container(
                     height: 48,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
                       color: AppColors.white,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.grey.shade400),
                     ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Select Distributor"),
-                        Icon(Icons.keyboard_arrow_down),
-                      ],
+                    child: DropdownButtonHideUnderline(
+                      child: Consumer<AppStateProvider>(
+                        builder: (context, appState, _) {
+                          return DropdownButton<String>(
+                            isExpanded: true,
+                            hint: const Text("Select Distributor"),
+                            value: appState.selectedDistributor,
+                            items: const [
+                              DropdownMenuItem(
+                                value: "Distributor 1",
+                                child: Text("Distributor 1"),
+                              ),
+                              DropdownMenuItem(
+                                value: "Distributor 2",
+                                child: Text("Distributor 2"),
+                              ),
+                              DropdownMenuItem(
+                                value: "Distributor 3",
+                                child: Text("Distributor 3"),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              appState.setDistributor(value);
+                            },
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -129,14 +150,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                )
+                ),
               ],
             ),
           ),
           const SizedBox(height: 10),
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 12),
-              padding: const EdgeInsets.fromLTRB(0,70, 0, 20),
+            padding: const EdgeInsets.fromLTRB(0, 70, 0, 20),
             decoration: BoxDecoration(
               color: AppColors.white,
               borderRadius: BorderRadius.circular(16),
@@ -181,9 +202,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                )
+                ),
               ],
-            )
+            ),
           ),
 
           const SizedBox(height: 20),
@@ -212,20 +233,56 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const ActionBox(Icons.person, "Leave\nManagement"),
+                ActionBox(
+                  Icons.person,
+                  "Leave\nManagement",
+                  enabled: !appState.isOnline,
+                  onTap: () {
+                    if (AccessValidator.validate(
+                      context: context,
+                      isOnline: appState.isOnline,
+                      hasDistributor: appState.selectedDistributor != null,
+                      isLeave: true,
+                    )) {
+                      // TODO: Open Leave Screen
+                    }
+                  },
+                ),
                 ActionBox(
                   Icons.access_time,
                   "Attendance",
+                  enabled: appState.isOnline,
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AttendanceScreen(),
-                      ),
-                    );
+                    if (AccessValidator.validate(
+                      context: context,
+                      isOnline: appState.isOnline,
+                      hasDistributor: appState.selectedDistributor != null,
+                      isLeave: false,
+                    )) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AttendanceScreen(),
+                        ),
+                      );
+                    }
                   },
                 ),
-                const ActionBox(Icons.receipt, "User\nTransaction's"),
+                ActionBox(
+                  Icons.receipt,
+                  "User\nTransaction's",
+                  enabled: appState.isOnline,
+                  onTap: () {
+                    if (AccessValidator.validate(
+                      context: context,
+                      isOnline: appState.isOnline,
+                      hasDistributor: appState.selectedDistributor != null,
+                      isLeave: false,
+                    )) {
+                      // TODO: Open Transactions
+                    }
+                  },
+                ),
               ],
             ),
           ),

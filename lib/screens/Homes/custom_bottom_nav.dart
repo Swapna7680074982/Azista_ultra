@@ -1,8 +1,11 @@
-import 'package:azista_ultra/constants/image_constants.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
+import '../../constants/image_constants.dart';
+import '../../permissions/AccessValidator.dart';
+import '../../permissions/AppStateProvider.dart';
 import 'main_tab_provider.dart';
 
 class CustomBottomNav extends StatelessWidget {
@@ -14,108 +17,124 @@ class CustomBottomNav extends StatelessWidget {
 
     return SafeArea(
       top: false,
-      child: Container(
-        height: 75,
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 12,
-              color: AppColors.shadow,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Stack(
-          alignment: Alignment.topCenter,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                navItem(context, ImageConstants.attendance, "Attend.", 0),
-                navItem(context, ImageConstants.marketing, "Marketing", 1),
-                const SizedBox(width: 60),
-                navItem(context, ImageConstants.distribution, "Dist. Net.", 3),
-                navItem(context, ImageConstants.sync, "Sync", 4),
-              ],
-            ),
-            Positioned(
-              top: -25,
-              child: GestureDetector(
-                onTap: () => provider.setTab(2),
-                child: Column(
-                  children: [
-                    Container(
-                      height: 65,
-                      width: 65,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.primary,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withAlpha(40),
-                            blurRadius: 15,
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Image.asset(
-                          ImageConstants.nearme,
-                          color: AppColors.white,
-                        ),
-                      ),
-                    ),
+      child:  Container(
+      height: 90,
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 10,
+            color: AppColors.shadow,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              navItemIcon(context, Icons.access_time, "Attend.", 0),
+              navItemIcon(context, Icons.alt_route, "Marketing", 1),
 
-                    const SizedBox(height: 4),
+              const SizedBox(width: 70),
 
-                    Text(
-                      "Near Me",
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: provider.currentIndex == 2
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                        color: provider.currentIndex == 2
-                            ? AppColors.primary
-                            : Colors.black54,
-                      ),
+              navItemIcon(context, Icons.account_tree_outlined, "Dist. Net.", 3),
+              navItemIcon(context, Icons.sync, "Sync", 4),
+            ],
+          ),
+
+          Positioned(
+            top: -20,
+            child: GestureDetector(
+              onTap: () {
+                final appState =
+                Provider.of<AppStateProvider>(context, listen: false);
+
+                if (!AccessValidator.validateTab(
+                  context: context,
+                  isOnline: appState.isOnline,
+                  hasDistributor: appState.selectedDistributor != null,
+                  index: 2,
+                )) {
+                  return;
+                }
+
+                provider.setTab(2);
+              },
+              child: Column(
+                children: [
+                  Image.asset(
+                    ImageConstants.nearme,
+                    height: 70,
+                    width: 70,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Near Me",
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: provider.currentIndex == 2
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                      color: provider.currentIndex == 2
+                          ? AppColors.primary
+                          : Colors.black54,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+    ),
     );
   }
 
-  Widget navItem(
-      BuildContext context, String imagePath, String text, int index) {
+  Widget navItemIcon(
+      BuildContext context,
+      IconData icon,
+      String text,
+      int index,
+      ) {
     final provider = context.watch<MainTabProvider>();
     final selected = provider.currentIndex == index;
 
     return GestureDetector(
-      onTap: () => provider.setTab(index),
+      onTap: () {
+        final appState =
+        Provider.of<AppStateProvider>(context, listen: false);
+
+        if (!AccessValidator.validateTab(
+          context: context,
+          isOnline: appState.isOnline,
+          hasDistributor: appState.selectedDistributor != null,
+          index: index,
+        )) {
+          return;
+        }
+
+        provider.setTab(index);
+      },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Image.asset(
-          //   imagePath,
-          //   height: 22,
-          //   color: selected ? AppColors.primary : Colors.black54,
-          // ),
-          const SizedBox(height: 4),
+          Icon(
+            icon,
+            size: 22,
+            color: selected ? AppColors.primary : Colors.black54,
+          ),
+          const SizedBox(height: 6),
           Text(
             text,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               fontWeight:
               selected ? FontWeight.w600 : FontWeight.normal,
-              color: selected
-                  ? AppColors.primary
-                  : Colors.black54,
+              color: selected ? AppColors.primary : Colors.black54,
             ),
           ),
         ],
