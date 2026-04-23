@@ -54,20 +54,10 @@ class NearMeScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.location_on, size: 18, color: Colors.grey.shade500),
                   const SizedBox(width: 12),
-                  Text(outlet.phone, style: TextStyle(color: Colors.grey.shade800)), // Image shows phone number next to location pin
+                  Text(outlet.phone, style: TextStyle(color: Colors.grey.shade800)),
                 ],
               ),
               
-              const SizedBox(height: 10),
-              
-              Row(
-                children: [
-                  const Icon(Icons.storefront, size: 18, color: Colors.teal),
-                  const SizedBox(width: 12),
-                  const Text("OUTLET IMAGE", style: TextStyle(color: Colors.teal, fontWeight: FontWeight.w500)),
-                ],
-              ),
-
               const SizedBox(height: 10),
 
               Align(
@@ -85,33 +75,41 @@ class NearMeScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 5),
 
-                    Icon(
-                      Icons.domain,
-                      size: 18,
-                      color: Colors.blueGrey.shade700,
+                    ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [
+                          Colors.orange,
+                          Colors.teal,
+                        ],
+                      ).createShader(bounds),
+                      child: const Icon(
+                        Icons.storefront,
+                        size: 18,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
               ),
 
               const Divider(height: 24),
-              
+
               Row(
                 children: [
                   Expanded(
                     child: Container(
                       height: 35,
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.teal),
-                        borderRadius: BorderRadius.circular(20), // rounded borders like in image
-                        color: Colors.white,
+                        border: Border.all(color: AppColors.buttonBlue),
+                        borderRadius: BorderRadius.circular(6),
+                        color: AppColors.buttonBlue.withValues(alpha:0.05),
                       ),
                       child: TextButton(
                         onPressed: () {},
                         child: const Text(
                           "CALL",
                           style: TextStyle(
-                            color: Colors.teal,
+                            color: AppColors.buttonBlue,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -124,16 +122,16 @@ class NearMeScreen extends StatelessWidget {
                     child: Container(
                       height: 35,
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.green),
-                        borderRadius: BorderRadius.circular(20), // rounded borders like in image
-                        color: Colors.white,
+                        border: Border.all(color: AppColors.button),
+                        borderRadius: BorderRadius.circular(6),
+                        color: AppColors.button.withValues(alpha:0.05),
                       ),
                       child: TextButton(
                         onPressed: () {},
                         child: const Text(
                           "DIRECTIONS",
                           style: TextStyle(
-                            color: Colors.green,
+                            color: AppColors.button,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -144,14 +142,14 @@ class NearMeScreen extends StatelessWidget {
               ),
             ],
           ),
-          if (outlet.name.toUpperCase() == "TESTING") // Add Unfreeze button overlay for testing
+          if (outlet.name.toUpperCase() == "TESTING")
             Positioned(
               top: 50,
               left: 40,
               right: 40,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                color: const Color(0xFFC62828), // Dark red
+                color: const Color(0xFFC62828),
                 alignment: Alignment.center,
                 child: const Text(
                   "UNFREEZE OUTLET",
