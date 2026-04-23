@@ -5,6 +5,8 @@ import '../../permissions/AccessValidator.dart';
 import '../../permissions/AppStateProvider.dart';
 import '../attendance/Attendancescreen.dart';
 import '../distribution_list/DistributorStockScreen.dart';
+import '../leave_management/leave_management_screen.dart';
+import '../productivity/ProductivityScreen.dart';
 import 'widgets/DonutChart.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -136,6 +138,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(width: 10),
                 GestureDetector(
                   onTap: () {
+                    if (appState.selectedDistributor == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Please select a distributor first"),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                      return;
+                    }
+
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -147,7 +159,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     height: 45,
                     width: 65,
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: appState.selectedDistributor == null
+                          ? Colors.grey.shade400
+                          : AppColors.primary,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Center(
@@ -168,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 10),
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 12),
-            padding: const EdgeInsets.fromLTRB(0, 70, 0, 20),
+            padding: const EdgeInsets.fromLTRB(0, 60, 0, 20),
             decoration: BoxDecoration(
               color: AppColors.white,
               borderRadius: BorderRadius.circular(16),
@@ -187,14 +201,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     DonutChart(
-                      value: 30,
-                      label: "Target Calls",
-                      color: AppColors.primary,
+                      value: 2,
+                      total: 30,
+                      label: "Total Calls",
+                      color: Colors.green,
                     ),
                     DonutChart(
                       value: 6,
+                      total: 30,
                       label: "Target Productive",
-                      color: AppColors.primary,
+                      color: Colors.green,
                     ),
                   ],
                 ),
@@ -205,11 +221,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.only(right: 12),
                   child: Align(
                     alignment: Alignment.centerRight,
-                    child: Text(
-                      "View Details >>",
-                      style: TextStyle(
-                        color: Colors.red.shade700,
-                        fontWeight: FontWeight.w600,
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProductivityScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        "View Details >>",
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -255,7 +281,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       hasDistributor: appState.selectedDistributor != null,
                       isLeave: true,
                     )) {
-                      // TODO: Open Leave Screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LeaveManagementScreen(),
+                        ),
+                      );
                     }
                   },
                 ),

@@ -2,14 +2,19 @@ import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 import 'dart:math';
 
+import 'dart:math';
+import 'package:flutter/material.dart';
+
 class DonutChart extends StatefulWidget {
   final double value;
+  final double total;
   final String label;
   final Color color;
 
   const DonutChart({
     super.key,
     required this.value,
+    required this.total,
     required this.label,
     required this.color,
   });
@@ -48,6 +53,17 @@ class _DonutChartState extends State<DonutChart>
           child: AnimatedBuilder(
             animation: _controller,
             builder: (context, child) {
+              final sweepLength = widget.total == 0 
+                  ? 0.0 
+                  : (widget.value / widget.total) * 2 * pi * _controller.value;
+
+              final greenMidAngle = -pi / 2 + sweepLength / 2;
+              final gDx = 65 * cos(greenMidAngle);
+              final gDy = 65 * sin(greenMidAngle);
+              final redMidAngle = pi / 2 + sweepLength / 2;
+              final rDx = 65 * cos(redMidAngle);
+              final rDy = 65 * sin(redMidAngle);
+
               return Stack(
                 alignment: Alignment.center,
                 children: [
@@ -55,37 +71,76 @@ class _DonutChartState extends State<DonutChart>
                     size: const Size(170, 170),
                     painter: DonutPainter(
                       progress: _controller.value,
+                      value: widget.value,
+                      total: widget.total,
                       color: widget.color,
                     ),
                   ),
+
                   Container(
-                    width: 95,
-                    height: 95,
+                    width: 90,
+                    height: 90,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
                     ),
                   ),
-                  Positioned(
-                    bottom: 16,
-                    child: Column(
-                      children: [
-                        Text(
-                          widget.value.toStringAsFixed(1),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+
+                  Positioned.fromRect(
+                    rect: Rect.fromCenter(
+                      center: Offset(95 + gDx, 95 + gDy), 
+                      width: 100, 
+                      height: 50
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                         children: [
+                          Text(
+                            widget.value.toStringAsFixed(1),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        Text(
-                          widget.label,
-                          style: const TextStyle(
-                            fontSize: 8,
-                            color: Colors.white,
+                          const Text(
+                            "Achieved",
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  Positioned.fromRect(
+                    rect: Rect.fromCenter(
+                      center: Offset(95 + rDx, 95 + rDy), 
+                      width: 100, 
+                      height: 50
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.total.toStringAsFixed(1),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            "Target ${widget.label.split(" ").last}",
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -95,12 +150,25 @@ class _DonutChartState extends State<DonutChart>
         ),
 
         const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Column(
           children: [
-            Container(width: 10, height: 10, color: widget.color),
-            const SizedBox(width: 6),
-            Text(widget.label),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(width: 10, height: 10, color: Colors.green),
+                const SizedBox(width: 6),
+                Text("Total ${widget.label.split(" ").last}"),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(width: 10, height: 10, color: Colors.red),
+                const SizedBox(width: 6),
+                Text("Target ${widget.label.split(" ").last}"),
+              ],
+            ),
           ],
         ),
       ],
@@ -108,67 +176,70 @@ class _DonutChartState extends State<DonutChart>
   }
 }
 
-
-
 class DonutPainter extends CustomPainter {
   final double progress;
+  final double value;
+  final double total;
   final Color color;
 
-  DonutPainter({required this.progress, required this.color});
+  DonutPainter({
+    required this.progress,
+    required this.value,
+    required this.total,
+    required this.color,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    final outerStroke = 40.0;
+    const stroke = 40.0;
+    final redPaint = Paint()
+      ..color = AppColors.primary
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.butt;
 
-    final outerPaint = Paint()
+    canvas.drawArc(
+      rect.deflate(stroke / 2),
+      -pi / 2,
+      2 * pi,
+      false,
+      redPaint,
+    );
+    final greenPaint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = outerStroke
-      ..strokeCap = StrokeCap.round;
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.butt;
+    final sweepAngle =
+    total == 0 ? 0.0 : (value / total) * 2 * pi * progress;
 
     canvas.drawArc(
-      rect.deflate(outerStroke / 2),
+      rect.deflate(stroke / 2),
       -pi / 2,
-      2 * pi * progress,
+      sweepAngle,
       false,
-      outerPaint,
+      greenPaint,
     );
-
-    final middleStroke = 30.0;
-
-    final middlePaint = Paint()
-      ..color = AppColors.background
+    final lightOverlayPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.35)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = middleStroke;
-
+      ..strokeWidth = 10 
+      ..strokeCap = StrokeCap.butt;
     canvas.drawArc(
-      rect.deflate(outerStroke + 8),
-      -pi / 2,
-      2 * pi,
-      false,
-      middlePaint,
-    );
-
-    final innerStroke = 22.0;
-
-    final innerPaint = Paint()
-      ..color = Colors.red.shade700
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = innerStroke;
-
-    canvas.drawArc(
-      rect.deflate(outerStroke + middleStroke + 16),
-      -pi / 2,
-      2 * pi,
-      false,
-      innerPaint,
+      rect.deflate(35), 
+      0, 
+      2 * pi, 
+      false, 
+      lightOverlayPaint,
     );
   }
 
   @override
   bool shouldRepaint(covariant DonutPainter oldDelegate) {
-    return oldDelegate.progress != progress;
+    return oldDelegate.progress != progress ||
+        oldDelegate.value != value ||
+        oldDelegate.total != total;
   }
 }
 class CustomToggle extends StatelessWidget {

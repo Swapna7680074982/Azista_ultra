@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 import 'DistributorExpensesScreen.dart';
+import 'DistributorVisitScreen.dart';
 import 'StockOnHandScreen.dart';
-
+import 'package:provider/provider.dart';
+import 'distribution_list_provider.dart';
 class DistributorStockScreen extends StatelessWidget {
   const DistributorStockScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade200,
+    return Consumer<DistributionListProvider>(
+      builder: (context, provider, child) {
+        return Scaffold(
+          backgroundColor: Colors.grey.shade200,
 
       appBar: AppBar(
         title: const Text(
@@ -49,7 +53,17 @@ class DistributorStockScreen extends StatelessWidget {
             icon: const Icon(Icons.currency_rupee),
           ),
           const SizedBox(width: 15),
-          const Icon(Icons.account_tree_outlined),
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DistributorVisitScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.account_tree_outlined, color: Colors.white),
+          ),
           const SizedBox(width: 10),
         ],
       ),
@@ -57,28 +71,9 @@ class DistributorStockScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(10),
         children: [
-          _buildSection("Kwik Mint", [
-            "Burst (Boxes)",
-            "1X 44'S (1X 2'S) (Boxes)",
-            "BURST'S CASSETS(10 X 20S) (Pcs)",
-            "PREMIUM STRONG CASSET 20",
-            "KWIK MINT STRONG CASSETS(10 X 20'S)",
-            "KWIK MINT BURST",
-          ]),
-          _buildSection("Menthopas", [
-            "3 PATCHES POUCHES (Pcs)",
-          ]),
-          _buildSection("Sparkel", [
-            "FACIAL MASK (Pcs)",
-            "GLOW FACIAL MASK (Pcs)",
-            "YOUTH FACIAL MASK (Pcs)",
-          ]),
-          _buildSection("Spice Sip", [
-            "(1X6) (Boxes)",
-          ]),
-          _buildSection("Taste Good", [
-            "KARELA BISCUIT 100G (Boxes)",
-          ]),
+          ...provider.distributorStockSections.entries.map((entry) {
+            return _buildSection(entry.key, entry.value);
+          }).toList(),
 
           const SizedBox(height: 10),
           Container(
@@ -106,6 +101,8 @@ class DistributorStockScreen extends StatelessWidget {
           const SizedBox(height: 30),
         ],
       ),
+        );
+      },
     );
   }
   Widget _buildSection(String title, List<String> items) {

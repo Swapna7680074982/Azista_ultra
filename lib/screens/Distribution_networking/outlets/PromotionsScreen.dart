@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-
+import 'package:provider/provider.dart';
+import 'outlet_activity_provider.dart';
 class PromotionsBody extends StatefulWidget {
   const PromotionsBody({super.key});
 
@@ -11,19 +12,13 @@ class _PromotionsBodyState extends State<PromotionsBody> {
   String? selectedProduct;
   final TextEditingController quantityController = TextEditingController();
 
-  final List<String> products = [
-    "Kwik Mint",
-    "Menthopas",
-    "Sparkel",
-    "Spice Sip",
-    "Taste Good",
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(12),
-      children: [
+    return Consumer<OutletActivityProvider>(
+      builder: (context, provider, child) {
+        return ListView(
+          padding: const EdgeInsets.all(12),
+          children: [
         Row(
           children: [
             Expanded(
@@ -40,7 +35,7 @@ class _PromotionsBodyState extends State<PromotionsBody> {
                     value: selectedProduct,
                     hint: const Text("Select product type"),
                     isExpanded: true,
-                    items: products.map((e) {
+                    items: provider.products.map((e) {
                       return DropdownMenuItem(
                         value: e,
                         child: Text(e),
@@ -129,6 +124,8 @@ class _PromotionsBodyState extends State<PromotionsBody> {
           ),
         ),
       ],
+    );
+      },
     );
   }
 }

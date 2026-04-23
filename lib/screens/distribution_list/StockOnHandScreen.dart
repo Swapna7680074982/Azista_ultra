@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../constants/app_colors.dart';
+import 'distribution_list_provider.dart';
 
 class StockOnHandScreen extends StatefulWidget {
   const StockOnHandScreen({super.key});
@@ -9,18 +11,12 @@ class StockOnHandScreen extends StatefulWidget {
 }
 
 class _StockOnHandScreenState extends State<StockOnHandScreen> {
-
-  String selectedMonth = "April";
-
-  final List<String> months = [
-    "January","February","March","April","May","June",
-    "July","August","September","October","November","December"
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
+    return Consumer<DistributionListProvider>(
+      builder: (context, provider, child) {
+        return Scaffold(
+          backgroundColor: Colors.white,
 
       appBar: AppBar(
         title: const Text(
@@ -58,21 +54,20 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: DropdownButton<String>(
-                value: selectedMonth,
+                value: provider.selectedMonth,
                 isExpanded: true,
                 underline: const SizedBox(),
                 icon: const Icon(Icons.keyboard_arrow_down),
-                items: months.map((month) {
+                items: provider.months.map((month) {
                   return DropdownMenuItem(
                     value: month,
                     child: Text(month),
                   );
                 }).toList(),
                 onChanged: (value) {
-                  setState(() {
-                    selectedMonth = value!;
-                  });
-                  print("Selected Month: $value");
+                  if (value != null) {
+                    provider.setSelectedMonth(value);
+                  }
                 },
               ),
             ),
@@ -88,7 +83,7 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
 
             GestureDetector(
               onTap: () {
-                _showProductPopup(context);
+                _showProductPopup(context, provider);
               },
               child: Container(
                 width: double.infinity,
@@ -111,11 +106,13 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
             ),
           ],
         ),
-      ),
+        ),
+        );
+      },
     );
   }
 
-  void _showProductPopup(BuildContext context) {
+  void _showProductPopup(BuildContext context, DistributionListProvider provider) {
     showDialog(
       context: context,
       builder: (context) {
@@ -139,11 +136,9 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
 
                 const SizedBox(height: 10),
 
-                _productRow("3 - BURST'S CASSETS(10 X 20'S) (PCS)", "5"),
-                _productRow("2 - 1X 44'S (1X 2'S) (BOXES)", "5"),
-                _productRow("1 - BURST (BOXES)", "5"),
-                _productRow("5 - 1X 44'S (1X 2'S) (BOXES)", "1"),
-                _productRow("4 - BURST (BOXES)", "1"),
+                ...provider.stockOnHandProducts.map((product) {
+                  return _productRow(product["name"]!, product["qty"]!);
+                }).toList(),
 
                 const SizedBox(height: 10),
                 Align(

@@ -4,6 +4,7 @@ import '../Distribution_networking/distribution_network_screen.dart';
 import 'HomeScreen.dart';
 import 'custom_bottom_nav.dart';
 import 'main_tab_provider.dart';
+import 'near_me_screen.dart';
 
 class MainShellScreen extends StatelessWidget {
   const MainShellScreen({super.key});
@@ -18,7 +19,7 @@ class MainShellScreen extends StatelessWidget {
             children: const [
               HomeScreen(),
               Center(child: Text("Marketing")),
-              Center(child: Text("Near Me")),
+              NearMeScreen(),
               DistributionNetworkScreen(),
               Center(child: Text("Sync")),
             ],

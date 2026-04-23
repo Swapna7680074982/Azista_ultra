@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-
+import 'package:provider/provider.dart';
+import 'outlet_activity_provider.dart';
 import '../../../constants/app_colors.dart';
 import 'PobHistoryScreen.dart';
 
@@ -8,43 +9,14 @@ class PobBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(8),
-      children: [
-        _section(
-          "Kwik Mint",
-          [
-            "Burst (Boxes)",
-            "1X 44'S (1X 2'S) (Boxes)",
-            "BURST'S CASSETS(10 X 20S) (Pcs)",
-            "PREMIUM STRONG CASSET 20",
-            "KWIK MINT STRONG CASSETS(10 X 20'S)",
-            "KWIK MINT BURST",
-          ],
-        ),
-        _section(
-          "Menthopas",
-          ["3 PATCHES POUCHES (Pcs)"],
-        ),
-        _section(
-          "Sparkel",
-          [
-            "FACIAL MASK (Pcs)",
-            "GLOW FACIAL MASK (Pcs)",
-            "YOUTH FACIAL MASK (Pcs)",
-          ],
-        ),
-        _section(
-          "Spice Sip",
-          ["(1X6) (Boxes)"],
-        ),
-        _section(
-          "Taste Good",
-          [
-            "PREGAEND KIT ULTRA",
-            "PREGAF LASH KIT ULTRA",
-          ],
-        ),
+    return Consumer<OutletActivityProvider>(
+      builder: (context, provider, child) {
+        return ListView(
+          padding: const EdgeInsets.all(8),
+          children: [
+            ...provider.sectionsData.entries.map((entry) {
+              return _section(entry.key, entry.value);
+            }).toList(),
 
         Container(
           width: double.infinity,
@@ -100,7 +72,9 @@ class PobBody extends StatelessWidget {
         ),
 
         const SizedBox(height: 40),
-      ],
+          ],
+        );
+      },
     );
   }
   Widget _section(String title, List<String> items) {

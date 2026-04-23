@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+
+import 'DistributorStatusScreen.dart';
 class DistributorExpensesScreen extends StatefulWidget {
   const DistributorExpensesScreen({super.key});
 
@@ -137,7 +139,12 @@ class _DistributorExpensesScreenState
                       alignment: Alignment.bottomRight,
                       child: GestureDetector(
                         onTap: () {
-                          // TODO: Track logic
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const DistributorStatusScreen(),
+                            ),
+                          );
                         },
                         child: const Text(
                           "Track Status",
@@ -172,35 +179,28 @@ class _DistributorExpensesScreenState
 
     File? selectedImage;
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
+            return Dialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Container(
-                margin: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                ),
+              child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-
-                    // 🔴 Header
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(16),
                         ),
                       ),
                       child: Row(
@@ -211,9 +211,10 @@ class _DistributorExpensesScreenState
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          GestureDetector(
+                          InkWell(
                             onTap: () => Navigator.pop(context),
                             child: const Icon(Icons.close, color: Colors.white),
                           )
@@ -221,65 +222,134 @@ class _DistributorExpensesScreenState
                       ),
                     ),
 
-                    const SizedBox(height: 10),
-                    _inputField("Payment Type", paymentTypeController),
-                    _inputField("Amount", amountController),
-                    _inputField("Comment", commentController),
+                    const SizedBox(height: 16),
+                    _styledField("Payment Type", paymentTypeController),
+                    _styledField("Amount", amountController,
+                        keyboardType: TextInputType.number),
+                    _styledField("Comment", commentController, maxLines: 2),
 
                     const SizedBox(height: 10),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text("Take Payment Photo"),
-                          GestureDetector(
-                            onTap: () async {
-                              final picker = ImagePicker();
-                              final pickedFile = await picker.pickImage(
-                                source: ImageSource.gallery,
-                              );
-
-                              if (pickedFile != null) {
-                                setState(() {
-                                  selectedImage = File(pickedFile.path);
-                                });
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.red),
-                              ),
-                              child: const Icon(Icons.image, color: Colors.red),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              "Upload Payment Photo",
+                              style: TextStyle(fontWeight: FontWeight.w500),
                             ),
-                          ),
-                        ],
+                            InkWell(
+                              onTap: () async {
+                                final picker = ImagePicker();
+
+                                showModalBottomSheet(
+                                  context: context,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(16)),
+                                  ),
+                                  builder: (context) {
+                                    return SafeArea(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          ListTile(
+                                            leading: const Icon(
+                                                Icons.camera_alt_outlined),
+                                            title: const Text("Camera"),
+                                            onTap: () async {
+                                              Navigator.pop(context);
+                                              final pickedFile =
+                                              await picker.pickImage(
+                                                source: ImageSource.camera,
+                                              );
+                                              if (pickedFile != null) {
+                                                setState(() {
+                                                  selectedImage =
+                                                      File(pickedFile.path);
+                                                });
+                                              }
+                                            },
+                                          ),
+                                          ListTile(
+                                            leading:
+                                            const Icon(Icons.photo_outlined),
+                                            title: const Text("Gallery"),
+                                            onTap: () async {
+                                              Navigator.pop(context);
+                                              final pickedFile =
+                                              await picker.pickImage(
+                                                source: ImageSource.gallery,
+                                              );
+                                              if (pickedFile != null) {
+                                                setState(() {
+                                                  selectedImage =
+                                                      File(pickedFile.path);
+                                                });
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha:0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(Icons.image,
+                                    color: AppColors.primary),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
+
                     if (selectedImage != null)
                       Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Image.file(selectedImage!, height: 100),
+                        padding: const EdgeInsets.all(12),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.file(selectedImage!, height: 100),
+                        ),
                       ),
 
-                    const SizedBox(height: 15),
-
-
+                    const SizedBox(height: 10),
                     Padding(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
                       child: SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: AppColors.primary,
                             padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           onPressed: () {
-                            // TODO: Save Data
                             Navigator.pop(context);
                           },
-                          child: const Text("SUBMIT"),
+                          child: const Text(
+                            "SUBMIT",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
                     ),
@@ -292,18 +362,36 @@ class _DistributorExpensesScreenState
       },
     );
   }
-  Widget _inputField(String hint, TextEditingController controller) {
+  Widget _styledField(
+      String hint,
+      TextEditingController controller, {
+        TextInputType keyboardType = TextInputType.text,
+        int maxLines = 1,
+      }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: TextField(
         controller: controller,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
         decoration: InputDecoration(
           hintText: hint,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-          ),
           filled: true,
-          fillColor: Colors.grey.shade200,
+          fillColor: Colors.white,
+          contentPadding:
+          const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: AppColors.primary),
+          ),
         ),
       ),
     );
