@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../services/call_service.dart';
+import '../../../services/directions_map_screen.dart';
 import 'NewOutletScreen.dart';
 import 'PosBaseScreen.dart';
 import 'outlet_provider.dart';
@@ -102,7 +104,9 @@ class OutletsScreen extends StatelessWidget {
                     color: AppColors.buttonBlue.withValues(alpha:0.05),
                   ),
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      CallService.makeCall(outlet.phone);
+                    },
                     child: const Text(
                       "CALL",
                       style: TextStyle(
@@ -124,7 +128,18 @@ class OutletsScreen extends StatelessWidget {
                     color: AppColors.button.withValues(alpha:0.05),
                   ),
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DirectionsMapScreen(
+                            outletLat: outlet.latitude,
+                            outletLng: outlet.longitude,
+                            outletName: outlet.name,
+                          ),
+                        ),
+                      );
+                    },
                     child: const Text(
                       "DIRECTIONS",
                       style: TextStyle(

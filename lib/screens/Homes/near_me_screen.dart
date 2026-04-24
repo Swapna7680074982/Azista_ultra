@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
+import '../../services/call_service.dart';
 import '../Distribution_networking/outlets/PosBaseScreen.dart';
 import '../Distribution_networking/outlets/outlet_provider.dart';
+import '../../services/directions_map_screen.dart';
 
 class NearMeScreen extends StatelessWidget {
   const NearMeScreen({super.key});
@@ -105,7 +107,9 @@ class NearMeScreen extends StatelessWidget {
                         color: AppColors.buttonBlue.withValues(alpha:0.05),
                       ),
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          CallService.makeCall(outlet.phone);
+                        },
                         child: const Text(
                           "CALL",
                           style: TextStyle(
@@ -127,7 +131,18 @@ class NearMeScreen extends StatelessWidget {
                         color: AppColors.button.withValues(alpha:0.05),
                       ),
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DirectionsMapScreen(
+                                outletLat: outlet.latitude,
+                                outletLng: outlet.longitude,
+                                outletName: outlet.name,
+                              ),
+                            ),
+                          );
+                        },
                         child: const Text(
                           "DIRECTIONS",
                           style: TextStyle(

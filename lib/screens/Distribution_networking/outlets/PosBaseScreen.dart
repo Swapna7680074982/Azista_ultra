@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
+import '../../../services/call_service.dart';
+import '../../../services/directions_map_screen.dart';
 import 'BrandingScreen.dart';
 import 'PobScreen.dart';
 import 'PreviousTransactionsScreen.dart';
@@ -153,7 +155,9 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                         color: AppColors.buttonBlue.withValues(alpha:0.05),
                       ),
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          CallService.makeCall(outlet.phone);
+                        },
                         child: const Text(
                           "CALL",
                           style: TextStyle(
@@ -175,7 +179,18 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                         color: AppColors.button.withValues(alpha:0.05),
                       ),
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DirectionsMapScreen(
+                                outletLat: widget.outlet.latitude,
+                                outletLng: widget.outlet.longitude,
+                                outletName: widget.outlet.name,
+                              ),
+                            ),
+                          );
+                        },
                         child: const Text(
                           "DIRECTIONS",
                           style: TextStyle(
