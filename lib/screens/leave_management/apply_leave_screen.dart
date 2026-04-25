@@ -87,7 +87,10 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 const SizedBox(height: 16),
                 const Text(
                   'Leave',
-                  style: TextStyle(color: Color(0xFFC62828), fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Color(0xFFC62828),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const Divider(thickness: 1, color: Colors.grey),
                 if (selectedBalance != null)
@@ -96,9 +99,18 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildSummaryItem('Allocated', selectedBalance.allocated.toString()),
-                        _buildSummaryItem('Used', selectedBalance.used.toString()),
-                        _buildSummaryItem('Remaining', selectedBalance.remaining.toString()),
+                        _buildSummaryItem(
+                          'Allocated',
+                          selectedBalance.allocated.toString(),
+                        ),
+                        _buildSummaryItem(
+                          'Used',
+                          selectedBalance.used.toString(),
+                        ),
+                        _buildSummaryItem(
+                          'Remaining',
+                          selectedBalance.remaining.toString(),
+                        ),
                       ],
                     ),
                   ),
@@ -111,9 +123,19 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                     border: OutlineInputBorder(),
                   ),
                   readOnly: true,
-                  onTap: () async {
-                    // Implement date picker
-                  },
+                    onTap: () async {
+                      DateTime? pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+
+                      if (pickedDate != null) {
+                        _fromDateController.text =
+                        pickedDate.toIso8601String().split('T')[0];
+                      }
+                    }
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -124,9 +146,25 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                     border: OutlineInputBorder(),
                   ),
                   readOnly: true,
-                  onTap: () async {
-                    // Implement date picker
-                  },
+                    onTap: () async {
+                      DateTime initialDate = DateTime.now();
+
+                      if (_fromDateController.text.isNotEmpty) {
+                        initialDate = DateTime.parse(_fromDateController.text);
+                      }
+
+                      DateTime? pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: initialDate,
+                        firstDate: initialDate,
+                        lastDate: DateTime(2100),
+                      );
+
+                      if (pickedDate != null) {
+                        _toDateController.text =
+                        pickedDate.toIso8601String().split('T')[0];
+                      }
+                    }
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -160,24 +198,63 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 const SizedBox(height: 32),
                 ElevatedButton(
                   onPressed: () {
-                    // Implement submit logic
-                    if (_selectedLeaveType != null) {
-                      String typeCode = '';
-                      if (_selectedLeaveType == 'CASUAL LEAVE') typeCode = 'CL';
-                      else if (_selectedLeaveType == 'SICK LEAVE') typeCode = 'SL';
-                      else if (_selectedLeaveType == 'EARNED LEAVE') typeCode = 'EL';
-                      
-                      provider.addLeaveRequest(
-                        LeaveRequest(
-                          fromDate: _fromDateController.text.isNotEmpty ? _fromDateController.text : 'Today',
-                          toDate: _toDateController.text.isNotEmpty ? _toDateController.text : 'Today',
-                          type: typeCode,
-                          status: 'Pending',
-                          reason: _reasonController.text,
-                        ),
-                      );
-                      Navigator.pop(context);
+                    if (_selectedLeaveType == null) return;
+
+                    final provider = context.read<LeaveProvider>();
+
+                    final balance = provider.leaveBalances.firstWhere(
+                      (b) => b.type == _selectedLeaveType,
+                    );
+
+                    if (_fromDateController.text.isEmpty ||
+                        _toDateController.text.isEmpty ||
+                        _reasonController.text.isEmpty ||
+                        _daysApplicableController.text.isEmpty) {
+                      _showError("All fields are required");
+                      return;
                     }
+
+                    DateTime? fromDate;
+                    DateTime? toDate;
+
+                    try {
+                      fromDate = DateTime.parse(_fromDateController.text);
+                      toDate = DateTime.parse(_toDateController.text);
+                    } catch (e) {
+                      _showError("Invalid date format");
+                      return;
+                    }
+
+                    int days =
+                        int.tryParse(_daysApplicableController.text) ?? 0;
+
+                    String? error = provider.validateLeave(
+                      balance: balance,
+                      fromDate: fromDate,
+                      toDate: toDate,
+                      days: days,
+                      reason: _reasonController.text,
+                    );
+
+                    if (error != null) {
+                      _showError(error);
+                      return;
+                    }
+
+                    provider.applyLeave(
+                      balance: balance,
+                      days: days,
+                      request: LeaveRequest(
+                        fromDate: _fromDateController.text,
+                        toDate: _toDateController.text,
+                        type: balance
+                            .shortName,
+                        status: 'Pending',
+                        reason: _reasonController.text,
+                      ),
+                    );
+
+                    Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.buttonBlue,
@@ -198,7 +275,11 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
       ),
     );
   }
-
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
+  }
   Widget _buildSummaryItem(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
