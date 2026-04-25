@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../User_transactions/UserTransactionScreen.dart';
 import '../../constants/app_colors.dart';
 import '../../permissions/AccessValidator.dart';
 import '../../permissions/AppStateProvider.dart';
+import '../../profile.dart';
 import '../attendance/Attendancescreen.dart';
 import '../distribution_list/DistributorStockScreen.dart';
 import '../leave_management/leave_management_screen.dart';
@@ -22,18 +24,28 @@ class _HomeScreenState extends State<HomeScreen> {
     final appState = Provider.of<AppStateProvider>(context);
     return Scaffold(
       backgroundColor: AppColors.white,
-
+      drawer: const ProfileDrawer(selectedMenu: "Attendance"),
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
         toolbarHeight: 60,
         titleSpacing: 0,
 
-        leading: const Padding(
-          padding: EdgeInsets.only(left: 12),
-          child: Icon(Icons.menu, color: AppColors.white, size: 26),
+        leading: Builder(
+          builder: (context) => Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: GestureDetector(
+              onTap: () {
+                Scaffold.of(context).openDrawer();
+              },
+              child: const Icon(
+                Icons.menu,
+                color: AppColors.white,
+                size: 26,
+              ),
+            ),
+          ),
         ),
-
         title: const Text(
           "Attendance",
           style: TextStyle(
@@ -279,6 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       context: context,
                       isOnline: appState.isOnline,
                       hasDistributor: appState.selectedDistributor != null,
+                      checkDistributor: false,
                       isLeave: true,
                     )) {
                       Navigator.push(
@@ -299,6 +312,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       context: context,
                       isOnline: appState.isOnline,
                       hasDistributor: appState.selectedDistributor != null,
+                      checkDistributor: false,
                       isLeave: false,
                     )) {
                       Navigator.push(
@@ -321,7 +335,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       hasDistributor: appState.selectedDistributor != null,
                       isLeave: false,
                     )) {
-                      // TODO: Open Transactions
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const UserTransactionScreen(),
+                        ),
+                      );
                     }
                   },
                 ),

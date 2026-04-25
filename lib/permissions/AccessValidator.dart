@@ -6,8 +6,9 @@ class AccessValidator {
     required bool isOnline,
     required bool hasDistributor,
     required bool isLeave,
+    bool checkDistributor = true,
   }) {
-    if (!hasDistributor) {
+    if (checkDistributor && !hasDistributor) {
       _show(context, "Please select a distributor to continue.");
       return false;
     }

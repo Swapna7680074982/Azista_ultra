@@ -38,13 +38,13 @@ class Holiday {
 }
 
 class LeaveProvider extends ChangeNotifier {
-  List<LeaveBalance> _leaveBalances = [
+  final List<LeaveBalance> _leaveBalances = [
     LeaveBalance(type: 'CASUAL LEAVE', allocated: 10, used: 0, remaining: 10),
     LeaveBalance(type: 'SICK LEAVE', allocated: 10, used: 2, remaining: 8),
     LeaveBalance(type: 'EARNED LEAVE', allocated: 30, used: 2, remaining: 28),
   ];
 
-  List<LeaveRequest> _leaveHistory = [
+  final List<LeaveRequest> _leaveHistory = [
     LeaveRequest(fromDate: '03-Aug-2024', toDate: '04-Aug-2024', type: 'CL', status: 'Rejected', reason: 'Personal'),
     LeaveRequest(fromDate: '01-Aug-2024', toDate: '02-Aug-2024', type: 'SL', status: 'Approved', reason: 'Fever'),
     LeaveRequest(fromDate: '13-Sept-2024', toDate: '13-Sept-2024', type: 'CL', status: 'Pending', reason: 'Family event'),
@@ -52,19 +52,19 @@ class LeaveProvider extends ChangeNotifier {
     LeaveRequest(fromDate: '09-Sept-2024', toDate: '09-Sept-2024', type: 'CL', status: 'Pending', reason: 'Urgent work'),
   ];
 
-  List<Holiday> _holidays = [
-    Holiday(date: '01-Jan-2024', occasion: 'NEW YEAR'),
-    Holiday(date: '15-Jan-2024', occasion: 'MAKARA SANKRANTHI'),
-    Holiday(date: '26-Jan-2024', occasion: 'REPUBLIC DAY'),
-    Holiday(date: '09-Apr-2024', occasion: 'UGADI'),
-    Holiday(date: '01-May-2024', occasion: 'MAY DAY'),
-    Holiday(date: '15-Aug-2024', occasion: 'INDEPENDENCE DAY'),
-    Holiday(date: '19-Aug-2024', occasion: 'RAKSHA BANDHAN'),
-    Holiday(date: '07-Sep-2024', occasion: 'GANESH CHATURTHI'),
-    Holiday(date: '02-Oct-2024', occasion: 'GANDHI JAYANTI'),
-    Holiday(date: '11-Oct-2024', occasion: 'DURGA POOJA'),
-    Holiday(date: '12-Oct-2024', occasion: 'DURGA POOJA'),
-    Holiday(date: '01-Nov-2024', occasion: 'DIWALI'),
+  final List<Holiday> _holidays = [
+    Holiday(date: '01-Jan-2026', occasion: 'NEW YEAR'),
+    Holiday(date: '15-Jan-2026', occasion: 'MAKARA SANKRANTHI'),
+    Holiday(date: '26-Jan-2026', occasion: 'REPUBLIC DAY'),
+    Holiday(date: '09-Apr-2026', occasion: 'UGADI'),
+    Holiday(date: '01-May-2026', occasion: 'MAY DAY'),
+    Holiday(date: '15-Aug-2026', occasion: 'INDEPENDENCE DAY'),
+    Holiday(date: '19-Aug-2026', occasion: 'RAKSHA BANDHAN'),
+    Holiday(date: '07-Sep-2026', occasion: 'GANESH CHATURTHI'),
+    Holiday(date: '02-Oct-2026', occasion: 'GANDHI JAYANTI'),
+    Holiday(date: '11-Oct-2026', occasion: 'DURGA POOJA'),
+    Holiday(date: '12-Oct-2026', occasion: 'DURGA POOJA'),
+    Holiday(date: '01-Nov-2026', occasion: 'DIWALI'),
   ];
 
   List<LeaveBalance> get leaveBalances => _leaveBalances;

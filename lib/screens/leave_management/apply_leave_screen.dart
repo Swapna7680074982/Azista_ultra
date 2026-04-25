@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../constants/app_colors.dart';
 import 'leave_provider.dart';
 
 class ApplyLeaveScreen extends StatefulWidget {
@@ -11,7 +12,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   String? _selectedLeaveType;
   final _fromDateController = TextEditingController();
   final _toDateController = TextEditingController();
-  final _emailController = TextEditingController(text: 'priyanka.akasapu@heterohealthcare.com');
+  final _emailController = TextEditingController();
   final _reasonController = TextEditingController();
   final _daysApplicableController = TextEditingController();
 
@@ -132,6 +133,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                   controller: _emailController,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.email),
+                    labelText: 'Email',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -178,10 +180,16 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.lightBlue,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: AppColors.buttonBlue,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.zero,
+                    ),
                   ),
-                  child: const Text('SUBMIT', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  child: const Text(
+                    'SUBMIT',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
                 ),
               ],
             );

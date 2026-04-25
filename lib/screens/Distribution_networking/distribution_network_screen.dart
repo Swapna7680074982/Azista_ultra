@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
+import '../../profile.dart';
 import 'distribution_provider.dart';
 import 'outlets/outlets_screen.dart';
 
@@ -34,17 +35,28 @@ class DistributionNetworkScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.white,
+      drawer: const ProfileDrawer(selectedMenu: "Distribution Network"),
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
         toolbarHeight: 60,
         titleSpacing: 0,
 
-        leading: const Padding(
-          padding: EdgeInsets.only(left: 12),
-          child: Icon(Icons.menu, color: AppColors.white, size: 26),
+        leading: Builder(
+          builder: (context) => Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: GestureDetector(
+              onTap: () {
+                Scaffold.of(context).openDrawer();
+              },
+              child: const Icon(
+                Icons.menu,
+                color: AppColors.white,
+                size: 26,
+              ),
+            ),
+          ),
         ),
-
         title: const Text(
           "Distribution Network",
           style: TextStyle(

@@ -29,33 +29,33 @@ class AttendanceCard extends StatelessWidget {
           _row("Ended At", _format(data.end)),
           const SizedBox(height: 4),
 
-          if (data.hasRequest)
-            Align(
-              alignment: Alignment.bottomRight,
-              child: GestureDetector(
-                onTap: () => showRequestPopup(context, data),
-                child: ClipPath(
-                  clipper: _RequestClipper(),
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(18, 5, 16, 5),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: const BorderRadius.only(
-                        topRight: Radius.circular(8),
-                        bottomRight: Radius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      "REQUEST",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          // if (data.hasRequest)
+          //   Align(
+          //     alignment: Alignment.bottomRight,
+          //     child: GestureDetector(
+          //       onTap: () => showRequestPopup(context, data),
+          //       child: ClipPath(
+          //         clipper: _RequestClipper(),
+          //         child: Container(
+          //           padding: const EdgeInsets.fromLTRB(18, 5, 16, 5),
+          //           decoration: BoxDecoration(
+          //             color: AppColors.primary,
+          //             borderRadius: const BorderRadius.only(
+          //               topRight: Radius.circular(8),
+          //               bottomRight: Radius.circular(8),
+          //             ),
+          //           ),
+          //           child: const Text(
+          //             "REQUEST",
+          //             style: TextStyle(
+          //               color: Colors.white,
+          //               fontWeight: FontWeight.bold,
+          //             ),
+          //           ),
+          //         ),
+          //       ),
+          //     ),
+          //   ),
         ],
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
+import '../../profile.dart';
 import '../../services/call_service.dart';
 import '../Distribution_networking/outlets/PosBaseScreen.dart';
 import '../Distribution_networking/outlets/outlet_provider.dart';
@@ -183,7 +184,8 @@ class NearMeScreen extends StatelessWidget {
     final provider = context.watch<OutletProvider>();
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100, // light background
+      backgroundColor: Colors.grey.shade100,
+      drawer: const ProfileDrawer(selectedMenu: "Near Me"),
       appBar: AppBar(
         title: const Text(
           "Near Me",
@@ -197,11 +199,20 @@ class NearMeScreen extends StatelessWidget {
         iconTheme: const IconThemeData(
           color: AppColors.white,
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {
-            Scaffold.of(context).openDrawer();
-          },
+        leading: Builder(
+          builder: (context) => Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: GestureDetector(
+              onTap: () {
+                Scaffold.of(context).openDrawer();
+              },
+              child: const Icon(
+                Icons.menu,
+                color: AppColors.white,
+                size: 26,
+              ),
+            ),
+          ),
         ),
       ),
       body: Column(

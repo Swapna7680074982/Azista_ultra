@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../constants/app_colors.dart';
 import 'leave_provider.dart';
 
 class HolidayListScreen extends StatelessWidget {
@@ -39,6 +41,10 @@ class HolidayListScreen extends StatelessWidget {
                   separatorBuilder: (context, index) => const Divider(height: 1, color: Colors.grey),
                   itemBuilder: (context, index) {
                     final holiday = provider.holidays[index];
+                    DateTime holidayDate =
+                    DateFormat("dd-MMM-yyyy").parse(holiday.date);
+                    bool isFuture = holidayDate.isAfter(DateTime.now());
+
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
                       child: Row(
@@ -47,14 +53,21 @@ class HolidayListScreen extends StatelessWidget {
                             flex: 2,
                             child: Text(
                               holiday.date,
-                              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 13,
+                                color: isFuture ? AppColors.primary : Colors.black,
+                              ),
                             ),
                           ),
                           Expanded(
                             flex: 3,
                             child: Text(
                               holiday.occasion,
-                              style: const TextStyle(color: Colors.black87, fontSize: 13),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isFuture ? AppColors.primary : Colors.black87,
+                              ),
                             ),
                           ),
                         ],

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../Distribution_networking/distribution_network_screen.dart';
+import '../attendance/Attendancescreen.dart';
+import '../leave_management/leave_management_screen.dart';
 import 'HomeScreen.dart';
 import 'custom_bottom_nav.dart';
 import 'main_tab_provider.dart';
@@ -16,12 +18,12 @@ class MainShellScreen extends StatelessWidget {
         return Scaffold(
           body: IndexedStack(
             index: nav.currentIndex,
-            children: const [
-              HomeScreen(),
-              Center(child: Text("Marketing")),
-              NearMeScreen(),
-              DistributionNetworkScreen(),
-              Center(child: Text("Sync")),
+            children: [
+              const HomeScreen(),
+              LeaveManagementScreen(),
+              const NearMeScreen(),
+              const DistributionNetworkScreen(),
+              AttendanceScreen(),
             ],
           ),
           bottomNavigationBar: const CustomBottomNav(),

@@ -37,12 +37,11 @@ class CustomBottomNav extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               navItemIcon(context, Icons.access_time, "Attend.", 0),
-              navItemIcon(context, Icons.alt_route, "Marketing", 1),
-
+              navItemIcon(context, Icons.event_note, "Leave Management", 1),
               const SizedBox(width: 70),
 
               navItemIcon(context, Icons.account_tree_outlined, "Dist. Net.", 3),
-              navItemIcon(context, Icons.sync, "Sync", 4),
+              navItemIcon(context, Icons.check_circle, "Attendance", 4),
             ],
           ),
 
@@ -129,7 +128,7 @@ class CustomBottomNav extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            text,
+            text.length > 12 ? "${text.substring(0, 12)}..." : text,
             style: TextStyle(
               fontSize: 13,
               fontWeight:
