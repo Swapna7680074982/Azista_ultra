@@ -1,6 +1,7 @@
 class AppUrls {
   static const String baseUrl =
-      "http://services.heterohcl.com/ultra-iris/index.php/api/v3";
+      "https://services.heterohcl.com/ultra-iris-v2/api";
 
-  static const String login = "$baseUrl/login";
+  static const String login = "$baseUrl/user/login";
+  static const String logout = "$baseUrl/user/logout";
 }

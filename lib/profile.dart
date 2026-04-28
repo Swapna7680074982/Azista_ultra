@@ -1,11 +1,14 @@
 import 'package:azista_ultra/permissions/AccessValidator.dart';
 import 'package:azista_ultra/permissions/AppStateProvider.dart';
+import 'package:azista_ultra/permissions/SessionManager.dart';
 import 'package:azista_ultra/screens/Distribution_networking/distribution_network_screen.dart';
 import 'package:azista_ultra/screens/Homes/HomeScreen.dart';
 import 'package:azista_ultra/screens/Homes/change_password.dart';
 import 'package:azista_ultra/screens/Homes/main_tab_provider.dart';
 import 'package:azista_ultra/screens/Homes/near_me_screen.dart';
 import 'package:azista_ultra/screens/Homes/support.dart';
+import 'package:azista_ultra/screens/login/login_screen.dart';
+import 'package:azista_ultra/services/api_services.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -29,8 +32,10 @@ class ProfileDrawer extends StatelessWidget {
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("rajeswar reddy",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  "rajeswar reddy",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 SizedBox(height: 4),
                 Text("SALEOFF"),
                 SizedBox(height: 4),
@@ -65,7 +70,7 @@ class ProfileDrawer extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: Text(
           title,
-          style:  TextStyle(
+          style: TextStyle(
             color: AppColors.primary,
             fontWeight: FontWeight.bold,
           ),
@@ -82,78 +87,79 @@ class ProfileDrawer extends StatelessWidget {
       child: ListTile(
         title: Text(
           title,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.black,
-          ),
+          style: TextStyle(color: isSelected ? Colors.white : Colors.black),
         ),
-          onTap: () {
-            final navProvider =
-            Provider.of<MainTabProvider>(context, listen: false);
+        onTap: () {
+          final navProvider = Provider.of<MainTabProvider>(
+            context,
+            listen: false,
+          );
 
-            final appState =
-            Provider.of<AppStateProvider>(context, listen: false);
+          final appState = Provider.of<AppStateProvider>(
+            context,
+            listen: false,
+          );
 
-            bool allowed = true;
+          bool allowed = true;
 
-            if (title == "Attendance") {
-              allowed = AccessValidator.validate(
-                context: context,
-                isOnline: appState.isOnline,
-                hasDistributor: true,
-                isLeave: false,
-                checkDistributor: false,
-              );
-            }
-
-            else if (title == "Near Me" || title == "Distribution Network") {
-              allowed = AccessValidator.validate(
-                context: context,
-                isOnline: appState.isOnline,
-                hasDistributor: appState.selectedDistributor != null,
-                isLeave: false,
-                checkDistributor: true,
-              );
-            }
-
-            if (!allowed) return;
-
-            Navigator.pop(context);
-
-            switch (title) {
-              case "Attendance":
-                navProvider.setTab(0);
-                break;
-
-              case "Near Me":
-                navProvider.setTab(2);
-                break;
-
-              case "Distribution Network":
-                navProvider.setTab(3);
-                break;
-
-              case "Support":
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SupportScreen()),
-                );
-                break;
-
-              case "Change Password":
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-                );
-                break;
-
-              case "Logout":
-                _showLogoutDialog(context);
-                break;
-            }
+          if (title == "Attendance") {
+            allowed = AccessValidator.validate(
+              context: context,
+              isOnline: appState.isOnline,
+              hasDistributor: true,
+              isLeave: false,
+              checkDistributor: false,
+            );
+          } else if (title == "Near Me" || title == "Distribution Network") {
+            allowed = AccessValidator.validate(
+              context: context,
+              isOnline: appState.isOnline,
+              hasDistributor: appState.selectedDistributor != null,
+              isLeave: false,
+              checkDistributor: true,
+            );
           }
+
+          if (!allowed) return;
+
+          Navigator.pop(context);
+
+          switch (title) {
+            case "Attendance":
+              navProvider.setTab(0);
+              break;
+
+            case "Near Me":
+              navProvider.setTab(2);
+              break;
+
+            case "Distribution Network":
+              navProvider.setTab(3);
+              break;
+
+            case "Support":
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SupportScreen()),
+              );
+              break;
+
+            case "Change Password":
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+              );
+              break;
+
+            case "Logout":
+              _showLogoutDialog(context);
+              break;
+          }
+        },
       ),
     );
   }
+
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -170,10 +176,15 @@ class ProfileDrawer extends StatelessWidget {
               child: const Text("CANCEL", style: TextStyle(color: Colors.pink)),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-
-                // TODO: Add logout logic (clear session, navigate to login)
+              onPressed: () async {
+                final navigator = Navigator.of(context, rootNavigator: true);
+                navigator.pop();
+                await ApiServices.logout();
+                await SessionManager.clearSession();
+                navigator.pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => LoginScreen()),
+                      (route) => false,
+                );
               },
               child: const Text("OK", style: TextStyle(color: Colors.pink)),
             ),

@@ -9,6 +9,7 @@ import '../attendance/Attendancescreen.dart';
 import '../distribution_list/DistributorStockScreen.dart';
 import '../leave_management/leave_management_screen.dart';
 import '../productivity/ProductivityScreen.dart';
+import 'HomeProvider.dart';
 import 'widgets/DonutChart.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -19,6 +20,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() {
+      Provider.of<HomeProvider>(context, listen: false)
+          .loadDistributors();
+    });
+  }
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppStateProvider>(context);
@@ -118,26 +128,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       border: Border.all(color: Colors.grey.shade400),
                     ),
                     child: DropdownButtonHideUnderline(
-                      child: Consumer<AppStateProvider>(
-                        builder: (context, appState, _) {
+                      child: Consumer2<HomeProvider, AppStateProvider>(
+                        builder: (context, homeProvider, appState, _) {
                           return DropdownButton<String>(
                             isExpanded: true,
                             hint: const Text("Select Distributor"),
                             value: appState.selectedDistributor,
-                            items: const [
-                              DropdownMenuItem(
-                                value: "Distributor 1",
-                                child: Text("Distributor 1"),
-                              ),
-                              DropdownMenuItem(
-                                value: "Distributor 2",
-                                child: Text("Distributor 2"),
-                              ),
-                              DropdownMenuItem(
-                                value: "Distributor 3",
-                                child: Text("Distributor 3"),
-                              ),
-                            ],
+
+                            items: homeProvider.distributors.map<DropdownMenuItem<String>>((d) {
+                              return DropdownMenuItem<String>(
+                                value: d["distributor_name"],
+                                child: Text(d["distributor_name"]),
+                              );
+                            }).toList(),
+
                             onChanged: (value) {
                               appState.setDistributor(value);
                             },

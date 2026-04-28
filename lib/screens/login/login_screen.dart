@@ -88,38 +88,30 @@ class LoginScreen extends StatelessWidget {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.button,
                             ),
-                            // onPressed: provider.isLoading
-                            //     ? null
-                            //     : () async {
-                            //   final success = await provider.login(
-                            //     phoneController.text.trim(),
-                            //     passwordController.text.trim(),
-                            //   );
-                            //
-                            //   if (success) {
-                            //     Navigator.pushReplacement(
-                            //       context,
-                            //       MaterialPageRoute(
-                            //         builder: (context) => const MainShellScreen(),
-                            //       ),
-                            //     );
-                            //   } else {
-                            //     ScaffoldMessenger.of(context).showSnackBar(
-                            //       SnackBar(
-                            //         content: Text(
-                            //           provider.error ?? "Login Failed",
-                            //         ),
-                            //       ),
-                            //     );
-                            //   }
-                            // },
-                            onPressed: () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const MainShellScreen(),
-                                ),
+                            onPressed: provider.isLoading
+                                ? null
+                                : () async {
+                              final success = await provider.login(
+                                phoneController.text.trim(),
+                                passwordController.text.trim(),
                               );
+
+                              if (success) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const MainShellScreen(),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      provider.error ?? "Login Failed",
+                                    ),
+                                  ),
+                                );
+                              }
                             },
                             child: provider.isLoading
                                 ? const CircularProgressIndicator(

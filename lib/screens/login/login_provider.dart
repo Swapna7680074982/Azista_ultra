@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+
+import '../../permissions/SessionManager.dart';
 import '../../services/api_services.dart';
 
 class LoginProvider extends ChangeNotifier {
@@ -11,14 +13,25 @@ class LoginProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final success = await ApiServices.login(
+      final response = await ApiServices.login(
         phone: phone,
         password: password,
       );
 
-      isLoading = false;
-      notifyListeners();
-      return success;
+      if (response != null) {
+        final data = response["data"];
+        await SessionManager.saveSession(
+          refreshToken: data["refresh_token"],
+          token: data["access_token"],
+          distributors: data["distributors"],
+        );
+
+        isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        error = "Invalid login";
+      }
     } catch (e) {
       error = e.toString();
     }
