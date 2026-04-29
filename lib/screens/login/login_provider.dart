@@ -26,6 +26,9 @@ class LoginProvider extends ChangeNotifier {
           distributors: data["distributors"],
         );
 
+        final attendanceStatus = data["attendance_status"]?["today_status"];
+        await SessionManager.saveAttendanceStatus(attendanceStatus);
+
         isLoading = false;
         notifyListeners();
         return true;
@@ -40,4 +43,39 @@ class LoginProvider extends ChangeNotifier {
     notifyListeners();
     return false;
   }
+
+  Future<bool> changePassword({
+    required String oldPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    isLoading = true;
+    error = null;
+    notifyListeners();
+
+    try {
+      final response = await ApiServices.changePassword(
+        oldPassword: oldPassword,
+        newPassword: newPassword,
+        confirmPassword: confirmPassword,
+      );
+
+      if (response != null && response["status"] == true) {
+        await SessionManager.clearSession();
+
+        isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        error = response?["message"] ?? "Change password failed";
+      }
+    } catch (e) {
+      error = e.toString();
+    }
+
+    isLoading = false;
+    notifyListeners();
+    return false;
+  }
+
 }

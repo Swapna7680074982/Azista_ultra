@@ -26,7 +26,7 @@ class AttendanceCard extends StatelessWidget {
         children: [
           _row("Started At", _format(data.start)),
           const SizedBox(height: 6),
-          _row("Ended At", _format(data.end)),
+          _row("Ended At", data.end != null ? _format(data.end!) : "-"),
           const SizedBox(height: 4),
 
           // if (data.hasRequest)

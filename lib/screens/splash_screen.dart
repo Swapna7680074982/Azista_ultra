@@ -1,9 +1,9 @@
 import 'dart:async';
-
-import 'package:azista_ultra/constants/image_constants.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../constants/image_constants.dart';
+import '../permissions/SessionManager.dart';
+import 'Homes/main_shell_screen.dart';
 import 'login/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -18,12 +18,26 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 3), () {
+    _checkSession();
+  }
+
+  Future<void> _checkSession() async {
+    await Future.delayed(const Duration(seconds: 2));
+
+    final token = await SessionManager.getToken();
+    final isExpired = await SessionManager.isSessionExpired();
+
+    if (token != null && !isExpired) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => LoginScreen()),
+        MaterialPageRoute(builder: (_) => const MainShellScreen()),
       );
-    });
+    } else {
+       Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) =>  LoginScreen()),
+      );
+    }
   }
 
   @override

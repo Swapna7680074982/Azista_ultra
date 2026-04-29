@@ -1,13 +1,86 @@
 import 'package:flutter/cupertino.dart';
 
+import '../../permissions/AppStateProvider.dart';
 import '../../permissions/SessionManager.dart';
+import '../../services/api_services.dart';
 
 class HomeProvider extends ChangeNotifier {
   List distributors = [];
   String? selectedDistributor;
+  Map<String, dynamic>? todayAttendance;
+  bool isAttendanceLoading = false;
+  bool isLoading = false;
+  String? message;
 
   Future<void> loadDistributors() async {
     distributors = await SessionManager.getDistributors();
+    notifyListeners();
+  }
+
+  Future<void> initializeAttendance(AppStateProvider appState) async {
+    final status = await SessionManager.getAttendanceStatus();
+
+    if (status == "CHECKED_IN") {
+      appState.setOnline(true);
+    } else {
+      appState.setOnline(false);
+    }
+  }
+
+  Future<bool> checkIn() async {
+    isLoading = true;
+    notifyListeners();
+
+    final res = await ApiServices.markAttendance(type: "IN");
+
+    isLoading = false;
+    notifyListeners();
+
+    if (res != null && res["status"] == true) {
+      message = res["message"];
+      await SessionManager.saveAttendanceStatus("CHECKED_IN");
+      return true;
+    }
+
+    message = res?["message"] ?? "Check-in failed";
+    return false;
+  }
+
+  Future<bool> checkOut() async {
+    isLoading = true;
+    notifyListeners();
+
+    final res = await ApiServices.markAttendance(type: "OUT");
+
+
+
+    isLoading = false;
+    notifyListeners();
+
+
+    if (res != null && res["status"] == true) {
+      message = res["message"];
+      await SessionManager.saveAttendanceStatus("CHECKED_OUT");
+      return true;
+    }
+
+    message = res?["message"] ?? "Check-out failed";
+    return false;
+  }
+
+  Future<void> fetchTodayAttendance() async {
+    isAttendanceLoading = true;
+    notifyListeners();
+
+    final res = await ApiServices.getTodayAttendance();
+
+    if (res != null && res["data"] != null) {
+      todayAttendance = res["data"];
+    } else {
+      todayAttendance = null;
+    }
+
+    isAttendanceLoading = false;
     notifyListeners();
   }
 }

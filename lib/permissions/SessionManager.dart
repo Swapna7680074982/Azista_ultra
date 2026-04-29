@@ -22,6 +22,18 @@ class SessionManager {
     await prefs.setString(_expiryKey, midnight.toIso8601String());
   }
 
+  static const _attendanceKey = "attendance_status";
+
+  static Future<void> saveAttendanceStatus(String? status) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_attendanceKey, status ?? "");
+  }
+
+  static Future<String?> getAttendanceStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_attendanceKey);
+  }
+
   static Future<String?> getRefreshToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_refreshTokenKey);

@@ -5,8 +5,22 @@ import '../../constants/app_colors.dart';
 import 'attendance_provider.dart';
 
 
-class AttendanceScreen extends StatelessWidget {
+class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
+
+  @override
+  State<AttendanceScreen> createState() => _AttendanceScreenState();
+}
+
+class _AttendanceScreenState extends State<AttendanceScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      context.read<AttendanceProvider>().fetchAttendance();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,13 +47,10 @@ class AttendanceScreen extends StatelessWidget {
           _monthDropdown(context),
 
           Expanded(
-            child: provider.list.isEmpty
-                ? const Center(
-              child: Text(
-                "No attendance found",
-                style: TextStyle(color: Colors.grey),
-              ),
-            )
+            child: provider.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : provider.list.isEmpty
+                ? const Center(child: Text("No attendance found"))
                 : ListView(
               children: provider.list
                   .map((e) => AttendanceCard(data: e))

@@ -26,4 +26,5 @@ class LocationService {
       position.longitude.toString(),
     ];
   }
+
 }

@@ -1,43 +1,60 @@
 import 'package:flutter/material.dart';
 
+import '../../services/api_services.dart';
+
 class DistributionProvider extends ChangeNotifier {
-  String _selectedCity = "HYDERABAD";
-  String _selectedPoint = "POINT 1";
-  String _selectedRoute = "UPPAL";
-  final Map<String, Map<String, List<String>>> _data = {
-    "HYDERABAD": {
-      "POINT 1": ["UPPAL", "MIYAPUR"],
-      "POINT 2": ["KUKATPALLY", "LB NAGAR"],
-    },
-    "BANGALORE": {
-      "POINT A": ["WHITEFIELD", "BTM"],
-      "POINT B": ["INDIRANAGAR", "MG ROAD"],
-    },
-  };
-  List<String> get cities => _data.keys.toList();
+  String? _selectedCity;
+  String? _selectedRoute;
 
-  List<String> get points =>
-      _data[_selectedCity]?.keys.toList() ?? [];
+  List<String> _cities = [];
+  Map<String, List<String>> _routesByCity = {};
 
-  List<String> get routes =>
-      _data[_selectedCity]?[_selectedPoint] ?? [];
+  List<String> get cities => _cities;
+  List<String> get routes => _routesByCity[_selectedCity] ?? [];
 
-  String get selectedCity => _selectedCity;
-  String get selectedPoint => _selectedPoint;
-  String get selectedRoute => _selectedRoute;
+  String? get selectedCity => _selectedCity;
+  String? get selectedRoute => _selectedRoute;
 
-  void setCity(String city) {
-    _selectedCity = city;
-    _selectedPoint = points.first;
-    _selectedRoute = routes.first;
+  bool isLoading = false;
 
+  Future<void> fetchRoutes() async {
+    isLoading = true;
+    notifyListeners();
+
+    final response = await ApiServices.getRoutes();
+
+    if (response != null) {
+      final routes = response["routes"] as Map<String, dynamic>;
+
+      Map<String, List<String>> tempMap = {};
+
+      for (var item in routes.values) {
+        final city = item["CITY"];
+        final route = item["ROUTE"];
+
+        if (!tempMap.containsKey(city)) {
+          tempMap[city] = [];
+        }
+
+        tempMap[city]!.add(route);
+      }
+
+      _routesByCity = tempMap;
+      _cities = tempMap.keys.toList();
+
+      if (_cities.isNotEmpty) {
+        _selectedCity = _cities.first;
+        _selectedRoute = _routesByCity[_selectedCity]!.first;
+      }
+    }
+
+    isLoading = false;
     notifyListeners();
   }
 
-  void setPoint(String point) {
-    _selectedPoint = point;
-    _selectedRoute = routes.first;
-
+  void setCity(String city) {
+    _selectedCity = city;
+    _selectedRoute = _routesByCity[city]!.first;
     notifyListeners();
   }
 

@@ -6,27 +6,23 @@ import '../../profile.dart';
 import 'distribution_provider.dart';
 import 'outlets/outlets_screen.dart';
 
-
-class DistributionNetworkScreen extends StatelessWidget {
+class DistributionNetworkScreen extends StatefulWidget {
   const DistributionNetworkScreen({super.key});
 
-  Widget dropdownCard(String value) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      height: 55,
-      decoration: BoxDecoration(
-        color: AppColors.inputFill,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(value),
-          const Icon(Icons.keyboard_arrow_down),
-        ],
-      ),
-    );
+  @override
+  State<DistributionNetworkScreen> createState() =>
+      _DistributionNetworkScreenState();
+}
+
+class _DistributionNetworkScreenState
+    extends State<DistributionNetworkScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() =>
+        Provider.of<DistributionProvider>(context, listen: false)
+            .fetchRoutes());
   }
 
   @override
@@ -41,19 +37,13 @@ class DistributionNetworkScreen extends StatelessWidget {
         elevation: 0,
         toolbarHeight: 60,
         titleSpacing: 0,
-
         leading: Builder(
           builder: (context) => Padding(
             padding: const EdgeInsets.only(left: 12),
             child: GestureDetector(
-              onTap: () {
-                Scaffold.of(context).openDrawer();
-              },
-              child: const Icon(
-                Icons.menu,
-                color: AppColors.white,
-                size: 26,
-              ),
+              onTap: () => Scaffold.of(context).openDrawer(),
+              child: const Icon(Icons.menu,
+                  color: AppColors.white, size: 26),
             ),
           ),
         ),
@@ -66,7 +56,10 @@ class DistributionNetworkScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: Column(
+
+      body: provider.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
         children: [
           const SizedBox(height: 10),
 
@@ -75,15 +68,12 @@ class DistributionNetworkScreen extends StatelessWidget {
             child: Column(
               children: [
                 DropdownButtonFormField<String>(
-                  initialValue: provider.selectedCity,
+                  value: provider.selectedCity,
+                  hint: const Text("Select City"),
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: AppColors.inputFill,
                     border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
                   ),
                   items: provider.cities.map((city) {
                     return DropdownMenuItem(
@@ -92,44 +82,21 @@ class DistributionNetworkScreen extends StatelessWidget {
                     );
                   }).toList(),
                   onChanged: (value) {
-                    if (value != null) provider.setCity(value);
+                    if (value != null) {
+                      provider.setCity(value);
+                    }
                   },
                 ),
 
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: provider.selectedPoint,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: AppColors.inputFill,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                  ),
-                  items: provider.points.map((point) {
-                    return DropdownMenuItem(
-                      value: point,
-                      child: Text(point),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) provider.setPoint(value);
-                  },
-                ),
 
-                const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  initialValue: provider.selectedRoute,
+                  value: provider.selectedRoute,
+                  hint: const Text("Select Route"),
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: AppColors.inputFill,
                     border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
                   ),
                   items: provider.routes.map((route) {
                     return DropdownMenuItem(
@@ -138,7 +105,9 @@ class DistributionNetworkScreen extends StatelessWidget {
                     );
                   }).toList(),
                   onChanged: (value) {
-                    if (value != null) provider.setRoute(value);
+                    if (value != null) {
+                      provider.setRoute(value);
+                    }
                   },
                 ),
               ],
@@ -152,13 +121,14 @@ class DistributionNetworkScreen extends StatelessWidget {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.buttonBlue,
-                minimumSize: const Size(double.infinity, 40),
-
+                minimumSize: const Size(double.infinity, 45),
                 shape: const RoundedRectangleBorder(
                   borderRadius: BorderRadius.zero,
                 ),
               ),
-              onPressed: () {
+              onPressed: provider.selectedRoute == null
+                  ? null
+                  : () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(

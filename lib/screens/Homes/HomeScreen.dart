@@ -6,6 +6,7 @@ import '../../permissions/AccessValidator.dart';
 import '../../permissions/AppStateProvider.dart';
 import '../../profile.dart';
 import '../attendance/Attendancescreen.dart';
+import '../attendance/attendance_provider.dart';
 import '../distribution_list/DistributorStockScreen.dart';
 import '../leave_management/leave_management_screen.dart';
 import '../productivity/ProductivityScreen.dart';
@@ -21,12 +22,20 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   @override
+  @override
   void initState() {
     super.initState();
 
-    Future.microtask(() {
-      Provider.of<HomeProvider>(context, listen: false)
-          .loadDistributors();
+    Future.microtask(() async {
+      final homeProvider =
+      Provider.of<HomeProvider>(context, listen: false);
+
+      final appState =
+      Provider.of<AppStateProvider>(context, listen: false);
+
+      await homeProvider.loadDistributors();
+      await homeProvider.initializeAttendance(appState);
+      await homeProvider.fetchTodayAttendance();
     });
   }
   @override
@@ -66,21 +75,66 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
 
         actions: [
-          Transform.scale(
-            scale: 0.75,
-            child: Switch(
-              value: appState.isOnline,
-              onChanged: (val) {
-                appState.setOnline(val);
-              },
+          Consumer<HomeProvider>(
+            builder: (context, homeProvider, _) {
+              final appState = Provider.of<AppStateProvider>(context);
 
-              activeThumbColor: AppColors.button,
-              activeTrackColor: AppColors.button.withValues(alpha: 0.35),
-              inactiveThumbColor: AppColors.white,
-              inactiveTrackColor: AppColors.white.withValues(alpha: 0.4),
+              return Transform.scale(
+                scale: 0.75,
+                child: homeProvider.isLoading
+                    ? const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                )
+                    : Switch(
+                  value: appState.isOnline,
 
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
+                  onChanged: (val) async {
+                    bool success = false;
+
+                    if (val) {
+                      success = await homeProvider.checkIn();
+
+                      if (success) {
+                        appState.setOnline(true);
+
+                        await homeProvider.fetchTodayAttendance();
+                      }
+                    } else {
+                      success = await homeProvider.checkOut();
+
+                      if (success) {
+                        appState.setOnline(false);
+
+                        await homeProvider.fetchTodayAttendance();
+                      }
+                    }
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(homeProvider.message ?? ""),
+                      ),
+                    );
+                  },
+                  activeThumbColor: AppColors.button,
+                  activeTrackColor:
+                  AppColors.button.withValues(alpha: 0.35),
+                  inactiveThumbColor: AppColors.white,
+                  inactiveTrackColor:
+                  AppColors.white.withValues(alpha: 0.4),
+
+                  materialTapTargetSize:
+                  MaterialTapTargetSize.shrinkWrap,
+                ),
+              );
+            },
           ),
 
           const SizedBox(width: 6),
@@ -262,24 +316,48 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(height: 20),
 
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.access_time, size: 18, color: Colors.grey),
-              SizedBox(width: 6),
-              Text("Current Session"),
-            ],
-          ),
+          Consumer<HomeProvider>(
+            builder: (context, provider, _) {
+              if (provider.isAttendanceLoading) {
+                return const CircularProgressIndicator();
+              }
 
-          const SizedBox(height: 7),
+              if (provider.todayAttendance == null) {
+                return const Text("No attendance data");
+              }
 
-          Text(
-            "20-Apr-2026 09:24 am",
-            style: TextStyle(
-              color: AppColors.primary,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+              final data = provider.todayAttendance!;
+              final sessions = data["sessions"] ?? [];
+
+              String checkIn = "-";
+              String workingHours = "0";
+
+              if (sessions.isNotEmpty) {
+                final lastSession = sessions.last;
+
+                checkIn = lastSession["check_in"] ?? "-";
+                workingHours =
+                    lastSession["working_hours"]?.toString() ?? "0";
+              }
+
+              return Column(
+                children: [
+                  Text(
+                    "Check-In: $checkIn",
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Working Hours: $workingHours hrs",
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ],
+              );
+            },
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),

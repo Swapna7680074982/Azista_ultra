@@ -125,4 +125,184 @@ class ApiServices {
       return false;
     }
   }
+  static Future<Map<String, dynamic>?> changePassword({
+    required String oldPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+
+      if (token == null) {
+        AppLogger.warning("No token found");
+        return null;
+      }
+
+      final payload = {
+        "old_password": oldPassword,
+        "new_password": newPassword,
+        "confirm_password": confirmPassword,
+      };
+
+      AppLogger.info("Change Password API called");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.changePassword,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      AppLogger.info("Change Password response: ${response.data}");
+
+      if (response.statusCode == 200 && response.data["status"] == true) {
+        return response.data;
+      }
+
+      return response.data;
+    } catch (e) {
+      AppLogger.error("Change Password error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getRoutes() async {
+    try {
+      final token = await SessionManager.getToken();
+
+      if (token == null) {
+        AppLogger.warning("No token found for getRoutes");
+        return null;
+      }
+
+      AppLogger.info("Get Routes API called");
+
+      final response = await _dio.get(
+        AppUrls.routes,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      AppLogger.info("Get Routes response: ${response.data}");
+
+      if (response.statusCode == 200 && response.data["status"] == true) {
+        return response.data;
+      }
+
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Routes error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> markAttendance({
+    required String type,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+
+      final coords = await LocationService.getCoordinates();
+      final deviceId =
+          NotificationService.instance.deviceId ?? "no_device";
+
+      final payload = {
+        "type": type.trim(),
+        "meta": {
+          "deviceId": deviceId,
+          "latitude": double.tryParse(coords[0]) ?? 0.0,
+          "longitude": double.tryParse(coords[1]) ?? 0.0,
+        }
+      };
+
+      final response = await _dio.post(
+        AppUrls.markAttendance,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status! < 500,
+        ),
+      );
+
+      print("API RESPONSE: ${response.data}");
+
+      return response.data;
+    } catch (e) {
+      print("REAL ERROR: $e");
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getTodayAttendance() async {
+    try {
+      final token = await SessionManager.getToken();
+
+      final response = await _dio.get(
+        AppUrls.todaysAttendance,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 &&
+          response.data["status"] == true) {
+        return response.data;
+      }
+
+      return null;
+    } catch (e) {
+      print("Today Attendance Error: $e");
+      return null;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>?> getAttendanceRange({
+    required String fromDate,
+    required String toDate,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+
+      final payload = {
+        "from_date": fromDate,
+        "to_date": toDate,
+      };
+
+      AppLogger.info("Attendance Range API called");
+      AppLogger.info("Payload: $payload");
+
+      final response = await _dio.post(
+        AppUrls.attendanceRange,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      AppLogger.info("Attendance response: ${response.data}");
+
+      if (response.statusCode == 200 &&
+          response.data["status"] == true) {
+        return List<Map<String, dynamic>>.from(response.data["data"]);
+      }
+
+      return null;
+    } catch (e) {
+      AppLogger.error("Attendance API error", e);
+      return null;
+    }
+  }
 }
