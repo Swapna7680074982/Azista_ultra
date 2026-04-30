@@ -91,40 +91,43 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
           color: AppColors.white,
         ),
       ),
-      body: currentLatLng == null
-          ? const Center(child: CircularProgressIndicator())
-          : GoogleMap(
+      body: GoogleMap(
         initialCameraPosition: CameraPosition(
           target: outletLatLng,
           zoom: 14,
         ),
         myLocationEnabled: true,
+        myLocationButtonEnabled: true,
         onMapCreated: (controller) {
           mapController = controller;
-          _moveCamera();
+          if (currentLatLng != null) {
+            _moveCamera();
+          }
         },
         markers: {
-          Marker(
-            markerId: const MarkerId("current"),
-            position: currentLatLng!,
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueBlue,
+          if (currentLatLng != null)
+            Marker(
+              markerId: const MarkerId("current"),
+              position: currentLatLng!,
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueBlue,
+              ),
             ),
-          ),
           Marker(
             markerId: const MarkerId("outlet"),
             position: outletLatLng,
           ),
         },
         circles: {
-          Circle(
-            circleId: const CircleId("accuracy"),
-            center: currentLatLng!,
-            radius: 50,
-            fillColor: Colors.blue.withOpacity(0.2),
-            strokeColor: Colors.blue,
-            strokeWidth: 1,
-          ),
+          if (currentLatLng != null)
+            Circle(
+              circleId: const CircleId("accuracy"),
+              center: currentLatLng!,
+              radius: 50,
+              fillColor: Colors.blue.withOpacity(0.2),
+              strokeColor: Colors.blue,
+              strokeWidth: 1,
+            ),
         },
       ),
     );

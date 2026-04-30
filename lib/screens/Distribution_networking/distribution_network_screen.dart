@@ -126,13 +126,16 @@ class _DistributionNetworkScreenState
                   borderRadius: BorderRadius.zero,
                 ),
               ),
-              onPressed: provider.selectedRoute == null
+              onPressed: provider.selectedRoute == null || provider.selectedRouteId == null
                   ? null
                   : () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const OutletsScreen(),
+                    builder: (_) => OutletsScreen(
+                      routeId: int.tryParse(provider.selectedRouteId!) ?? 0,
+                      routeName: provider.selectedRoute!,
+                    ),
                   ),
                 );
               },

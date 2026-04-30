@@ -75,7 +75,7 @@ class HomeProvider extends ChangeNotifier {
     final res = await ApiServices.getTodayAttendance();
 
     if (res != null && res["data"] != null) {
-      todayAttendance = res["data"];
+      todayAttendance = res["data"] as Map<String, dynamic>;
     } else {
       todayAttendance = null;
     }

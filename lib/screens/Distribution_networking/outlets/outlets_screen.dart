@@ -8,8 +8,29 @@ import 'NewOutletScreen.dart';
 import 'PosBaseScreen.dart';
 import 'outlet_provider.dart';
 
-class OutletsScreen extends StatelessWidget {
-  const OutletsScreen({super.key});
+class OutletsScreen extends StatefulWidget {
+  final int routeId;
+  final String routeName;
+
+  const OutletsScreen({
+    super.key,
+    required this.routeId,
+    required this.routeName,
+  });
+
+  @override
+  State<OutletsScreen> createState() => _OutletsScreenState();
+}
+
+class _OutletsScreenState extends State<OutletsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      Provider.of<OutletProvider>(context, listen: false)
+          .fetchOutlets(widget.routeId);
+    });
+  }
 
   Widget outletCard(Outlet outlet, BuildContext context) {
     return InkWell(
@@ -179,13 +200,20 @@ class OutletsScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const NewOutletScreen(),
+                  builder: (_) => NewOutletScreen(
+                    routeId: widget.routeId,
+                    routeName: widget.routeName,
+                  ),
                 ),
               );
+              if (result == true) {
+                // Refresh list if registration was successful
+                provider.fetchOutlets(widget.routeId);
+              }
             },
             icon: const Icon(Icons.add_circle_outline),
           ),
@@ -217,11 +245,11 @@ class OutletsScreen extends StatelessWidget {
                     color: AppColors.inputFill,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("UPPAL"),
-                      Icon(Icons.arrow_drop_down),
+                      Text(widget.routeName),
+                      const Icon(Icons.arrow_drop_down),
                     ],
                   ),
                 ),
@@ -250,7 +278,11 @@ class OutletsScreen extends StatelessWidget {
           const SizedBox(height: 10),
 
           Expanded(
-            child: ListView.builder(
+            child: provider.isLoading 
+                ? const Center(child: CircularProgressIndicator()) 
+                : provider.outlets.isEmpty 
+                    ? const Center(child: Text("No outlets found")) 
+                    : ListView.builder(
               itemCount: provider.outlets.length,
               itemBuilder: (context, index) {
                 return outletCard(provider.outlets[index], context);

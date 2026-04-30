@@ -2,9 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../services/api_services.dart';
+import '../../../services/location_service.dart';
 
 class NewOutletScreen extends StatefulWidget {
-  const NewOutletScreen({super.key});
+  final int routeId;
+  final String routeName;
+
+  const NewOutletScreen({
+    super.key,
+    required this.routeId,
+    required this.routeName,
+  });
 
   @override
   State<NewOutletScreen> createState() => _NewOutletScreenState();
@@ -30,27 +39,134 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
   final TextEditingController altMobileController = TextEditingController();
   final TextEditingController altPositionController = TextEditingController();
   final TextEditingController altEmailController = TextEditingController();
-
-  String selectedType = "Outlet Types";
+  String selectedType = "Retailer";
   String gender = "Male";
-  String vicinityType = "vicinity Type";
-  String outletShape = "Outlet Shape";
-  String stockPosition = "Stock Position";
+  String vicinityType = "Near";
+  String outletShape = "Square";
+  String stockPosition = "Shelf Display";
   String isStoreLaunched = "Yes";
 
   TimeOfDay? openingTime;
   TimeOfDay? closingTime;
 
-  LatLng currentPosition = const LatLng(17.4435, 78.3772);
+  LatLng currentPosition = const LatLng(20.5937, 78.9629);
   Marker? marker;
+  bool isLoadingLocation = false;
+  bool isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
-    marker = Marker(
-      markerId: const MarkerId("marker"),
-      position: currentPosition,
-    );
+    _loadCurrentLocation();
+  }
+
+
+  Future<void> _loadCurrentLocation() async {
+    try {
+      final coords = await LocationService.getCoordinates();
+
+      final lat = double.parse(coords[0]);
+      final lng = double.parse(coords[1]);
+
+      final pos = LatLng(lat, lng);
+
+      if (mounted) {
+        setState(() {
+          currentPosition = pos;
+          marker = Marker(
+            markerId: const MarkerId("current"),
+            position: pos,
+          );
+        });
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(pos, 16),
+        );
+      }
+    } catch (e) {
+      print("Location error: $e");
+    }
+  }
+  Future<void> submitOutlet() async {
+    if (nameController.text.isEmpty ||
+        phoneController.text.isEmpty ||
+        addressController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill required fields")),
+      );
+      return;
+    }
+
+    if (phoneController.text.length != 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Invalid phone number")),
+      );
+      return;
+    }
+
+    if (marker == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select location on map")),
+      );
+      return;
+    }
+
+    if (isSubmitting) return;
+
+    setState(() => isSubmitting = true);
+
+    final payload = {
+      "route_id": widget.routeId,
+      "outlet_type": selectedType,
+      "outlet_name": nameController.text.trim(),
+      "owner_name": contactController.text.trim(),
+      "mobile": phoneController.text.trim(),
+      "whatsapp_mobile": whatsappController.text.trim(),
+      "date_of_birth": dobController.text,
+      "gender": gender,
+      "address": addressController.text.trim(),
+      "landmark": landmarkController.text.trim(),
+      "email": emailController.text.trim(),
+      "opening_time": _formatTime(openingTime),
+      "closing_time": _formatTime(closingTime),
+      "gst": gstController.text.trim(),
+      "area": areaController.text.trim(),
+      "vicinity_type": vicinityType,
+      "outlet_shape": outletShape,
+      "stock_position": stockPosition,
+      "store_year_launched": yearLaunchedController.text,
+      "daily_foot_traffic":
+      int.tryParse(footTrafficController.text) ?? 0,
+      "latitude": marker!.position.latitude,
+      "longitude": marker!.position.longitude,
+      "alt_name": altNameController.text.trim(),
+      "alt_mobile": altMobileController.text.trim(),
+      "alt_position": altPositionController.text.trim(),
+      "alt_email": altEmailController.text.trim(),
+    };
+
+    final res = await ApiServices.registerOutlet(payload: payload);
+
+    setState(() => isSubmitting = false);
+
+    final message = res?["message"]?.toString() ?? "Registration failed";
+    final status = res?["status"] == true;
+
+    if (status) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
+  String _formatTime(TimeOfDay? time) {
+    if (time == null) return "";
+    final hour = time.hour.toString().padLeft(2, '0');
+    final min = time.minute.toString().padLeft(2, '0');
+    return "$hour:$min";
   }
 
   @override
@@ -72,8 +188,10 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
           color: AppColors.white,
         ),
       ),
-      body: Column(
-        children: [
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Column(
@@ -101,11 +219,11 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                     color: AppColors.inputFill,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("UPPAL"),
-                      Icon(Icons.arrow_drop_down),
+                      Text(widget.routeName),
+                      const Icon(Icons.arrow_drop_down),
                     ],
                   ),
                 ),
@@ -115,12 +233,14 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
           const SizedBox(height: 5),
           SizedBox(
             height: 200,
-            child: GoogleMap(
+            child: isLoadingLocation
+                ? const Center(child: CircularProgressIndicator())
+                : GoogleMap(
               initialCameraPosition: CameraPosition(
                 target: currentPosition,
                 zoom: 14,
               ),
-              markers: {marker!},
+              markers: marker != null ? {marker!} : {},
               myLocationEnabled: true,
               onTap: (latLng) {
                 setState(() {
@@ -150,11 +270,8 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
               ],
             ),
           ),
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
+          Column(
+            children: [
 
                   _dropdownField(
                       value: selectedType,
@@ -305,18 +422,13 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                   _textField(altEmailController, "Email", Icons.email),
 
                   const SizedBox(height: 80),
-                ],
-              ),
-            ),
+            ],
           ),
 
           Padding(
             padding: const EdgeInsets.all(12),
             child: GestureDetector(
-              onTap: () {
-                print(nameController.text);
-                print(marker?.position.latitude);
-              },
+              onTap: submitOutlet,
               child: Container(
                 height: 50,
                 color: Colors.green,
@@ -330,7 +442,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
           const SizedBox(height: 40),
         ],
       ),
-    );
+    ));
   }
   Widget _textField(controller, hint, icon) {
     return _buildField(

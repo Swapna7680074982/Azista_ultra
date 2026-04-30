@@ -305,4 +305,111 @@ class ApiServices {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>?> registerOutlet({
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+
+      final response = await _dio.post(
+        "https://services.heterohcl.com/ultra-iris-v2/api/user/outlet_registration",
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      final data = response.data;
+
+      AppLogger.info("RAW STATUS: ${data["status"]}");
+      AppLogger.info("TYPE: ${data["status"].runtimeType}");
+
+      return {
+        "status": data["status"] == true || data["outlet_id"] != null,
+        "message": data["message"]?.toString() ?? "Success",
+        "outlet_id": data["outlet_id"],
+      };
+
+    } catch (e) {
+      return {
+        "status": false,
+        "message": "Registration failed"
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getUserOutlets({int? routeId}) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final payload = routeId != null ? {"route_id": routeId} : {};
+
+      final response = await _dio.post(
+        "https://services.heterohcl.com/ultra-iris-v2/api/user/get_user_outlets",
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data["status"] == true) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get User Outlets error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getNearbyOutlets({
+    required double latitude,
+    required double longitude,
+    int radius = 5,
+    int? routeId,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final payload = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "radius": radius,
+      };
+
+      if (routeId != null) {
+        payload["route_id"] = routeId;
+      }
+
+      final response = await _dio.post(
+        "https://services.heterohcl.com/ultra-iris-v2/api/user/get_nearby_outlets",
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("API FULL RESPONSE: ${response.data}");
+
+      if (response.statusCode == 200 && response.data["status"] == true) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Nearby Outlets error", e);
+      return null;
+    }
+  }
 }

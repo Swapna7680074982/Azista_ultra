@@ -3,12 +3,47 @@ import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../profile.dart';
 import '../../services/call_service.dart';
+import '../../services/location_service.dart';
 import '../Distribution_networking/outlets/PosBaseScreen.dart';
 import '../Distribution_networking/outlets/outlet_provider.dart';
 import '../../services/directions_map_screen.dart';
 
-class NearMeScreen extends StatelessWidget {
+class NearMeScreen extends StatefulWidget {
   const NearMeScreen({super.key});
+
+  @override
+  State<NearMeScreen> createState() => _NearMeScreenState();
+}
+
+class _NearMeScreenState extends State<NearMeScreen> {
+  bool _isLoadingLocation = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLocationAndOutlets();
+  }
+
+  Future<void> _fetchLocationAndOutlets() async {
+    try {
+      final coords = await LocationService.getCoordinates();
+      final lat = double.parse(coords[0]);
+      final lng = double.parse(coords[1]);
+
+      if (mounted) {
+        Provider.of<OutletProvider>(context, listen: false)
+            .fetchNearbyOutlets(lat, lng, radius: 5);
+      }
+    } catch (e) {
+      print("Error fetching location: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+      }
+    }
+  }
 
   Widget outletCard(Outlet outlet, BuildContext context) {
     return InkWell(
@@ -39,7 +74,14 @@ class NearMeScreen extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               
               const SizedBox(height: 4),
-              Text("OUTLET ID: ${outlet.id}", style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text("OUTLET ID: ${outlet.id}", style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
+                  if (outlet.distanceKm != null)
+                    Text("${outlet.distanceKm!.toStringAsFixed(2)} km away", style: TextStyle(color: Colors.red.shade700, fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
+              ),
 
               const Divider(height: 24),
 
@@ -55,7 +97,7 @@ class NearMeScreen extends StatelessWidget {
 
               Row(
                 children: [
-                  Icon(Icons.location_on, size: 18, color: Colors.grey.shade500),
+                  Icon(Icons.phone, size: 18, color: Colors.grey.shade500),
                   const SizedBox(width: 12),
                   Text(outlet.phone, style: TextStyle(color: Colors.grey.shade800)),
                 ],
@@ -238,16 +280,20 @@ class NearMeScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
-              "Outlets of 100 mts around current location",
+              "Outlets around current location (5 km radius)",
               style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
             ),
           ),
 
           Expanded(
-            child: ListView.builder(
-              itemCount: provider.outlets.length,
+            child: _isLoadingLocation || provider.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : provider.nearbyOutlets.isEmpty
+                    ? const Center(child: Text("No nearby outlets found"))
+                    : ListView.builder(
+              itemCount: provider.nearbyOutlets.length,
               itemBuilder: (context, index) {
-                return outletCard(provider.outlets[index], context);
+                return outletCard(provider.nearbyOutlets[index], context);
               },
             ),
           )
