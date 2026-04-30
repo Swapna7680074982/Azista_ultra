@@ -313,7 +313,7 @@ class ApiServices {
       final token = await SessionManager.getToken();
 
       final response = await _dio.post(
-        "https://services.heterohcl.com/ultra-iris-v2/api/user/outlet_registration",
+        AppUrls.outletRegistration,
         data: payload,
         options: Options(
           headers: {
@@ -350,7 +350,7 @@ class ApiServices {
       final payload = routeId != null ? {"route_id": routeId} : {};
 
       final response = await _dio.post(
-        "https://services.heterohcl.com/ultra-iris-v2/api/user/get_user_outlets",
+        AppUrls.Outlets,
         data: payload,
         options: Options(
           headers: {
@@ -391,7 +391,7 @@ class ApiServices {
       }
 
       final response = await _dio.post(
-        "https://services.heterohcl.com/ultra-iris-v2/api/user/get_nearby_outlets",
+        AppUrls.nearOutlets,
         data: payload,
         options: Options(
           headers: {
