@@ -412,4 +412,59 @@ class ApiServices {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>?> getProductsWithSkus() async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.get(
+        AppUrls.getProductsWithSkus,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data["status"] == true) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Products With SKUs error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> insertDistributorStock({
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.post(
+        AppUrls.insertDistributorStock,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      return {
+        "status": response.data["status"] == true,
+        "message": response.data["message"]?.toString() ?? "Success",
+      };
+    } catch (e) {
+      AppLogger.error("Insert Distributor Stock error", e);
+      return {
+        "status": false,
+        "message": "Failed to insert stock",
+      };
+    }
+  }
 }

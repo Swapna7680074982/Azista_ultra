@@ -12,4 +12,6 @@ class AppUrls {
   static const String outletRegistration = "$baseUrl/user/outlet_registration";
   static const String Outlets = "$baseUrl/user/get_user_outlets";
   static const String nearOutlets = "$baseUrl/user/get_nearby_outlets";
+  static const String getProductsWithSkus = "$baseUrl/distribution/get_products_with_skus";
+  static const String insertDistributorStock = "$baseUrl/distribution/insert_distributor_stock";
 }

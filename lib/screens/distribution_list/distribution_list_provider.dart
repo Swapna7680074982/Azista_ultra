@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/api_services.dart';
 
 class DistributionListProvider extends ChangeNotifier {
   // DistributorStatusScreen State
@@ -43,24 +44,68 @@ class DistributionListProvider extends ChangeNotifier {
   List<Map<String, String>> get stockOnHandProducts => _stockOnHandProducts;
 
   // DistributorStockScreen State
-  final Map<String, List<String>> _distributorStockSections = {
-    "Kwik Mint": [
-      "Burst (Boxes)",
-      "1X 44'S (1X 2'S) (Boxes)",
-      "BURST'S CASSETS(10 X 20S) (Pcs)",
-      "PREMIUM STRONG CASSET 20",
-      "KWIK MINT STRONG CASSETS(10 X 20'S)",
-      "KWIK MINT BURST",
-    ],
-    "Menthopas": ["3 PATCHES POUCHES (Pcs)"],
-    "Sparkel": [
-      "FACIAL MASK (Pcs)",
-      "GLOW FACIAL MASK (Pcs)",
-      "YOUTH FACIAL MASK (Pcs)",
-    ],
-    "Spice Sip": ["(1X6) (Boxes)"],
-    "Taste Good": ["KARELA BISCUIT 100G (Boxes)"],
-  };
+  bool _isLoadingProducts = false;
+  bool get isLoadingProducts => _isLoadingProducts;
 
-  Map<String, List<String>> get distributorStockSections => _distributorStockSections;
+  List<dynamic> _productsWithSkus = [];
+  List<dynamic> get productsWithSkus => _productsWithSkus;
+
+  // Map to hold stock quantities: key is "productId_skuId", value is quantity
+  final Map<String, int> _stockQuantities = {};
+  Map<String, int> get stockQuantities => _stockQuantities;
+
+  Future<void> fetchProductsWithSkus() async {
+    _isLoadingProducts = true;
+    notifyListeners();
+
+    final response = await ApiServices.getProductsWithSkus();
+    if (response != null && response['status'] == true) {
+      _productsWithSkus = response['data'] ?? [];
+      _stockQuantities.clear();
+    }
+
+    _isLoadingProducts = false;
+    notifyListeners();
+  }
+
+  void updateStockQuantity(int productId, int skuId, String value) {
+    int qty = int.tryParse(value) ?? 0;
+    _stockQuantities["${productId}_$skuId"] = qty;
+  }
+
+  Future<bool> submitDistributorStock(int distributorId) async {
+    List<Map<String, dynamic>> stocks = [];
+
+    _stockQuantities.forEach((key, quantity) {
+      if (quantity > 0) {
+        final parts = key.split('_');
+        final productId = int.parse(parts[0]);
+        final skuId = int.parse(parts[1]);
+        
+        stocks.add({
+          "product_id": productId,
+          "sku_id": skuId,
+          "quantity": quantity,
+        });
+      }
+    });
+
+    if (stocks.isEmpty) {
+      return false; // Nothing to submit
+    }
+
+    final payload = {
+      "distributor_id": distributorId,
+      "stocks": stocks,
+    };
+
+    final response = await ApiServices.insertDistributorStock(payload: payload);
+    
+    if (response != null && response['status'] == true) {
+      _stockQuantities.clear();
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
 }

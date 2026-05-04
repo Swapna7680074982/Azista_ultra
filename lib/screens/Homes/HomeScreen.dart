@@ -193,7 +193,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                   .toList(),
 
                               onChanged: (value) {
-                                appState.setDistributor(value);
+                                final selected = homeProvider.distributors.firstWhere(
+                                  (d) => d["distributor_name"] == value,
+                                  orElse: () => null,
+                                );
+                                int? id;
+                                if (selected != null) {
+                                  // ID can be string or int in JSON, ensure it's parsed to int
+                                  if (selected["distributor_id"] is int) {
+                                    id = selected["distributor_id"];
+                                  } else if (selected["distributor_id"] != null) {
+                                    id = int.tryParse(selected["distributor_id"].toString());
+                                  }
+                                }
+                                appState.setDistributor(value, id: id);
                               },
                             );
                           },
