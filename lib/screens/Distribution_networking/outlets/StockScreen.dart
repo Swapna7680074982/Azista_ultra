@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'outlet_activity_provider.dart';
 import '../../../constants/app_colors.dart';
+import '../../../permissions/AppStateProvider.dart';
+
 class StockBody extends StatefulWidget {
-  const StockBody({super.key});
+  final int outletId;
+  const StockBody({super.key, required this.outletId});
 
   @override
   State<StockBody> createState() => _StockBodyState();
@@ -51,11 +54,31 @@ class _StockBodyState extends State<StockBody> {
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                      onPressed: () {
-                        // Insert logic for submitting sampling stock here
+                      onPressed: () async {
+                        final appState = Provider.of<AppStateProvider>(context, listen: false);
+                        final distributorId = appState.selectedDistributorId ?? 6;
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                           const SnackBar(content: Text('Submitting Stock...')),
+                        );
+
+                        final result = await provider.submitPosTransaction("stock", widget.outletId, distributorId);
+
+                        if (!context.mounted) return;
+                        
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        if (result != null && result['status'] == true) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                             SnackBar(content: Text(result['message'] ?? 'Stock submitted successfully!'), backgroundColor: Colors.green),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                             SnackBar(content: Text(result?['message'] ?? 'Failed to submit stock'), backgroundColor: Colors.red),
+                          );
+                        }
                       },
                       child: const Text(
-                        "SUBMIT SAMPLING",
+                        "SUBMIT STOCK",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,

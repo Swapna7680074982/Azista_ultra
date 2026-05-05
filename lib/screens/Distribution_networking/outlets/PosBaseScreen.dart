@@ -8,6 +8,7 @@ import 'PreviousTransactionsScreen.dart';
 import 'PromotionsScreen.dart';
 import 'SamplingScreen.dart';
 import 'StockScreen.dart';
+import 'SaleScreen.dart';
 import 'outlet_provider.dart';
 
 import '../../../services/api_services.dart';
@@ -58,9 +59,9 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   Widget _getModuleBody(String moduleCode) {
     switch (moduleCode) {
       case "SAMP":
-        return const SamplingBody();
+        return SamplingBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
       case "STOCK":
-        return const StockBody();
+        return StockBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
       case "POB":
         return PobBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
       case "BRD":
@@ -68,7 +69,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       case "PRM":
         return const PromotionsBody();
       case "SALE":
-        return const Center(child: Text("SALE Screen (TBD)"));
+        return SaleBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
       default:
         return Center(child: Text("$moduleCode Screen"));
     }
@@ -342,7 +343,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(
                 vertical: 12,
-                horizontal: 15,
+                horizontal: 25,
               ),
               color: isSelected ? Colors.white : Colors.grey[300],
               child: Center(

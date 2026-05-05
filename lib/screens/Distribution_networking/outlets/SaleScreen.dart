@@ -1,18 +1,19 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'outlet_activity_provider.dart';
-import '../../../constants/app_colors.dart';
 import '../../../permissions/AppStateProvider.dart';
+import '../../../constants/app_colors.dart';
 
-class SamplingBody extends StatefulWidget {
+class SaleBody extends StatefulWidget {
   final int outletId;
-  const SamplingBody({super.key, required this.outletId});
+  const SaleBody({super.key, required this.outletId});
 
   @override
-  State<SamplingBody> createState() => _SamplingBodyState();
+  State<SaleBody> createState() => _SaleBodyState();
 }
 
-class _SamplingBodyState extends State<SamplingBody> {
+class _SaleBodyState extends State<SaleBody> {
   @override
   void initState() {
     super.initState();
@@ -58,26 +59,26 @@ class _SamplingBodyState extends State<SamplingBody> {
                         final distributorId = appState.selectedDistributorId ?? 6;
 
                         ScaffoldMessenger.of(context).showSnackBar(
-                           const SnackBar(content: Text('Submitting Sampling...')),
+                           const SnackBar(content: Text('Submitting Sale...')),
                         );
 
-                        final result = await provider.submitPosTransaction("sampling", widget.outletId, distributorId);
+                        final result = await provider.submitPosTransaction("sale", widget.outletId, distributorId);
 
                         if (!context.mounted) return;
                         
                         ScaffoldMessenger.of(context).hideCurrentSnackBar();
                         if (result != null && result['status'] == true) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                             SnackBar(content: Text(result['message'] ?? 'Sampling submitted successfully!'), backgroundColor: Colors.green),
+                             SnackBar(content: Text(result['message'] ?? 'Sale submitted successfully!'), backgroundColor: Colors.green),
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                             SnackBar(content: Text(result?['message'] ?? 'Failed to submit sampling'), backgroundColor: Colors.red),
+                             SnackBar(content: Text(result?['message'] ?? 'Failed to submit sale'), backgroundColor: Colors.red),
                           );
                         }
                       },
                       child: const Text(
-                        "SUBMIT SAMPLING",
+                        "SUBMIT SALE",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
@@ -129,7 +130,7 @@ class _SamplingBodyState extends State<SamplingBody> {
   Widget _buildSkuRow(int productId, dynamic sku, OutletActivityProvider provider) {
     final skuName = sku['sku_displayname'] ?? 'Unknown SKU';
     final skuId = sku['sku_id'];
-    final currentQty = provider.samplingQuantities["${productId}_$skuId"]?.toString() ?? "";
+    final currentQty = provider.saleQuantities["${productId}_$skuId"]?.toString() ?? "";
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -150,7 +151,7 @@ class _SamplingBodyState extends State<SamplingBody> {
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.done,
               onChanged: (value) {
-                provider.updateSamplingQuantity(productId, skuId, value);
+                provider.updateSaleQuantity(productId, skuId, value);
               },
               decoration: InputDecoration(
                 contentPadding: const EdgeInsets.symmetric(vertical: 4),

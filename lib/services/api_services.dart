@@ -612,4 +612,32 @@ class ApiServices {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>?> submitPosTransaction({
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.post(
+        AppUrls.posTransaction,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data["status"] == "success") {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("POS Transaction error", e);
+      return null;
+    }
+  }
 }

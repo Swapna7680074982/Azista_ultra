@@ -62,7 +62,19 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
         ),
       ),
         body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(15, 15, 15, 5),
+              child: Text(
+                "Distributor: ${Provider.of<AppStateProvider>(context).selectedDistributor ?? 'Not Selected'}",
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.all(10),
               child: Row(
@@ -152,7 +164,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "POINT NAME: ${outlet['outlet_name']}".toUpperCase(),
+                                  "OUTLET NAME: ${outlet['outlet_name']}".toUpperCase(),
                                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                 ),
                                 const SizedBox(height: 5),

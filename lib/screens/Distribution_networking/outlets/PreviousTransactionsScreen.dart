@@ -132,7 +132,7 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
                 children: [
                   Text("POB NUMBER: ${pob['pob_number'] ?? 'N/A'}", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 5),
-                  Text("Total Amount: \$${pob['total_amount'] ?? '0.00'}"),
+                  //Text("Total Amount: \$${pob['total_amount'] ?? '0.00'}"),
                   Text("Date: ${pob['created_at'] ?? 'N/A'}"),
                   Text("Status: ${pob['status'] ?? 'N/A'}"),
                   if (items.isNotEmpty) ...[

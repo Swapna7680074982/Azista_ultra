@@ -17,6 +17,12 @@ class OutletActivityProvider extends ChangeNotifier {
   final Map<String, int> _stockQuantities = {};
   Map<String, int> get stockQuantities => _stockQuantities;
 
+  final Map<String, int> _saleQuantities = {};
+  Map<String, int> get saleQuantities => _saleQuantities;
+
+  final Map<String, int> _samplingQuantities = {};
+  Map<String, int> get samplingQuantities => _samplingQuantities;
+
   bool _isLoadingDistributorStock = false;
   bool get isLoadingDistributorStock => _isLoadingDistributorStock;
 
@@ -63,6 +69,8 @@ class OutletActivityProvider extends ChangeNotifier {
     if (response != null && response['status'] == true) {
       _productsWithSkus = response['data'] ?? [];
       _stockQuantities.clear();
+      _saleQuantities.clear();
+      _samplingQuantities.clear();
     }
 
     _isLoadingProducts = false;
@@ -72,6 +80,63 @@ class OutletActivityProvider extends ChangeNotifier {
   void updateStockQuantity(int productId, int skuId, String value) {
     int qty = int.tryParse(value) ?? 0;
     _stockQuantities["${productId}_$skuId"] = qty;
+  }
+
+  void updateSaleQuantity(int productId, int skuId, String value) {
+    int qty = int.tryParse(value) ?? 0;
+    _saleQuantities["${productId}_$skuId"] = qty;
+  }
+
+  void updateSamplingQuantity(int productId, int skuId, String value) {
+    int qty = int.tryParse(value) ?? 0;
+    _samplingQuantities["${productId}_$skuId"] = qty;
+  }
+
+  Future<Map<String, dynamic>?> submitPosTransaction(String posType, int outletId, int distributorId) async {
+    Map<String, int> targetMap;
+    if (posType == "sale") {
+      targetMap = _saleQuantities;
+    } else if (posType == "sampling") {
+      targetMap = _samplingQuantities;
+    } else {
+      targetMap = _stockQuantities;
+    }
+
+    List<Map<String, dynamic>> items = [];
+
+    targetMap.forEach((key, quantity) {
+      if (quantity > 0) {
+        final parts = key.split('_');
+        final productId = int.parse(parts[0]);
+        final skuId = int.parse(parts[1]);
+        
+        items.add({
+          "product_id": productId,
+          "sku_id": skuId,
+          "quantity": quantity,
+        });
+      }
+    });
+
+    if (items.isEmpty) {
+      return {"status": false, "message": "Please enter quantities"};
+    }
+
+    final payload = {
+      "pos_type": posType,
+      "distributor_id": distributorId,
+      "outlet_id": outletId,
+      "items": items,
+    };
+
+    final response = await ApiServices.submitPosTransaction(payload: payload);
+    
+    if (response != null && response['status'] == "success") {
+      targetMap.clear();
+      notifyListeners();
+      return {"status": true, "message": response['message'] ?? "$posType transaction success"};
+    }
+    return {"status": false, "message": "Transaction failed"};
   }
 
   Future<bool> submitPob(int outletId, int distributorId) async {
