@@ -33,15 +33,43 @@ class DistributionListProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  final List<Map<String, String>> _stockOnHandProducts = [
-    {"name": "3 - BURST'S CASSETS(10 X 20'S) (PCS)", "qty": "5"},
-    {"name": "2 - 1X 44'S (1X 2'S) (BOXES)", "qty": "5"},
-    {"name": "1 - BURST (BOXES)", "qty": "5"},
-    {"name": "5 - 1X 44'S (1X 2'S) (BOXES)", "qty": "1"},
-    {"name": "4 - BURST (BOXES)", "qty": "1"},
-  ];
+  Map<String, List<Map<String, dynamic>>> _submissions = {};
+  Map<String, List<Map<String, dynamic>>> get submissions => _submissions;
+  
+  bool _isLoadingStock = false;
+  bool get isLoadingStock => _isLoadingStock;
 
-  List<Map<String, String>> get stockOnHandProducts => _stockOnHandProducts;
+  Future<void> fetchDistributorStock(int distributorId) async {
+    _isLoadingStock = true;
+    notifyListeners();
+
+    final response = await ApiServices.getDistributorStock(distributorId: distributorId);
+    _submissions.clear();
+
+    if (response != null && response['status'] == true) {
+      final data = response['data'] as List<dynamic>? ?? [];
+      for (var product in data) {
+        final skus = product['skus'] as List<dynamic>? ?? [];
+        for (var sku in skus) {
+          final createdOn = sku['created_on']?.toString() ?? "";
+          if (createdOn.isNotEmpty) {
+            // e.g. "2026-05-05 10:12:07" -> "2026-05-05"
+            final datePart = createdOn.split(' ')[0]; 
+            if (!_submissions.containsKey(datePart)) {
+              _submissions[datePart] = [];
+            }
+            _submissions[datePart]!.add({
+              "name": sku['display_name'] ?? 'Unknown SKU',
+              "qty": sku['stock_qty']?.toString() ?? "0",
+            });
+          }
+        }
+      }
+    }
+
+    _isLoadingStock = false;
+    notifyListeners();
+  }
 
   // DistributorStockScreen State
   bool _isLoadingProducts = false;

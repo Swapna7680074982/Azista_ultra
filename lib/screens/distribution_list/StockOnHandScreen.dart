@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../constants/app_colors.dart';
+import '../../../permissions/AppStateProvider.dart';
 import 'distribution_list_provider.dart';
 
 class StockOnHandScreen extends StatefulWidget {
@@ -11,6 +12,18 @@ class StockOnHandScreen extends StatefulWidget {
 }
 
 class _StockOnHandScreenState extends State<StockOnHandScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      final appState = Provider.of<AppStateProvider>(context, listen: false);
+      if (appState.selectedDistributorId != null) {
+        Provider.of<DistributionListProvider>(context, listen: false)
+            .fetchDistributorStock(appState.selectedDistributorId!);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<DistributionListProvider>(
@@ -31,7 +44,9 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
         iconTheme: const IconThemeData(color: AppColors.white),
       ),
 
-      body: Padding(
+      body: provider.isLoadingStock
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,29 +96,46 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
 
             const SizedBox(height: 20),
 
-            GestureDetector(
-              onTap: () {
-                _showProductPopup(context, provider);
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(6),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.shade300,
-                      blurRadius: 4,
-                    )
-                  ],
-                ),
-                child: const Text(
-                  "SUBMISSION ON 22-Apr-2026",
-                  style: TextStyle(fontWeight: FontWeight.w500),
+            if (provider.submissions.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(20.0),
+                child: Center(child: Text("No submissions found")),
+              )
+            else
+              Expanded(
+                child: ListView.builder(
+                  itemCount: provider.submissions.keys.length,
+                  itemBuilder: (context, index) {
+                    final date = provider.submissions.keys.elementAt(index);
+                    final products = provider.submissions[date]!;
+                    
+                    return GestureDetector(
+                      onTap: () {
+                        _showProductPopup(context, products);
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(6),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.shade300,
+                              blurRadius: 4,
+                            )
+                          ],
+                        ),
+                        child: Text(
+                          "SUBMISSION ON $date",
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
-            ),
           ],
         ),
         ),
@@ -112,7 +144,7 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
     );
   }
 
-  void _showProductPopup(BuildContext context, DistributionListProvider provider) {
+  void _showProductPopup(BuildContext context, List<Map<String, dynamic>> products) {
     showDialog(
       context: context,
       builder: (context) {
@@ -136,7 +168,7 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
 
                 const SizedBox(height: 10),
 
-                ...provider.stockOnHandProducts.map((product) {
+                ...products.map((product) {
                   return _productRow(product["name"]!, product["qty"]!);
                 }).toList(),
 
@@ -145,7 +177,7 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text(
+                    child:  Text(
                       "CLOSE",
                       style: TextStyle(color: AppColors.primary),
                     ),

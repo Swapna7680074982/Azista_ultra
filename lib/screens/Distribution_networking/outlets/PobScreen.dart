@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'outlet_activity_provider.dart';
 import '../../../constants/app_colors.dart';
 import 'PobHistoryScreen.dart';
+import '../../../permissions/AppStateProvider.dart';
 
 class PobBody extends StatefulWidget {
-  const PobBody({super.key});
+  final int outletId;
+  const PobBody({super.key, required this.outletId});
 
   @override
   State<PobBody> createState() => _PobBodyState();
@@ -16,8 +19,13 @@ class _PobBodyState extends State<PobBody> {
   void initState() {
     super.initState();
     Future.microtask(() {
-      Provider.of<OutletActivityProvider>(context, listen: false)
-          .fetchProductsWithSkus();
+      final provider = Provider.of<OutletActivityProvider>(context, listen: false);
+      provider.fetchProductsWithSkus();
+      
+      final appState = Provider.of<AppStateProvider>(context, listen: false);
+      if (appState.selectedDistributorId != null) {
+        provider.fetchDistributorStock(appState.selectedDistributorId!);
+      }
     });
   }
   Widget build(BuildContext context) {
@@ -51,7 +59,36 @@ class _PobBodyState extends State<PobBody> {
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                      onPressed: () {},
+                      onPressed: () async {
+                        final appState = Provider.of<AppStateProvider>(context, listen: false);
+                        if (appState.selectedDistributorId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("No distributor selected")),
+                          );
+                          return;
+                        }
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Submitting POB...")),
+                        );
+
+                        bool success = await provider.submitPob(
+                          widget.outletId,
+                          appState.selectedDistributorId!,
+                        );
+
+                        if (!mounted) return;
+
+                        if (success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("POB Submitted Successfully!")),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Failed to submit POB or no items selected.")),
+                          );
+                        }
+                      },
                       child: const Text(
                         "SUBMIT POB",
                         style: TextStyle(
@@ -78,7 +115,7 @@ class _PobBodyState extends State<PobBody> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const PobHistoryScreen(),
+                            builder: (context) => PobHistoryScreen(outletId: widget.outletId),
                           ),
                         );
                       },
@@ -138,6 +175,8 @@ class _PobBodyState extends State<PobBody> {
     final skuId = sku['sku_id'];
     // Red box input value might need a different state map, but we'll use stockQuantities temporarily
     final currentQty = provider.stockQuantities["${productId}_$skuId"]?.toString() ?? "";
+    final distStockStr = provider.distributorStock["${productId}_$skuId"]?.toString() ?? "0";
+    final distStock = int.tryParse(distStockStr) ?? 0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -150,10 +189,10 @@ class _PobBodyState extends State<PobBody> {
             ),
           ),
 
-          _box(),
+          _box(currentQty: distStockStr),
 
           const SizedBox(width: 10),
-          _box(red: true, currentQty: currentQty, onChange: (val) {
+          _box(red: true, currentQty: currentQty, maxQty: distStock, onChange: (val) {
             provider.updateStockQuantity(productId, skuId, val);
           }),
         ],
@@ -161,7 +200,7 @@ class _PobBodyState extends State<PobBody> {
     );
   }
 
-  Widget _box({bool red = false, String currentQty = "", Function(String)? onChange}) {
+  Widget _box({bool red = false, String currentQty = "", int maxQty = 0, Function(String)? onChange}) {
     if (red) {
       return SizedBox(
         width: 55,
@@ -171,6 +210,10 @@ class _PobBodyState extends State<PobBody> {
           textAlign: TextAlign.center,
           keyboardType: TextInputType.number,
           textInputAction: TextInputAction.done,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            CustomMaxNumberFormatter(maxQty),
+          ],
           onChanged: onChange,
           decoration: InputDecoration(
             contentPadding: EdgeInsets.zero,
@@ -195,10 +238,38 @@ class _PobBodyState extends State<PobBody> {
         color: Colors.white,
         border: Border.all(color: Colors.grey.shade400),
       ),
-      child: const Text(
-        "0",
-        style: TextStyle(fontSize: 13),
+      child: Text(
+        currentQty.isEmpty ? "0" : currentQty,
+        style: const TextStyle(fontSize: 13),
       ),
     );
+  }
+}
+
+class CustomMaxNumberFormatter extends TextInputFormatter {
+  final int max;
+
+  CustomMaxNumberFormatter(this.max);
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue;
+    }
+    final int? value = int.tryParse(newValue.text);
+    if (value == null) {
+      return oldValue;
+    }
+    if (value > max) {
+      final maxStr = max.toString();
+      return TextEditingValue(
+        text: maxStr,
+        selection: TextSelection.collapsed(offset: maxStr.length),
+      );
+    }
+    return newValue;
   }
 }

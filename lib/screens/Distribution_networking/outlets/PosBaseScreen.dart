@@ -10,6 +10,8 @@ import 'SamplingScreen.dart';
 import 'StockScreen.dart';
 import 'outlet_provider.dart';
 
+import '../../../services/api_services.dart';
+
 class PosBaseScreen extends StatefulWidget {
   final Outlet outlet;
 
@@ -21,8 +23,56 @@ class PosBaseScreen extends StatefulWidget {
 
 class _PosBaseScreenState extends State<PosBaseScreen> {
   int selectedTab = 0;
+  List<Map<String, dynamic>> dynamicTabs = [];
+  bool isLoadingTabs = true;
 
-  final tabs = const ["SAMPLING", "STOCK", "POB", "BRANDING", "PROMOTIONS"];
+  @override
+  void initState() {
+    super.initState();
+    _fetchModules();
+  }
+
+  Future<void> _fetchModules() async {
+    final response = await ApiServices.getModules();
+    if (response != null && response['status'] == 'success') {
+      final List<dynamic> data = response['data'] ?? [];
+      setState(() {
+        dynamicTabs = data.map((e) => e as Map<String, dynamic>).toList();
+        isLoadingTabs = false;
+      });
+    } else {
+      // Fallback
+      setState(() {
+        dynamicTabs = [
+          {"module_name": "SAMPLING", "module_code": "SAMP"},
+          {"module_name": "STOCK", "module_code": "STOCK"},
+          {"module_name": "POB", "module_code": "POB"},
+          {"module_name": "BRANDING", "module_code": "BRD"},
+          {"module_name": "PROMOTIONS", "module_code": "PRM"},
+        ];
+        isLoadingTabs = false;
+      });
+    }
+  }
+
+  Widget _getModuleBody(String moduleCode) {
+    switch (moduleCode) {
+      case "SAMP":
+        return const SamplingBody();
+      case "STOCK":
+        return const StockBody();
+      case "POB":
+        return PobBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
+      case "BRD":
+        return const BrandingBody();
+      case "PRM":
+        return const PromotionsBody();
+      case "SALE":
+        return const Center(child: Text("SALE Screen (TBD)"));
+      default:
+        return Center(child: Text("$moduleCode Screen"));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,29 +91,17 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         iconTheme: const IconThemeData(
           color: AppColors.white,
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.location_on),
-            onPressed: () {
-              _showLocationPopup();
-            },
-          ),
-        ],
       ),
-      body: Column(
+      body: isLoadingTabs 
+          ? const Center(child: CircularProgressIndicator()) 
+          : Column(
         children: [
           outletCard(widget.outlet),
           _tabs(),
           Expanded(
             child: IndexedStack(
               index: selectedTab,
-              children: const [
-                SamplingBody(),
-                StockBody(),
-                PobBody(),
-                BrandingBody(),
-                PromotionsBody(),
-              ],
+              children: dynamicTabs.map((tab) => _getModuleBody(tab['module_code'])).toList(),
             ),
           ),
         ],
@@ -145,6 +183,84 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
               const SizedBox(height: 10),
 
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    height: 30,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(4),
+                      color: Colors.white,
+                    ),
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Feature will be implemented in future"),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        "JOINT CALL",
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Container(
+                        height: 30,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(4),
+                          color: Colors.white,
+                        ),
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => StockSalePosScreen(
+                                  outletId: int.tryParse(widget.outlet.id) ?? 0,
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            "PREVIOUS TRANSACTIONS",
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              Row(
                 children: [
                   Expanded(
                     child: Container(
@@ -152,7 +268,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                       decoration: BoxDecoration(
                         border: Border.all(color: AppColors.buttonBlue),
                         borderRadius: BorderRadius.circular(6),
-                        color: AppColors.buttonBlue.withValues(alpha:0.05),
+                        color: AppColors.white,
                       ),
                       child: TextButton(
                         onPressed: () {
@@ -176,7 +292,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                       decoration: BoxDecoration(
                         border: Border.all(color: AppColors.button),
                         borderRadius: BorderRadius.circular(6),
-                        color: AppColors.button.withValues(alpha:0.05),
+                        color: AppColors.white,
                       ),
                       child: TextButton(
                         onPressed: () {
@@ -202,82 +318,20 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                     ),
                   ),
                 ],
-              ),
-
-              const SizedBox(height: 10),
-
-              Row(
-                children: [
-                  Expanded(
-                    flex: 1,
-                    child: _actionButton(
-                      text: "JOINT CALL",
-                      color: Colors.orange,
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Feature will be implemented in future"),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
-                    child: _actionButton(
-                      text: "PREVIOUS TRANSACTIONS",
-                      color: AppColors.primary,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const StockSalePosScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
               )
             ],
           ),
 
     );
   }
-
-  Widget _actionButton({
-    required String text,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      height: 35,
-      decoration: BoxDecoration(
-        border: Border.all(color: color),
-        borderRadius: BorderRadius.circular(6),
-        color: color.withValues(alpha: 0.05),
-      ),
-      child: TextButton(
-        onPressed: onTap,
-        child: Text(
-          text,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
-          ),
-        ),
-      ),
-    );
-  }
   Widget _tabs() {
+    if (dynamicTabs.isEmpty) return const SizedBox.shrink();
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: List.generate(tabs.length, (index) {
+        children: List.generate(dynamicTabs.length, (index) {
           final isSelected = index == selectedTab;
+          final tabName = dynamicTabs[index]['module_name'] ?? 'UNKNOWN';
 
           return GestureDetector(
             onTap: () {
@@ -293,7 +347,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
               color: isSelected ? Colors.white : Colors.grey[300],
               child: Center(
                 child: Text(
-                  tabs[index],
+                  tabName,
                   style: TextStyle(
                     color: isSelected ? AppColors.primary : Colors.black54,
                     fontWeight: FontWeight.w600,

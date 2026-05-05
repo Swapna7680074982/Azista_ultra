@@ -11,6 +11,7 @@ import 'package:azista_ultra/screens/login/login_screen.dart';
 import 'package:azista_ultra/services/api_services.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:provider/provider.dart';
 
 import 'constants/app_colors.dart';
@@ -29,18 +30,27 @@ class ProfileDrawer extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(40),
             color: AppColors.white,
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "rajeswar reddy",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 4),
-                Text("SALEOFF"),
-                SizedBox(height: 4),
-                Text("Version: 5.9"),
-              ],
+            child: FutureBuilder<Map<String, String>>(
+              future: _loadProfileInfo(),
+              builder: (context, snapshot) {
+                final name = snapshot.data?["name"] ?? "Loading...";
+                final role = snapshot.data?["role"] ?? "Loading...";
+                final version = snapshot.data?["version"] ?? "Loading...";
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(role),
+                    const SizedBox(height: 4),
+                    Text("Version: $version"),
+                  ],
+                );
+              },
             ),
           ),
 
@@ -61,6 +71,25 @@ class ProfileDrawer extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<Map<String, String>> _loadProfileInfo() async {
+    final name = await SessionManager.getUserName();
+    final role = await SessionManager.getUserRole();
+    String version = "Unknown";
+    try {
+      final pubspec = await rootBundle.loadString('pubspec.yaml');
+      final lines = pubspec.split('\n');
+      for (var line in lines) {
+        if (line.startsWith('version:')) {
+          version = line.split(':')[1].trim();
+          break;
+        }
+      }
+    } catch (e) {
+      version = "1.0.0";
+    }
+    return {"name": name, "role": role, "version": version};
   }
 
   Widget sectionTitle(String title) {

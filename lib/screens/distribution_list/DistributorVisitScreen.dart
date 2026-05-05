@@ -12,7 +12,7 @@ class DistributorVisitScreen extends StatelessWidget {
 
         appBar: AppBar(
           title: const Text(
-            "Distributor Stock",
+            "Distributor Visit",
             style: TextStyle(
               color: AppColors.white,
               fontSize: 18,

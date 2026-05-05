@@ -467,4 +467,149 @@ class ApiServices {
       };
     }
   }
+
+  static Future<Map<String, dynamic>?> getDistributorStock({
+    required int distributorId,
+    int? productId,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final payload = {
+        "distributor_id": distributorId,
+      };
+      
+      if (productId != null) {
+        payload["product_id"] = productId;
+      }
+
+      final response = await _dio.post(
+        AppUrls.getDistributorStock,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data["status"] == true) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Distributor Stock error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getModules() async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.get(
+        AppUrls.getModules,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data["status"] == "success") {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Modules error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> generatePob({
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.post(
+        AppUrls.generatePob,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data["status"] == "success") {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Generate POB error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> supplyPob({
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.post(
+        AppUrls.supplyPob,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data["status"] == "success") {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Supply POB error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getPobHistory({
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.post(
+        AppUrls.pobHistory,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data["status"] == "success") {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("POB History error", e);
+      return null;
+    }
+  }
 }

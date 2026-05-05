@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../constants/app_colors.dart';
+import '../../../services/api_services.dart';
+import '../../../permissions/AppStateProvider.dart';
+import 'ProductListScreen.dart';
+import 'SuppliedProductListScreen.dart';
 
 class StockSalePosScreen extends StatefulWidget {
-  const StockSalePosScreen({super.key});
+  final int outletId;
+  const StockSalePosScreen({super.key, required this.outletId});
 
   @override
   State<StockSalePosScreen> createState() => _StockSalePosScreenState();
@@ -11,7 +17,7 @@ class StockSalePosScreen extends StatefulWidget {
 class _StockSalePosScreenState extends State<StockSalePosScreen> {
   int selectedTab = 0;
 
-  final tabs = ["STOCK", "SALE", "POS"];
+  final tabs = ["STOCK", "SALE", "POB"];
 
   @override
   Widget build(BuildContext context) {
@@ -81,10 +87,73 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
       case 1:
         return _submissionList("Sale");
       case 2:
-        return _submissionList("POS");
+        return _pobHistoryTab();
       default:
         return Container();
     }
+  }
+
+  Widget _pobHistoryTab() {
+    final appState = Provider.of<AppStateProvider>(context, listen: false);
+    final distributorId = appState.selectedDistributorId ?? 6;
+    
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: ApiServices.getPobHistory(payload: {
+        "outlet_id": widget.outletId,
+        "distributor_id": distributorId,
+      }),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data?['status'] != 'success') {
+          return const Center(child: Text("No POB History"));
+        }
+        final data = snapshot.data!['data'] as List<dynamic>? ?? [];
+        if (data.isEmpty) {
+          return const Center(child: Text("No POB History"));
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(10),
+          itemCount: data.length,
+          itemBuilder: (context, index) {
+            final pob = data[index];
+            final items = pob['items'] as List<dynamic>? ?? [];
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                boxShadow: [BoxShadow(color: Colors.grey.shade300, blurRadius: 3)],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("POB NUMBER: ${pob['pob_number'] ?? 'N/A'}", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 5),
+                  Text("Total Amount: \$${pob['total_amount'] ?? '0.00'}"),
+                  Text("Date: ${pob['created_at'] ?? 'N/A'}"),
+                  Text("Status: ${pob['status'] ?? 'N/A'}"),
+                  if (items.isNotEmpty) ...[
+                    const Divider(),
+                    ...items.map((item) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Text(
+                          "- ${item['product_name']} (${item['sku_displayname']}): Qty ${item['quantity']}",
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _submissionList(String type) {
@@ -97,7 +166,7 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ProductListScreen(type: type),
+                builder: (context) => DummyTransactionProductListScreen(type: type),
               ),
             );
           },
@@ -126,10 +195,10 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
 
 }
 
-class ProductListScreen extends StatelessWidget {
+class DummyTransactionProductListScreen extends StatelessWidget {
   final String type;
 
-  const ProductListScreen({super.key, required this.type});
+  const DummyTransactionProductListScreen({super.key, required this.type});
 
   @override
   Widget build(BuildContext context) {
@@ -152,17 +221,17 @@ class ProductListScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(10),
         children: const [
-          _productItem(
+          ProductItem(
             name: "KWIK MINT - 1X 44'S (1X 2'S) (BOXES)",
             raisedQty: 8,
             enteredQty: 6,
           ),
-          _productItem(
+          ProductItem(
             name: "KWIK MINT - BURST (BOXES)",
             raisedQty: 10,
             enteredQty: 10,
           ),
-          _productItem(
+          ProductItem(
             name: "CENTER FRESH - MINT (BOXES)",
             raisedQty: 5,
             enteredQty: 3,
@@ -173,12 +242,12 @@ class ProductListScreen extends StatelessWidget {
   }
 
 }
-class _productItem extends StatelessWidget {
+class ProductItem extends StatelessWidget {
   final String name;
   final int raisedQty;
   final int enteredQty;
 
-  const _productItem({
+  const ProductItem({
     required this.name,
     required this.raisedQty,
     required this.enteredQty,
@@ -258,4 +327,6 @@ class _productItem extends StatelessWidget {
       ),
     );
   }
+
+
 }

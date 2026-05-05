@@ -22,6 +22,25 @@ class SessionManager {
     await prefs.setString(_expiryKey, midnight.toIso8601String());
   }
 
+  static const _nameKey = "user_name";
+  static const _roleKey = "user_role";
+
+  static Future<void> saveUserDetails(String name, String role) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_nameKey, name);
+    await prefs.setString(_roleKey, role);
+  }
+
+  static Future<String> getUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_nameKey) ?? "Unknown User";
+  }
+
+  static Future<String> getUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_roleKey) ?? "Sale Off";
+  }
+
   static const _attendanceKey = "attendance_status";
 
   static Future<void> saveAttendanceStatus(String? status) async {

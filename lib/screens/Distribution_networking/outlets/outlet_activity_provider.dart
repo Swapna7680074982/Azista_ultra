@@ -17,6 +17,44 @@ class OutletActivityProvider extends ChangeNotifier {
   final Map<String, int> _stockQuantities = {};
   Map<String, int> get stockQuantities => _stockQuantities;
 
+  bool _isLoadingDistributorStock = false;
+  bool get isLoadingDistributorStock => _isLoadingDistributorStock;
+
+  final Map<String, int> _distributorStock = {};
+  Map<String, int> get distributorStock => _distributorStock;
+
+  bool _isLoadingPobHistory = false;
+  bool get isLoadingPobHistory => _isLoadingPobHistory;
+
+  List<dynamic> _pendingPobs = [];
+  List<dynamic> get pendingPobs => _pendingPobs;
+
+  List<dynamic> _suppliedPobs = [];
+  List<dynamic> get suppliedPobs => _suppliedPobs;
+
+  Future<void> fetchDistributorStock(int distributorId) async {
+    _isLoadingDistributorStock = true;
+    notifyListeners();
+
+    final response = await ApiServices.getDistributorStock(distributorId: distributorId);
+    if (response != null && response['status'] == true) {
+      _distributorStock.clear();
+      final data = response['data'] as List<dynamic>? ?? [];
+      for (var product in data) {
+        final productId = product['product_id'];
+        final skus = product['skus'] as List<dynamic>? ?? [];
+        for (var sku in skus) {
+          final skuId = sku['sku_id'];
+          final stockQty = sku['stock_qty'] ?? 0;
+          _distributorStock["${productId}_$skuId"] = stockQty is int ? stockQty : int.tryParse(stockQty.toString()) ?? 0;
+        }
+      }
+    }
+
+    _isLoadingDistributorStock = false;
+    notifyListeners();
+  }
+
   Future<void> fetchProductsWithSkus() async {
     _isLoadingProducts = true;
     notifyListeners();
@@ -34,5 +72,66 @@ class OutletActivityProvider extends ChangeNotifier {
   void updateStockQuantity(int productId, int skuId, String value) {
     int qty = int.tryParse(value) ?? 0;
     _stockQuantities["${productId}_$skuId"] = qty;
+  }
+
+  Future<bool> submitPob(int outletId, int distributorId) async {
+    List<Map<String, dynamic>> items = [];
+
+    _stockQuantities.forEach((key, quantity) {
+      if (quantity > 0) {
+        final parts = key.split('_');
+        final productId = int.parse(parts[0]);
+        final skuId = int.parse(parts[1]);
+        
+        items.add({
+          "product_id": productId,
+          "sku_id": skuId,
+          "quantity": quantity,
+        });
+      }
+    });
+
+    if (items.isEmpty) {
+      return false; 
+    }
+
+    final payload = {
+      "outlet_id": outletId,
+      "distributor_id": distributorId,
+      "remarks": "",
+      "items": items,
+    };
+
+    final response = await ApiServices.generatePob(payload: payload);
+    
+    if (response != null && response['status'] == "success") {
+      _stockQuantities.clear();
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> fetchPobHistory(int outletId, int distributorId) async {
+    _isLoadingPobHistory = true;
+    notifyListeners();
+
+    final payload = {
+      "outlet_id": outletId,
+      "distributor_id": distributorId,
+    };
+
+    final response = await ApiServices.getPobHistory(payload: payload);
+    if (response != null && response['status'] == "success") {
+      final data = response['data'] as List<dynamic>? ?? [];
+      _pendingPobs = data.where((pob) => pob['status'] == 'pending' || pob['status'] == 'partial').toList();
+      _suppliedPobs = data.where((pob) => pob['status'] == 'supplied').toList();
+    } else {
+      _pendingPobs = [];
+      _suppliedPobs = [];
+    }
+
+    _isLoadingPobHistory = false;
+    notifyListeners();
   }
 }

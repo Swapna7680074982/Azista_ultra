@@ -14,4 +14,9 @@ class AppUrls {
   static const String nearOutlets = "$baseUrl/user/get_nearby_outlets";
   static const String getProductsWithSkus = "$baseUrl/distribution/get_products_with_skus";
   static const String insertDistributorStock = "$baseUrl/distribution/insert_distributor_stock";
+  static const String getDistributorStock = "$baseUrl/distribution/get_distributor_stock";
+  static const String getModules = "$baseUrl/distribution/get_modules";
+  static const String generatePob = "$baseUrl/distribution/generate_pob";
+  static const String supplyPob = "$baseUrl/distribution/supply_pob";
+  static const String pobHistory = "$baseUrl/distribution/pob_history";
 }

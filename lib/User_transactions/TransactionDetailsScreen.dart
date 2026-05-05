@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_colors.dart';
 import 'SaleItem.dart';
-import 'package:intl/intl.dart';
+import '../services/api_services.dart';
+import '../permissions/AppStateProvider.dart';
 
 class TransactionDetailsScreen extends StatefulWidget {
-  const TransactionDetailsScreen({super.key});
+  final int outletId;
+  const TransactionDetailsScreen({super.key, required this.outletId});
 
   @override
   State<TransactionDetailsScreen> createState() =>
@@ -85,55 +87,120 @@ class _TransactionDetailsScreenState
           ),
 
           Expanded(
-            child: ListView.builder(
-              itemCount: provider.saleItems.length,
-              itemBuilder: (context, index) {
-                final item = provider.saleItems[index];
+            child: selectedTab == 2
+                ? _pobHistoryTab()
+                : ListView.builder(
+                    itemCount: provider.saleItems.length,
+                    itemBuilder: (context, index) {
+                      final item = provider.saleItems[index];
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
-                  child: Container(
-                    padding: const EdgeInsets.all(15),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: Colors.grey.shade300,
-                        width: 1,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        child: Container(
+                          padding: const EdgeInsets.all(15),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: Colors.grey.shade300,
+                              width: 1,
+                            ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.name,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                "QUANTITY: ${item.quantity}",
+                                style: const TextStyle(color: Colors.black54),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 5),
-                        Text(
-                          "QUANTITY: ${item.quantity}",
-                          style: const TextStyle(color: Colors.black54),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _pobHistoryTab() {
+    final appState = Provider.of<AppStateProvider>(context, listen: false);
+    final distributorId = appState.selectedDistributorId ?? 6;
+    
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: ApiServices.getPobHistory(payload: {
+        "outlet_id": widget.outletId,
+        "distributor_id": distributorId,
+      }),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data?['status'] != 'success') {
+          return const Center(child: Text("No POB History"));
+        }
+        final data = snapshot.data!['data'] as List<dynamic>? ?? [];
+        if (data.isEmpty) {
+          return const Center(child: Text("No POB History"));
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(10),
+          itemCount: data.length,
+          itemBuilder: (context, index) {
+            final pob = data[index];
+            final items = pob['items'] as List<dynamic>? ?? [];
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                boxShadow: [BoxShadow(color: Colors.grey.shade300, blurRadius: 3)],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("POB NUMBER: ${pob['pob_number'] ?? 'N/A'}", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 5),
+                  Text("Total Amount: \$${pob['total_amount'] ?? '0.00'}"),
+                  Text("Date: ${pob['created_at'] ?? 'N/A'}"),
+                  Text("Status: ${pob['status'] ?? 'N/A'}"),
+                  if (items.isNotEmpty) ...[
+                    const Divider(),
+                    ...items.map((item) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Text(
+                          "- ${item['product_name']} (${item['sku_displayname']}): Qty ${item['quantity']}",
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -4,16 +4,19 @@ import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 
 class SuppliedProductListScreen extends StatelessWidget {
-  const SuppliedProductListScreen({super.key});
+  final dynamic pobData;
+  const SuppliedProductListScreen({super.key, this.pobData});
 
   @override
   Widget build(BuildContext context) {
+    final items = pobData?['items'] as List<dynamic>? ?? [];
+
     return Scaffold(
       backgroundColor: Colors.grey[200],
       appBar: AppBar(
-        title: const Text(
-          "Supplied product list",
-          style: TextStyle(
+        title: Text(
+          pobData?['pob_number'] ?? "Supplied product list",
+          style: const TextStyle(
             color: AppColors.white,
             fontSize: 18,
             fontWeight: FontWeight.w500,
@@ -26,20 +29,21 @@ class SuppliedProductListScreen extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(10),
-        child: Column(
-          children: [
-            _productItem(
-              "KWIK MINT - 1X 44'S (1X 2'S) (BOXES)",
-            ),
-            _productItem(
-              "KWIK MINT - BURST (BOXES)",
-            ),
-          ],
+        child: ListView.builder(
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            return _productItem(items[index]);
+          },
         ),
       ),
     );
   }
-  Widget _productItem(String title) {
+
+  Widget _productItem(dynamic item) {
+    final title = "${item['product_name']} - ${item['sku_displayname']}";
+    final raisedQty = item['quantity']?.toString() ?? "0";
+    final suppliedQty = item['supplied_qty']?.toString() ?? "0";
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(10),
@@ -50,7 +54,7 @@ class SuppliedProductListScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 13)),
+          Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
 
           Row(
@@ -60,9 +64,9 @@ class SuppliedProductListScreen extends StatelessWidget {
                   height: 40,
                   alignment: Alignment.center,
                   color: const Color(0xFFB0B8D9),
-                  child: const Text(
-                    "RAISED QTY: 8",
-                    style: TextStyle(fontSize: 12),
+                  child: Text(
+                    "RAISED QTY: $raisedQty",
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ),
               ),
@@ -72,9 +76,9 @@ class SuppliedProductListScreen extends StatelessWidget {
                   height: 40,
                   alignment: Alignment.center,
                   color: const Color(0xFFB0B8D9),
-                  child: const Text(
-                    "9",
-                    style: TextStyle(fontSize: 12),
+                  child: Text(
+                    "SUPPLIED: $suppliedQty",
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ),
               ),

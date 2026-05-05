@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../constants/app_colors.dart';
 import 'SaleItem.dart';
 import 'TransactionDetailsScreen.dart';
+import '../services/api_services.dart';
+import '../permissions/AppStateProvider.dart';
 
 class UserTransactionScreen extends StatefulWidget {
   const UserTransactionScreen({super.key});
@@ -90,45 +92,79 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
               ),
             ),
 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const TransactionDetailsScreen(),
-                    ),
+            Expanded(
+              child: FutureBuilder<Map<String, dynamic>?>(
+                future: _fetchData(context),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!snapshot.hasData || snapshot.data?['status'] != 'success') {
+                    return const Center(child: Text("No Data Found"));
+                  }
+                  final data = snapshot.data!['data'] as List<dynamic>? ?? [];
+                  
+                  final Map<String, Map<String, dynamic>> outletsMap = {};
+                  for (var pob in data) {
+                    final outletId = pob['outlet_id']?.toString() ?? "0";
+                    if (!outletsMap.containsKey(outletId)) {
+                      outletsMap[outletId] = {
+                        'outlet_id': outletId,
+                        'outlet_name': pob['outlet_name'] ?? 'Unknown',
+                        'pob_count': 0,
+                      };
+                    }
+                    outletsMap[outletId]!['pob_count'] = (outletsMap[outletId]!['pob_count'] as int) + 1;
+                  }
+                  
+                  final outlets = outletsMap.values.toList();
+                  
+                  if (outlets.isEmpty) {
+                    return const Center(child: Text("No Data Found"));
+                  }
+                  
+                  return ListView.builder(
+                    itemCount: outlets.length,
+                    itemBuilder: (context, index) {
+                      final outlet = outlets[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TransactionDetailsScreen(outletId: int.tryParse(outlet['outlet_id']) ?? 0),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(15),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 2)),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "POINT NAME: ${outlet['outlet_name']}".toUpperCase(),
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 5),
+                                Text("POB COUNT: ${outlet['pob_count']}"),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 5,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "POINT NAME: UPPAL",
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 5),
-                      Text("OUTLETS COUNT: 2"),
-                      Text("VISIT DATE: 2024-11-06"),
-                    ],
-                  ),
-                ),
               ),
             ),
           ],
@@ -172,5 +208,20 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
         ),
       ),
     );
+  }
+
+  Future<Map<String, dynamic>?> _fetchData(BuildContext context) {
+    final appState = Provider.of<AppStateProvider>(context, listen: false);
+    final distributorId = appState.selectedDistributorId ?? 6;
+    Map<String, dynamic> payload = {
+      "distributor_id": distributorId,
+    };
+    if (fromDate != null) {
+      payload["from_date"] = "${fromDate!.year}-${fromDate!.month.toString().padLeft(2, '0')}-${fromDate!.day.toString().padLeft(2, '0')}";
+    }
+    if (toDate != null) {
+      payload["to_date"] = "${toDate!.year}-${toDate!.month.toString().padLeft(2, '0')}-${toDate!.day.toString().padLeft(2, '0')}";
+    }
+    return ApiServices.getPobHistory(payload: payload);
   }
 }
