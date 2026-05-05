@@ -105,30 +105,17 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
             ),
 
             Expanded(
-              child: FutureBuilder<Map<String, dynamic>?>(
+              child: FutureBuilder<Map<String, Map<String, dynamic>>>(
                 future: _fetchData(context),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  if (!snapshot.hasData || snapshot.data?['status'] != 'success') {
+                  if (snapshot.hasError || !snapshot.hasData) {
                     return const Center(child: Text("No Data Found"));
                   }
-                  final data = snapshot.data!['data'] as List<dynamic>? ?? [];
                   
-                  final Map<String, Map<String, dynamic>> outletsMap = {};
-                  for (var pob in data) {
-                    final outletId = pob['outlet_id']?.toString() ?? "0";
-                    if (!outletsMap.containsKey(outletId)) {
-                      outletsMap[outletId] = {
-                        'outlet_id': outletId,
-                        'outlet_name': pob['outlet_name'] ?? 'Unknown',
-                        'pob_count': 0,
-                      };
-                    }
-                    outletsMap[outletId]!['pob_count'] = (outletsMap[outletId]!['pob_count'] as int) + 1;
-                  }
-                  
+                  final outletsMap = snapshot.data!;
                   final outlets = outletsMap.values.toList();
                   
                   if (outlets.isEmpty) {
@@ -168,7 +155,14 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
                                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                 ),
                                 const SizedBox(height: 5),
-                                Text("POB COUNT: ${outlet['pob_count']}"),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text("POB COUNT: ${outlet['pob_count']}"),
+                                    Text("SALE COUNT: ${outlet['sale_count']}"),
+                                    Text("STOCK COUNT: ${outlet['stock_count']}"),
+                                  ],
+                                ),
                               ],
                             ),
                           ),
@@ -222,7 +216,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
     );
   }
 
-  Future<Map<String, dynamic>?> _fetchData(BuildContext context) {
+  Future<Map<String, Map<String, dynamic>>> _fetchData(BuildContext context) async {
     final appState = Provider.of<AppStateProvider>(context, listen: false);
     final distributorId = appState.selectedDistributorId ?? 6;
     Map<String, dynamic> payload = {
@@ -234,6 +228,52 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
     if (toDate != null) {
       payload["to_date"] = "${toDate!.year}-${toDate!.month.toString().padLeft(2, '0')}-${toDate!.day.toString().padLeft(2, '0')}";
     }
-    return ApiServices.getPobHistory(payload: payload);
+
+    final results = await Future.wait([
+      ApiServices.getPobHistory(payload: payload),
+      ApiServices.getPosHistory(payload: {...payload, "pos_type": "sale"}),
+      ApiServices.getPosHistory(payload: {...payload, "pos_type": "stock"}),
+    ]);
+    
+    final pobRes = results[0];
+    final saleRes = results[1];
+    final stockRes = results[2];
+
+    final Map<String, Map<String, dynamic>> outletsMap = {};
+    
+    if (pobRes != null && pobRes['status'] == 'success') {
+      final data = pobRes['data'] as List<dynamic>? ?? [];
+      for (var item in data) {
+        final outletId = item['outlet_id']?.toString() ?? "0";
+        if (!outletsMap.containsKey(outletId)) {
+          outletsMap[outletId] = {'outlet_id': outletId, 'outlet_name': item['outlet_name'] ?? 'Unknown', 'pob_count': 0, 'sale_count': 0, 'stock_count': 0};
+        }
+        outletsMap[outletId]!['pob_count'] = (outletsMap[outletId]!['pob_count'] as int) + 1;
+      }
+    }
+
+    if (saleRes != null && saleRes['status'] == 'success') {
+      final data = saleRes['data'] as List<dynamic>? ?? [];
+      for (var item in data) {
+        final outletId = item['outlet_id']?.toString() ?? "0";
+        if (!outletsMap.containsKey(outletId)) {
+          outletsMap[outletId] = {'outlet_id': outletId, 'outlet_name': item['outlet_name'] ?? 'Unknown', 'pob_count': 0, 'sale_count': 0, 'stock_count': 0};
+        }
+        outletsMap[outletId]!['sale_count'] = (outletsMap[outletId]!['sale_count'] as int) + 1;
+      }
+    }
+
+    if (stockRes != null && stockRes['status'] == 'success') {
+      final data = stockRes['data'] as List<dynamic>? ?? [];
+      for (var item in data) {
+        final outletId = item['outlet_id']?.toString() ?? "0";
+        if (!outletsMap.containsKey(outletId)) {
+          outletsMap[outletId] = {'outlet_id': outletId, 'outlet_name': item['outlet_name'] ?? 'Unknown', 'pob_count': 0, 'sale_count': 0, 'stock_count': 0};
+        }
+        outletsMap[outletId]!['stock_count'] = (outletsMap[outletId]!['stock_count'] as int) + 1;
+      }
+    }
+
+    return outletsMap;
   }
 }

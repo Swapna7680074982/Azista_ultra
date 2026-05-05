@@ -87,54 +87,11 @@ class _TransactionDetailsScreenState
           ),
 
           Expanded(
-            child: selectedTab == 2
-                ? _pobHistoryTab()
-                : ListView.builder(
-                    itemCount: provider.saleItems.length,
-                    itemBuilder: (context, index) {
-                      final item = provider.saleItems[index];
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        child: Container(
-                          padding: const EdgeInsets.all(15),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: Colors.grey.shade300,
-                              width: 1,
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.name,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                "QUANTITY: ${item.quantity}",
-                                style: const TextStyle(color: Colors.black54),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+            child: () {
+              if (selectedTab == 0) return _posHistoryTab("sale");
+              if (selectedTab == 1) return _posHistoryTab("stock");
+              return _pobHistoryTab();
+            }(),
           ),
         ],
       ),
@@ -195,6 +152,58 @@ class _TransactionDetailsScreenState
                       );
                     }).toList(),
                   ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _posHistoryTab(String posType) {
+    final appState = Provider.of<AppStateProvider>(context, listen: false);
+    final distributorId = appState.selectedDistributorId ?? 6;
+    
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: ApiServices.getPosHistory(payload: {
+        "outlet_id": widget.outletId,
+        "distributor_id": distributorId,
+        "pos_type": posType,
+      }),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data?['status'] != 'success') {
+          return Center(child: Text("No ${posType.toUpperCase()} History"));
+        }
+        final data = snapshot.data!['data'] as List<dynamic>? ?? [];
+        if (data.isEmpty) {
+          return Center(child: Text("No ${posType.toUpperCase()} History"));
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(10),
+          itemCount: data.length,
+          itemBuilder: (context, index) {
+            final item = data[index];
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade300),
+                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item['product_name'] ?? "Product ID: ${item['product_id'] ?? 'N/A'}", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 5),
+                  Text("SKU: ${item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id'] ?? 'N/A'}"),
+                  Text("Quantity: ${item['quantity'] ?? '0'}"),
+                  Text("Date: ${item['created_on'] ?? 'N/A'}"),
                 ],
               ),
             );
