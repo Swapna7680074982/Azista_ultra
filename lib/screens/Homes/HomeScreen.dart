@@ -11,6 +11,7 @@ import '../leave_management/leave_management_screen.dart';
 import '../productivity/ProductivityScreen.dart';
 import 'HomeProvider.dart';
 import 'widgets/DonutChart.dart';
+import '../../utilities/date_formatter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -77,55 +78,55 @@ class _HomeScreenState extends State<HomeScreen> {
                 scale: 0.75,
                 child: homeProvider.isLoading
                     ? const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        ),
-                      )
+                  padding: EdgeInsets.all(8),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                )
                     : Switch(
-                        value: appState.isOnline,
+                  value: appState.isOnline,
 
-                        onChanged: (val) async {
-                          bool success = false;
+                  onChanged: (val) async {
+                    bool success = false;
 
-                          if (val) {
-                            success = await homeProvider.checkIn();
+                    if (val) {
+                      success = await homeProvider.checkIn();
 
-                            if (success) {
-                              appState.setOnline(true);
+                      if (success) {
+                        appState.setOnline(true);
 
-                              await homeProvider.fetchTodayAttendance();
-                            }
-                          } else {
-                            success = await homeProvider.checkOut();
+                        await homeProvider.fetchTodayAttendance();
+                      }
+                    } else {
+                      success = await homeProvider.checkOut();
 
-                            if (success) {
-                              appState.setOnline(false);
+                      if (success) {
+                        appState.setOnline(false);
 
-                              await homeProvider.fetchTodayAttendance();
-                            }
-                          }
+                        await homeProvider.fetchTodayAttendance();
+                      }
+                    }
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(homeProvider.message ?? "")),
-                          );
-                        },
-                        activeThumbColor: AppColors.button,
-                        activeTrackColor: AppColors.button.withValues(
-                          alpha: 0.35,
-                        ),
-                        inactiveThumbColor: AppColors.white,
-                        inactiveTrackColor: AppColors.white.withValues(
-                          alpha: 0.4,
-                        ),
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(homeProvider.message ?? "")),
+                    );
+                  },
+                  activeThumbColor: AppColors.button,
+                  activeTrackColor: AppColors.button.withValues(
+                    alpha: 0.35,
+                  ),
+                  inactiveThumbColor: AppColors.white,
+                  inactiveTrackColor: AppColors.white.withValues(
+                    alpha: 0.4,
+                  ),
 
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
               );
             },
           ),
@@ -185,16 +186,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
                               items: homeProvider.distributors
                                   .map<DropdownMenuItem<String>>((d) {
-                                    return DropdownMenuItem<String>(
-                                      value: d["distributor_name"],
-                                      child: Text(d["distributor_name"]),
-                                    );
-                                  })
+                                return DropdownMenuItem<String>(
+                                  value: d["distributor_name"],
+                                  child: Text(d["distributor_name"]),
+                                );
+                              })
                                   .toList(),
 
                               onChanged: (value) {
                                 final selected = homeProvider.distributors.firstWhere(
-                                  (d) => d["distributor_name"] == value,
+                                      (d) => d["distributor_name"] == value,
                                   orElse: () => null,
                                 );
                                 int? id;
@@ -352,7 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return Column(
                   children: [
                     Text(
-                      "Check-In: $checkIn",
+                      "Check-In: ${DateFormatter.formatDateTime(checkIn)}",
                       style: TextStyle(
                         color: AppColors.primary,
                         fontSize: 14,

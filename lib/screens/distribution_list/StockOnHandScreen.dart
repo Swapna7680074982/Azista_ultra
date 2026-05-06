@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../constants/app_colors.dart';
 import '../../../permissions/AppStateProvider.dart';
 import 'distribution_list_provider.dart';
+import '../../../utilities/date_formatter.dart';
 
 class StockOnHandScreen extends StatefulWidget {
   const StockOnHandScreen({super.key});
@@ -128,7 +129,7 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
                           ],
                         ),
                         child: Text(
-                          "SUBMISSION ON $date",
+                          "SUBMISSION ON ${DateFormatter.formatDateTime(date)}",
                           style: const TextStyle(fontWeight: FontWeight.w500),
                         ),
                       ),

@@ -8,6 +8,7 @@ import 'SuppliedProductListScreen.dart';
 import 'package:provider/provider.dart';
 import '../../../permissions/AppStateProvider.dart';
 import 'outlet_activity_provider.dart';
+import '../../../utilities/date_formatter.dart';
 
 class PobHistoryScreen extends StatefulWidget {
   final int outletId;
@@ -160,7 +161,7 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                     ),
                     const SizedBox(height: 5),
                     //Text("Total Amount: \$${pob['total_amount'] ?? '0.00'}"),
-                    Text("Date: ${pob['created_at'] ?? 'N/A'}"),
+                    Text("Date: ${DateFormatter.formatDateTime(pob['created_at'] ?? pob['created_on'])}"),
                     Text("Status: ${pob['status'] ?? 'N/A'}"),
                   ],
                 ),
@@ -218,7 +219,7 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                     ),
                     const SizedBox(height: 5),
                     //Text("Total Amount: \$${pob['total_amount'] ?? '0.00'}"),
-                    Text("Date: ${pob['created_at'] ?? 'N/A'}"),
+                    Text("Date: ${DateFormatter.formatDateTime(pob['created_at'] ?? pob['created_on'])}"),
                     Text("Status: ${pob['status'] ?? 'N/A'}"),
                   ],
                 ),

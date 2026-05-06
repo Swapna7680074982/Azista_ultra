@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 import '../constants/app_colors.dart';
 import 'SaleItem.dart';
@@ -84,7 +85,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
                       onTap: () => pickDate(context, true),
                       child: dateBox(
                         fromDate != null
-                            ? "${fromDate!.day}-${fromDate!.month}-${fromDate!.year}"
+                            ? DateFormat('d MMM yyyy').format(fromDate!)
                             : "From Date",
                       ),
                     ),
@@ -95,7 +96,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
                       onTap: () => pickDate(context, false),
                       child: dateBox(
                         toDate != null
-                            ? "${toDate!.day}-${toDate!.month}-${toDate!.year}"
+                            ? DateFormat('d MMM yyyy').format(toDate!)
                             : "To Date",
                       ),
                     ),

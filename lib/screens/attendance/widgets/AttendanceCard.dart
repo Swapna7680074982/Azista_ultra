@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 import '../../../models/Attendance model.dart';
+import '../../../utilities/date_formatter.dart';
 
 class AttendanceCard extends StatelessWidget {
   final Attendance data;
@@ -72,8 +73,7 @@ class AttendanceCard extends StatelessWidget {
   }
 
   String _format(DateTime dt) {
-    return "${dt.day}-${_monthName(dt.month)}-${dt.year} "
-        "${_formatTime(dt)}";
+    return DateFormatter.formatDateTime(dt.toString());
   }
 
   String _formatTime(DateTime dt) {

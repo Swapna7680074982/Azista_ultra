@@ -4,6 +4,7 @@ import '../constants/app_colors.dart';
 import 'SaleItem.dart';
 import '../services/api_services.dart';
 import '../permissions/AppStateProvider.dart';
+import '../utilities/date_formatter.dart';
 
 class TransactionDetailsScreen extends StatefulWidget {
   final int outletId;
@@ -138,7 +139,7 @@ class _TransactionDetailsScreenState
                   Text("POB NUMBER: ${pob['pob_number'] ?? 'N/A'}", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 5),
                   //Text("Total Amount: \$${pob['total_amount'] ?? '0.00'}"),
-                  Text("Date: ${pob['created_at'] ?? 'N/A'}"),
+                  Text("Date: ${DateFormatter.formatDateTime(pob['created_at'])}"),
                   Text("Status: ${pob['status'] ?? 'N/A'}"),
                   if (items.isNotEmpty) ...[
                     const Divider(),
@@ -203,7 +204,7 @@ class _TransactionDetailsScreenState
                   const SizedBox(height: 5),
                   Text("SKU: ${item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id'] ?? 'N/A'}"),
                   Text("Quantity: ${item['quantity'] ?? '0'}"),
-                  Text("Date: ${item['created_on'] ?? 'N/A'}"),
+                   Text("Date: ${DateFormatter.formatDateTime(item['created_on'] ?? item['created_at'])}"),
                 ],
               ),
             );

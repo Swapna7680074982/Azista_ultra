@@ -5,6 +5,7 @@ import '../../../services/api_services.dart';
 import '../../../permissions/AppStateProvider.dart';
 import 'ProductListScreen.dart';
 import 'SuppliedProductListScreen.dart';
+import '../../../utilities/date_formatter.dart';
 
 class StockSalePosScreen extends StatefulWidget {
   final int outletId;
@@ -133,7 +134,7 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
                   Text("POB NUMBER: ${pob['pob_number'] ?? 'N/A'}", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 5),
                   //Text("Total Amount: \$${pob['total_amount'] ?? '0.00'}"),
-                  Text("Date: ${pob['created_at'] ?? 'N/A'}"),
+                  Text("Date: ${DateFormatter.formatDateTime(pob['created_at'])}"),
                   Text("Status: ${pob['status'] ?? 'N/A'}"),
                   if (items.isNotEmpty) ...[
                     const Divider(),
@@ -197,7 +198,7 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
                   const SizedBox(height: 5),
                   Text("SKU: ${item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id'] ?? 'N/A'}"),
                   Text("Quantity: ${item['quantity'] ?? '0'}"),
-                  Text("Date: ${item['created_on'] ?? 'N/A'}"),
+                  Text("Date: ${DateFormatter.formatDateTime(item['created_on'] ?? item['created_at'])}"),
                 ],
               ),
             );
