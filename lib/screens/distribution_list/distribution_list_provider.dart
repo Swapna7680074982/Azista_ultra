@@ -59,7 +59,9 @@ class DistributionListProvider extends ChangeNotifier {
               _submissions[datePart] = [];
             }
             _submissions[datePart]!.add({
-              "name": sku['display_name'] ?? 'Unknown SKU',
+              "product_id": product['product_id'] ?? product['id'],
+              "product_name": product['product_name'] ?? product['name'] ?? 'Unknown Product',
+              "sku_name": sku['sku_name']?.toString().isNotEmpty == true ? sku['sku_name'] : (sku['display_name'] ?? sku['sku_displayname'] ?? sku['sku_id']?.toString() ?? 'Unknown SKU'),
               "qty": sku['stock_qty']?.toString() ?? "0",
             });
           }

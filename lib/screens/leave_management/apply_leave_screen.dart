@@ -44,7 +44,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Apply Leave'),
+        title: const Text('APPLY LEAVE'),
         backgroundColor: const Color(0xFFC62828),
         foregroundColor: Colors.white,
       ),
@@ -75,7 +75,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                   items: provider.leaveBalances.map((balance) {
                     return DropdownMenuItem<String>(
                       value: balance.type,
-                      child: Text(balance.type),
+                      child: Text(balance.type.toUpperCase()),
                     );
                   }).toList(),
                   onChanged: (value) {
@@ -86,7 +86,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Leave',
+                  'LEAVE',
                   style: TextStyle(
                     color: Color(0xFFC62828),
                     fontWeight: FontWeight.bold,
@@ -100,15 +100,15 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _buildSummaryItem(
-                          'Allocated',
+                          'ALLOCATED',
                           selectedBalance.allocated.toString(),
                         ),
                         _buildSummaryItem(
-                          'Used',
+                          'USED',
                           selectedBalance.used.toString(),
                         ),
                         _buildSummaryItem(
-                          'Remaining',
+                          'REMAINING',
                           selectedBalance.remaining.toString(),
                         ),
                       ],
@@ -119,7 +119,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                   controller: _fromDateController,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.calendar_today),
-                    labelText: 'From Date',
+                    labelText: 'FROM DATE',
                     border: OutlineInputBorder(),
                   ),
                   readOnly: true,
@@ -142,7 +142,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                   controller: _toDateController,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.calendar_today),
-                    labelText: 'To Date',
+                    labelText: 'TO DATE',
                     border: OutlineInputBorder(),
                   ),
                   readOnly: true,
@@ -171,7 +171,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                   controller: _emailController,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.email),
-                    labelText: 'Email',
+                    labelText: 'EMAIL',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -180,7 +180,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                   controller: _reasonController,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.notes),
-                    labelText: 'Reason',
+                    labelText: 'REASON',
                     border: OutlineInputBorder(),
                   ),
                   maxLines: 3,
@@ -190,7 +190,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                   controller: _daysApplicableController,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.calendar_today),
-                    labelText: 'Days applicable',
+                    labelText: 'DAYS APPLICABLE',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,

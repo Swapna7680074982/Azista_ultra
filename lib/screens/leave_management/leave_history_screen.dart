@@ -7,7 +7,7 @@ class LeaveHistoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Leave History'),
+        title: const Text('LEAVE HISTORY'),
         backgroundColor: const Color(0xFFC62828),
         foregroundColor: Colors.white,
       ),
@@ -21,10 +21,10 @@ class LeaveHistoryScreen extends StatelessWidget {
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(child: Text('From Date', style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(child: Text('To Date', style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(child: Text('Type', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-                Expanded(child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                Expanded(child: Text('FROM DATE', style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(child: Text('TO DATE', style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(child: Text('TYPE', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+                Expanded(child: Text('STATUS', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
               ],
             ),
           ),
@@ -48,7 +48,7 @@ class LeaveHistoryScreen extends StatelessWidget {
                             child: Text(request.toDate, style: const TextStyle(fontSize: 12)),
                           ),
                           Expanded(
-                            child: Text(request.type, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            child: Text(request.type.toUpperCase(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
                           ),
                           Expanded(
                             child: Align(
@@ -92,7 +92,7 @@ class LeaveHistoryScreen extends StatelessWidget {
             border: Border.all(color: Colors.grey.shade400),
           ),
           child: Text(
-            status,
+            status.toUpperCase(),
             style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold),
           ),
         );
@@ -105,7 +105,7 @@ class LeaveHistoryScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
-        status,
+        status.toUpperCase(),
         style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold),
       ),
     );

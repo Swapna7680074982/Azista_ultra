@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         title: const Text(
-          "Attendance",
+          "ATTENDANCE",
           style: TextStyle(
             color: AppColors.white,
             fontSize: 18,
@@ -181,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           builder: (context, homeProvider, appState, _) {
                             return DropdownButton<String>(
                               isExpanded: true,
-                              hint: const Text("Select Distributor"),
+                              hint: const Text("SELECT DISTRIBUTOR"),
                               value: appState.selectedDistributor,
 
                               items: homeProvider.distributors
@@ -311,7 +311,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                         },
                         child: Text(
-                          "View Details >>",
+                          "VIEW DETAILS >>",
                           style: TextStyle(
                             color: Colors.red.shade700,
                             fontWeight: FontWeight.w600,
@@ -333,7 +333,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
 
                 if (provider.todayAttendance == null) {
-                  return const Text("No attendance data");
+                  return const Text("NO ATTENDANCE DATA");
                 }
 
                 final data = provider.todayAttendance!;
@@ -353,7 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return Column(
                   children: [
                     Text(
-                      "Check-In: ${DateFormatter.formatDateTime(checkIn)}",
+                      "CHECK-IN: ${DateFormatter.formatDateTime(checkIn)}",
                       style: TextStyle(
                         color: AppColors.primary,
                         fontSize: 14,
@@ -362,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "Working Hours: $workingHours hrs",
+                      "WORKING HOURS: $workingHours hrs",
                       style: const TextStyle(fontSize: 13),
                     ),
                   ],
@@ -376,7 +376,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   ActionBox(
                     Icons.person,
-                    "Leave\nManagement",
+                    "LEAVE\nMANAGEMENT",
                     enabled: !appState.isOnline,
                     onTap: () {
                       if (AccessValidator.validate(
@@ -397,7 +397,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   ActionBox(
                     Icons.access_time,
-                    "Attendance",
+                    "ATTENDANCE",
                     enabled: appState.isOnline,
                     onTap: () {
                       if (AccessValidator.validate(
@@ -418,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   ActionBox(
                     Icons.receipt,
-                    "User\nTransaction's",
+                    "USER\nTRANSACTIONS",
                     enabled: appState.isOnline,
                     onTap: () {
                       if (AccessValidator.validate(

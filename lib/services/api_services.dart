@@ -668,4 +668,33 @@ class ApiServices {
       return null;
     }
   }
+  static Future<Map<String, dynamic>?> getSupportTeam() async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      AppLogger.info("Get Support Team API called: ${AppUrls.getSupportTeam}");
+      AppLogger.info("Headers: ${jsonEncode({
+        "Authorization": "Bearer $token",
+      })}");
+      final response = await _dio.post(
+        AppUrls.getSupportTeam,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status! < 500,
+        ),
+      );
+      AppLogger.info("Get Support Team response: ${response.statusCode} - ${response.data}");
+
+      if (response.statusCode == 200 && response.data["status"] == "success") {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Support Team error", e);
+      return null;
+    }
+  }
 }

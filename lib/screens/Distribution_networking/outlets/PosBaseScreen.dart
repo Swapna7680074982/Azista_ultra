@@ -81,7 +81,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       backgroundColor: AppColors.white,
       appBar: AppBar(
         title: const Text(
-          "Point of sale",
+          "POINT OF SALE",
           style: TextStyle(
             color: AppColors.white,
             fontSize: 18,
@@ -123,7 +123,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(outlet.name,
+              Text(outlet.name.toUpperCase(),
                   style: const TextStyle(fontWeight: FontWeight.bold)),
 
               Text("OUTLET ID: ${outlet.id}"),

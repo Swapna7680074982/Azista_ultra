@@ -10,7 +10,7 @@ class LeaveManagementScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Leave Management'),
+        title: const Text('LEAVE MANAGEMENT'),
         backgroundColor: const Color(0xFFC62828),
         foregroundColor: Colors.white,
       ),
@@ -25,7 +25,7 @@ class LeaveManagementScreen extends StatelessWidget {
                   child: _buildActionButton(
                     context,
                     icon: Icons.edit,
-                    label: 'Apply Leave',
+                    label: 'APPLY LEAVE',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -39,7 +39,7 @@ class LeaveManagementScreen extends StatelessWidget {
                   child: _buildActionButton(
                     context,
                     icon: Icons.history,
-                    label: 'Leave History',
+                    label: 'LEAVE HISTORY',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -57,7 +57,7 @@ class LeaveManagementScreen extends StatelessWidget {
                   child: _buildActionButton(
                     context,
                     icon: Icons.list_alt,
-                    label: 'Holiday List',
+                    label: 'HOLIDAY LIST',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -71,7 +71,7 @@ class LeaveManagementScreen extends StatelessWidget {
                   child: _buildActionButton(
                     context,
                     icon: Icons.event_busy,
-                    label: 'Comp Off',
+                    label: 'COMP OFF',
                     onTap: () {
                       // Implement Comp Off logic if needed
                     },
@@ -81,7 +81,7 @@ class LeaveManagementScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             const Text(
-              'Leaves Summary',
+              'LEAVES SUMMARY',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const Divider(thickness: 1, color: Colors.grey),
@@ -94,7 +94,7 @@ class LeaveManagementScreen extends StatelessWidget {
                       children: [
                         const SizedBox(height: 16),
                         Text(
-                          balance.type,
+                          balance.type.toUpperCase(),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const Divider(thickness: 1, color: Colors.grey),
@@ -103,9 +103,9 @@ class LeaveManagementScreen extends StatelessWidget {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _buildSummaryItem('Allocated', balance.allocated.toString()),
-                              _buildSummaryItem('Used', balance.used.toString()),
-                              _buildSummaryItem('Remaining', balance.remaining.toString()),
+                              _buildSummaryItem('ALLOCATED', balance.allocated.toString()),
+                              _buildSummaryItem('USED', balance.used.toString()),
+                              _buildSummaryItem('REMAINING', balance.remaining.toString()),
                             ],
                           ),
                         ),

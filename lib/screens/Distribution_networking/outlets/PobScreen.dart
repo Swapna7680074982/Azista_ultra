@@ -5,6 +5,7 @@ import 'outlet_activity_provider.dart';
 import '../../../constants/app_colors.dart';
 import 'PobHistoryScreen.dart';
 import '../../../permissions/AppStateProvider.dart';
+import '../../../utilities/common_widgets.dart';
 
 class PobBody extends StatefulWidget {
   final int outletId;
@@ -144,39 +145,17 @@ class _PobBodyState extends State<PobBody> {
 
     if (skus.isEmpty) return const SizedBox.shrink();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey.shade200),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
-          ...skus.map((sku) => _buildSkuRow(productId, sku, provider)).toList(),
-        ],
-      ),
+    return ProductCard(
+      title: title,
+      children: skus.map((sku) => _buildSkuRow(productId, sku, provider)).toList(),
     );
   }
 
   Widget _buildSkuRow(int productId, dynamic sku, OutletActivityProvider provider) {
     final skuName = sku['sku_displayname'] ?? 'Unknown SKU';
     final skuId = sku['sku_id'];
-    // Red box input value might need a different state map, but we'll use stockQuantities temporarily
     final currentQty = provider.stockQuantities["${productId}_$skuId"]?.toString() ?? "";
     final distStockStr = provider.distributorStock["${productId}_$skuId"]?.toString() ?? "0";
-    final distStock = int.tryParse(distStockStr) ?? 0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -185,62 +164,22 @@ class _PobBodyState extends State<PobBody> {
           Expanded(
             child: Text(
               skuName,
-              style: const TextStyle(fontSize: 13),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             ),
           ),
 
-          _box(currentQty: distStockStr),
+          QtyBox(isEditable: false, initialValue: distStockStr),
 
-          const SizedBox(width: 10),
-          _box(red: true, currentQty: currentQty, maxQty: distStock, onChange: (val) {
-            provider.updateStockQuantity(productId, skuId, val);
-          }),
+          const SizedBox(width: 12),
+          
+          QtyBox(
+            isRed: true,
+            initialValue: currentQty,
+            onChanged: (val) {
+              provider.updateStockQuantity(productId, skuId, val);
+            },
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _box({bool red = false, String currentQty = "", int maxQty = 0, Function(String)? onChange}) {
-    if (red) {
-      return SizedBox(
-        width: 55,
-        height: 30,
-        child: TextFormField(
-          initialValue: currentQty,
-          textAlign: TextAlign.center,
-          keyboardType: TextInputType.number,
-          textInputAction: TextInputAction.done,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            CustomMaxNumberFormatter(maxQty),
-          ],
-          onChanged: onChange,
-          decoration: InputDecoration(
-            contentPadding: EdgeInsets.zero,
-            border: OutlineInputBorder(
-              borderSide: BorderSide(color: AppColors.primary),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: AppColors.primary),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: AppColors.primary, width: 2),
-            ),
-          ),
-        ),
-      );
-    }
-    return Container(
-      width: 55,
-      height: 30,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey.shade400),
-      ),
-      child: Text(
-        currentQty.isEmpty ? "0" : currentQty,
-        style: const TextStyle(fontSize: 13),
       ),
     );
   }

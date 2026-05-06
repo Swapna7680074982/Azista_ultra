@@ -30,7 +30,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       backgroundColor: AppColors.white,
       appBar: AppBar(
         title: const Text(
-          "Attendance",
+          "ATTENDANCE",
           style: TextStyle(
             color: AppColors.white,
             fontSize: 18,

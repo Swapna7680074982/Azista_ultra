@@ -24,10 +24,16 @@ class AttendanceCard extends StatelessWidget {
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _row("Started At", _format(data.start)),
+          Text(
+            _formatDate(data.start),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const Divider(),
+          _row("STARTED AT", _format(data.start)),
           const SizedBox(height: 6),
-          _row("Ended At", data.end != null ? _format(data.end!) : "-"),
+          _row("ENDED AT", data.end != null ? _format(data.end!) : "-"),
           const SizedBox(height: 4),
 
           // if (data.hasRequest)
@@ -152,7 +158,7 @@ void showRequestPopup(BuildContext context, Attendance data) {
 
                   const Center(
                     child: Text(
-                      "Send Request",
+                      "SEND REQUEST",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -162,7 +168,7 @@ void showRequestPopup(BuildContext context, Attendance data) {
 
                   const SizedBox(height: 20),
 
-                  const Text("Request Date",
+                  const Text("REQUEST DATE",
                       style: TextStyle(color: Colors.grey)),
                   const SizedBox(height: 6),
 
@@ -183,7 +189,7 @@ void showRequestPopup(BuildContext context, Attendance data) {
 
                   const SizedBox(height: 16),
 
-                  const Text("Request Message",
+                  const Text("REQUEST MESSAGE",
                       style: TextStyle(color: Colors.grey)),
                   const SizedBox(height: 6),
 

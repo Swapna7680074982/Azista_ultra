@@ -70,7 +70,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(outlet.name,
+              Text(outlet.name.toUpperCase(),
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               
               const SizedBox(height: 4),
@@ -230,7 +230,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
       drawer: const ProfileDrawer(selectedMenu: "Near Me"),
       appBar: AppBar(
         title: const Text(
-          "Near Me",
+          "NEAR ME",
           style: TextStyle(
             color: AppColors.white,
             fontSize: 18,

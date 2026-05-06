@@ -55,7 +55,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(outlet.name,
+          Text(outlet.name.toUpperCase(),
               style: const TextStyle(fontWeight: FontWeight.bold)),
 
           Text("OUTLET ID: ${outlet.id}"),
@@ -156,7 +156,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
                           builder: (_) => DirectionsMapScreen(
                             outletLat: outlet.latitude,
                             outletLng: outlet.longitude,
-                            outletName: outlet.name,
+                            outletName: outlet.name.toUpperCase(),
                           ),
                         ),
                       );
@@ -187,7 +187,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
       backgroundColor: AppColors.white,
       appBar: AppBar(
         title: const Text(
-          "Outlet's",
+          "OUTLETS",
           style: TextStyle(
             color: AppColors.white,
             fontSize: 18,
@@ -228,7 +228,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Route",
+                  "ROUTE",
                   style: TextStyle(
                     fontSize: 15,
                     color: AppColors.primary,
@@ -264,7 +264,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
                 context.read<OutletProvider>().updateSearch(value);
               },
               decoration: InputDecoration(
-                hintText: "Search by Outlet / Owner / Phone",
+                hintText: "SEARCH BY OUTLET / OWNER / PHONE",
                 suffixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: AppColors.inputFill,

@@ -41,11 +41,11 @@ class ProfileDrawer extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      name,
+                      name.toUpperCase(),
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
-                    Text(role),
+                    Text(role.toUpperCase()),
                     const SizedBox(height: 4),
                     Text("Version: $version"),
                   ],

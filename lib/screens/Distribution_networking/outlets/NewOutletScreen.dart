@@ -176,7 +176,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
-          "Registration",
+          "REGISTRATION",
           style: TextStyle(
             color: AppColors.white,
             fontSize: 18,
@@ -201,7 +201,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    "Route",
+                    "ROUTE",
                     style: TextStyle(
                       fontSize: 15,
                       color: AppColors.primary,
@@ -319,7 +319,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                       children: [
                         const Center(
                           child: Text(
-                            "Select Gender",
+                            "SELECT GENDER",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -412,7 +412,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
 
                   const Padding(
                     padding: EdgeInsets.all(10),
-                    child: Text("Alternative Contact Details",
+                    child: Text("ALTERNATIVE CONTACT DETAILS",
                         style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
 

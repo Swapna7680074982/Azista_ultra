@@ -104,7 +104,7 @@ class _DonutChartState extends State<DonutChart>
                             ),
                           ),
                           const Text(
-                            "Achieved",
+                            "ACHIEVED",
                             style: TextStyle(
                               fontSize: 10,
                               color: Colors.white,
@@ -133,7 +133,7 @@ class _DonutChartState extends State<DonutChart>
                             ),
                           ),
                           Text(
-                            "Target ${widget.label.split(" ").last}",
+                            "TARGET ${widget.label.split(" ").last.toUpperCase()}",
                             style: const TextStyle(
                               fontSize: 10,
                               color: Colors.white,
@@ -157,7 +157,7 @@ class _DonutChartState extends State<DonutChart>
               children: [
                 Container(width: 10, height: 10, color: Colors.green),
                 const SizedBox(width: 6),
-                Text("Total ${widget.label.split(" ").last}"),
+                Text("TOTAL ${widget.label.split(" ").last.toUpperCase()}"),
               ],
             ),
             const SizedBox(height: 4),
@@ -166,7 +166,7 @@ class _DonutChartState extends State<DonutChart>
               children: [
                 Container(width: 10, height: 10, color: Colors.red),
                 const SizedBox(width: 6),
-                Text("Target ${widget.label.split(" ").last}"),
+                Text("TARGET ${widget.label.split(" ").last.toUpperCase()}"),
               ],
             ),
           ],

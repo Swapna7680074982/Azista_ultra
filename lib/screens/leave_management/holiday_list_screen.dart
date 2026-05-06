@@ -9,7 +9,7 @@ class HolidayListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Holiday List'),
+        title: const Text('HOLIDAY LIST'),
         backgroundColor: const Color(0xFFC62828),
         foregroundColor: Colors.white,
       ),
@@ -24,11 +24,11 @@ class HolidayListScreen extends StatelessWidget {
               children: [
                 Expanded(
                   flex: 2,
-                  child: Text('Date', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text('DATE', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 Expanded(
                   flex: 3,
-                  child: Text('Occassion', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text('OCCASION', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -63,7 +63,7 @@ class HolidayListScreen extends StatelessWidget {
                           Expanded(
                             flex: 3,
                             child: Text(
-                              holiday.occasion,
+                              holiday.occasion.toUpperCase(),
                               style: TextStyle(
                                 fontSize: 13,
                                 color: isFuture ? AppColors.primary : Colors.black87,

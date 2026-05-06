@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 import '../../../services/api_services.dart';
 import 'package:flutter/services.dart';
-import 'PobScreen.dart'; // For CustomMaxNumberFormatter
 
 class ProductListScreen extends StatefulWidget {
   final dynamic pobData;
@@ -104,7 +103,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
-                      CustomMaxNumberFormatter(int.tryParse(remainingQty) ?? 0),
                     ],
                     onChanged: (val) {
                       _supplyQuantities[index] = val;

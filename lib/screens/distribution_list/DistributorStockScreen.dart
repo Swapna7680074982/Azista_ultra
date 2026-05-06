@@ -6,6 +6,7 @@ import 'StockOnHandScreen.dart';
 import 'package:provider/provider.dart';
 import 'distribution_list_provider.dart';
 import '../../../permissions/AppStateProvider.dart';
+import '../../../utilities/common_widgets.dart';
 
 class DistributorStockScreen extends StatefulWidget {
   const DistributorStockScreen({super.key});
@@ -34,10 +35,10 @@ class _DistributorStockScreenState extends State<DistributorStockScreen> {
           backgroundColor: Colors.grey.shade200,
           appBar: AppBar(
             title: const Text(
-              "Distributor Stock",
+              "DISTRIBUTOR STOCK",
               style: TextStyle(
                 color: AppColors.white,
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -57,7 +58,6 @@ class _DistributorStockScreenState extends State<DistributorStockScreen> {
                 },
                 icon: const Icon(Icons.menu_book),
               ),
-              const SizedBox(width: 15),
               IconButton(
                 onPressed: () {
                   Navigator.push(
@@ -69,7 +69,6 @@ class _DistributorStockScreenState extends State<DistributorStockScreen> {
                 },
                 icon: const Icon(Icons.currency_rupee),
               ),
-              const SizedBox(width: 15),
               IconButton(
                 onPressed: () {
                   Navigator.push(
@@ -161,37 +160,15 @@ class _DistributorStockScreenState extends State<DistributorStockScreen> {
 
     if (skus.isEmpty) return const SizedBox.shrink();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Column(
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 6),
-          ...skus.map((sku) => _buildSkuRow(productId, sku, provider)).toList(),
-        ],
-      ),
+    return ProductCard(
+      title: title,
+      children: skus.map((sku) => _buildSkuRow(productId, sku, provider)).toList(),
     );
   }
 
   Widget _buildSkuRow(int productId, dynamic sku, DistributionListProvider provider) {
     final skuName = sku['sku_displayname'] ?? 'Unknown SKU';
     final skuId = sku['sku_id'];
-    
-    // Default controller so it retains value if user scrolls away? 
-    // Usually it's better to manage text controllers if we want to retain state,
-    // but updating onChanged and setting initial value from provider works too.
-    
     final currentQty = provider.stockQuantities["${productId}_$skuId"]?.toString() ?? "";
 
     return Padding(
@@ -201,29 +178,14 @@ class _DistributorStockScreenState extends State<DistributorStockScreen> {
           Expanded(
             child: Text(
               skuName,
-              style: const TextStyle(fontSize: 13),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             ),
           ),
-          SizedBox(
-            width: 60,
-            height: 30,
-            child: TextFormField(
-              initialValue: currentQty,
-              textAlign: TextAlign.center,
-              keyboardType: TextInputType.number,
-              onChanged: (value) {
-                provider.updateStockQuantity(productId, skuId, value);
-              },
-              decoration: InputDecoration(
-                contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primary),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primary, width: 2),
-                ),
-              ),
-            ),
+          QtyBox(
+            initialValue: currentQty,
+            onChanged: (value) {
+              provider.updateStockQuantity(productId, skuId, value);
+            },
           ),
         ],
       ),

@@ -69,12 +69,12 @@ class _DailyTabState extends State<DailyTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Outlet Name",
+                          "OUTLET NAME",
                           style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          data["outletName"]!,
+                          data["outletName"]!.toString().toUpperCase(),
                           style: const TextStyle(fontSize: 18, color: Colors.black87),
                         ),
                         const SizedBox(height: 16),
@@ -85,7 +85,7 @@ class _DailyTabState extends State<DailyTab> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Owner Name",
+                                  "OWNER NAME",
                                   style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                                 ),
                                 const SizedBox(height: 4),
@@ -99,7 +99,7 @@ class _DailyTabState extends State<DailyTab> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  "Phone Number",
+                                  "PHONE NUMBER",
                                   style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                                 ),
                                 const SizedBox(height: 4),

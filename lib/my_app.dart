@@ -1,5 +1,6 @@
 import 'package:azista_ultra/provider_create_list.dart';
 import 'package:azista_ultra/screens/splash_screen.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,6 +16,13 @@ class MyApp extends StatelessWidget {
         title: 'Azista App',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
+          fontFamily: 'Heebo',
+          cupertinoOverrideTheme: const CupertinoThemeData(
+            textTheme: CupertinoTextThemeData(
+              primaryColor: Colors.red,
+              textStyle: TextStyle(fontFamily: 'Heebo'),
+            ),
+          ),
         ),
         home: const SplashScreen(),
       ),

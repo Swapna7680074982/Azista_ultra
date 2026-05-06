@@ -146,41 +146,72 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
   }
 
   void _showProductPopup(BuildContext context, List<Map<String, dynamic>> products) {
+    // Group products by name
+    Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (var p in products) {
+      String name = p['product_name'] ?? 'Unknown';
+      if (!grouped.containsKey(name)) {
+        grouped[name] = [];
+      }
+      grouped[name]!.add(p);
+    }
+
     showDialog(
       context: context,
       builder: (context) {
         return Dialog(
           backgroundColor: AppColors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Align(
-                  alignment: Alignment.centerLeft,
+                const Center(
                   child: Text(
                     "PRODUCT LIST",
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 10),
-
-                ...products.map((product) {
-                  return _productRow(product["name"]!, product["qty"]!);
-                }).toList(),
-
-                const SizedBox(height: 10),
+                const Divider(),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: grouped.entries.map((entry) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: Text(
+                                entry.key.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            ...entry.value.map((sku) {
+                              return _skuRow(sku['sku_name'] ?? 'N/A', sku['qty'] ?? '0');
+                            }).toList(),
+                            const SizedBox(height: 20),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
                     child:  Text(
                       "CLOSE",
-                      style: TextStyle(color: AppColors.primary),
+                      style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -192,25 +223,30 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
     );
   }
 
-  Widget _productRow(String name, String qty) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 5),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(6),
-      ),
+  Widget _skuRow(String sku, String qty) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Expanded(child: Text(name)),
-
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade100,
-              borderRadius: BorderRadius.circular(4),
+          Expanded(
+            child: Text(
+              sku,
+              style: const TextStyle(fontSize: 14),
             ),
-            child: Text("QTY: $qty"),
+          ),
+          Container(
+            width: 70,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.lightBlue.shade50,
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Text(
+              qty,
+              style: const TextStyle(fontSize: 14),
+            ),
           ),
         ],
       ),

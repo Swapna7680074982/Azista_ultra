@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'outlet_activity_provider.dart';
 import '../../../constants/app_colors.dart';
 import '../../../permissions/AppStateProvider.dart';
+import '../../../utilities/common_widgets.dart';
 
 class SamplingBody extends StatefulWidget {
   final int outletId;
@@ -100,29 +101,9 @@ class _SamplingBodyState extends State<SamplingBody> {
 
     if (skus.isEmpty) return const SizedBox.shrink();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey.shade200),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
-          ...skus.map((sku) => _buildSkuRow(productId, sku, provider)).toList(),
-        ],
-      ),
+    return ProductCard(
+      title: title,
+      children: skus.map((sku) => _buildSkuRow(productId, sku, provider)).toList(),
     );
   }
 
@@ -138,36 +119,17 @@ class _SamplingBodyState extends State<SamplingBody> {
           Expanded(
             child: Text(
               skuName,
-              style: const TextStyle(fontSize: 13),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             ),
           ),
-          SizedBox(
-            width: 60,
-            height: 30,
-            child: TextFormField(
-              initialValue: currentQty,
-              textAlign: TextAlign.center,
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.done,
-              onChanged: (value) {
-                provider.updateSamplingQuantity(productId, skuId, value);
-              },
-              decoration: InputDecoration(
-                contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primary),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primary),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primary, width: 2),
-                ),
-              ),
-            ),
+          QtyBox(
+            initialValue: currentQty,
+            onChanged: (value) {
+              provider.updateSamplingQuantity(productId, skuId, value);
+            },
           ),
         ],
       ),
     );
   }
-}
+}

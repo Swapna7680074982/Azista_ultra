@@ -50,7 +50,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
 
       appBar: AppBar(
         title: const Text(
-          "User Transactions",
+          "USER TRANSACTIONS",
           style: TextStyle(
             color: AppColors.white,
             fontSize: 18,
@@ -68,7 +68,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(15, 15, 15, 5),
               child: Text(
-                "Distributor: ${Provider.of<AppStateProvider>(context).selectedDistributor ?? 'Not Selected'}",
+                "Distributor: ${(Provider.of<AppStateProvider>(context).selectedDistributor ?? 'Not Selected').toUpperCase()}",
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -159,9 +159,9 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text("POB COUNT: ${outlet['pob_count']}"),
-                                    Text("SALE COUNT: ${outlet['sale_count']}"),
-                                    Text("STOCK COUNT: ${outlet['stock_count']}"),
+                                    Text("POB COUNT: ${outlet['pob_count']}".toUpperCase()),
+                                    Text("SALE COUNT: ${outlet['sale_count']}".toUpperCase()),
+                                    Text("STOCK COUNT: ${outlet['stock_count']}".toUpperCase()),
                                   ],
                                 ),
                               ],

@@ -125,35 +125,22 @@ class _TransactionDetailsScreenState
           itemBuilder: (context, index) {
             final pob = data[index];
             final items = pob['items'] as List<dynamic>? ?? [];
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(6),
-                boxShadow: [BoxShadow(color: Colors.grey.shade300, blurRadius: 3)],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("POB NUMBER: ${pob['pob_number'] ?? 'N/A'}", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 5),
-                  //Text("Total Amount: \$${pob['total_amount'] ?? '0.00'}"),
-                  Text("Date: ${DateFormatter.formatDateTime(pob['created_at'])}"),
-                  Text("Status: ${pob['status'] ?? 'N/A'}"),
-                  if (items.isNotEmpty) ...[
-                    const Divider(),
-                    ...items.map((item) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4.0),
-                        child: Text(
-                          "- ${item['product_name']} (${item['sku_displayname']}): Qty ${item['quantity']}",
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      );
-                    }).toList(),
-                  ],
-                ],
+            final date = pob['created_at'] ?? pob['created_on'];
+            
+            return GestureDetector(
+              onTap: () => _showProductPopup(context, items, title: "POB: ${pob['pob_number']}"),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  boxShadow: [BoxShadow(color: Colors.grey.shade300, blurRadius: 3)],
+                ),
+                child: Text(
+                  "SUBMISSION ON ${DateFormatter.formatDateTime(date)}",
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
               ),
             );
           },
@@ -183,34 +170,159 @@ class _TransactionDetailsScreenState
         if (data.isEmpty) {
           return Center(child: Text("No ${posType.toUpperCase()} History"));
         }
+
+        // Group by date
+        final Map<String, List<dynamic>> grouped = {};
+        for (var item in data) {
+          final rawDate = item['created_on'] ?? item['created_at'];
+          if (rawDate != null) {
+             final formattedDate = DateFormatter.formatDateTime(rawDate);
+             if (!grouped.containsKey(formattedDate)) {
+               grouped[formattedDate] = [];
+             }
+             grouped[formattedDate]!.add(item);
+          }
+        }
+
+        final dates = grouped.keys.toList();
+
         return ListView.builder(
           padding: const EdgeInsets.all(10),
-          itemCount: data.length,
+          itemCount: dates.length,
           itemBuilder: (context, index) {
-            final item = data[index];
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade300),
-                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item['product_name'] ?? "Product ID: ${item['product_id'] ?? 'N/A'}", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 5),
-                  Text("SKU: ${item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id'] ?? 'N/A'}"),
-                  Text("Quantity: ${item['quantity'] ?? '0'}"),
-                   Text("Date: ${DateFormatter.formatDateTime(item['created_on'] ?? item['created_at'])}"),
-                ],
+            final date = dates[index];
+            final items = grouped[date]!;
+            
+            return GestureDetector(
+              onTap: () => _showProductPopup(context, items, title: "${posType.toUpperCase()} DETAILS"),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade300),
+                  boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+                ),
+                child: Text(
+                  "SUBMISSION ON $date",
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
               ),
             );
           },
         );
       },
+    );
+  }
+
+  void _showProductPopup(BuildContext context, List<dynamic> items, {String? title}) {
+    // Group by product name
+    Map<String, List<dynamic>> grouped = {};
+    for (var item in items) {
+      String name = item['product_name'] ?? "Product ID: ${item['product_id'] ?? 'N/A'}";
+      if (!grouped.containsKey(name)) {
+        grouped[name] = [];
+      }
+      grouped[name]!.add(item);
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: AppColors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Text(
+                    title ?? "PRODUCT LIST",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const Divider(),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: grouped.entries.map((entry) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: Text(
+                                entry.key.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            ...entry.value.map((item) {
+                              String qty = item['quantity']?.toString() ?? '0';
+                              String sku = item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'N/A';
+                              return _skuRow(sku, qty);
+                            }).toList(),
+                            const SizedBox(height: 20),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child:  Text(
+                      "CLOSE",
+                      style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _skuRow(String sku, String qty) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              sku,
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+          Container(
+            width: 70,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.lightBlue.shade50,
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Text(
+              qty,
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

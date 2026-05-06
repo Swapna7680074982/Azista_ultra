@@ -46,14 +46,14 @@ class _MonthlyTabState extends State<MonthlyTab> {
                 children: [
                   const Icon(Icons.flag, color: Colors.green),
                   const SizedBox(width: 4),
-                  const Text("Attendance", style: TextStyle(color: Colors.black87)),
+                  const Text("ATTENDANCE", style: TextStyle(color: Colors.black87)),
                 ],
               ),
               Row(
                 children: [
                   Icon(Icons.flag, color: AppColors.primary),
                   const SizedBox(width: 4),
-                  const Text("No Attendance", style: TextStyle(color: Colors.black87)),
+                  const Text("NO ATTENDANCE", style: TextStyle(color: Colors.black87)),
                 ],
               ),
             ],
@@ -84,7 +84,7 @@ class _MonthlyTabState extends State<MonthlyTab> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Date",
+                                  "DATE",
                                   style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                                 ),
                                 const SizedBox(height: 4),
@@ -108,7 +108,7 @@ class _MonthlyTabState extends State<MonthlyTab> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  "Sale",
+                                  "SALE",
                                   style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                                 ),
                                 const SizedBox(height: 4),
@@ -128,7 +128,7 @@ class _MonthlyTabState extends State<MonthlyTab> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Productive Calls",
+                                  "PRODUCTIVE CALLS",
                                   style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                                 ),
                                 const SizedBox(height: 4),
@@ -142,7 +142,7 @@ class _MonthlyTabState extends State<MonthlyTab> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  "Total Calls",
+                                  "TOTAL CALLS",
                                   style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                                 ),
                                 const SizedBox(height: 4),
