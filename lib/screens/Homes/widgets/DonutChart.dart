@@ -239,7 +239,7 @@ class DonutPainter extends CustomPainter {
       greenPaint,
     );
     final lightOverlayPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.35)
+      ..color = Colors.white.withOpacity(0.35)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 10 
       ..strokeCap = StrokeCap.butt;
@@ -338,7 +338,7 @@ class ActionBox extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.black.withAlpha(5),
+                    color: AppColors.black.withOpacity(0.05),
                     blurRadius: 6,
                     offset: const Offset(0, 3),
                   )

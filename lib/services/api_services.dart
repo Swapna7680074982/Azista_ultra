@@ -697,4 +697,75 @@ class ApiServices {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>?> getDailyCallSummary({
+    required String date,
+    int? distributorId,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final payload = {
+        "date": date,
+      };
+      if (distributorId != null) {
+        payload["distributor_id"] = distributorId.toString();
+      }
+
+      final response = await _dio.post(
+        AppUrls.dailyCallSummary,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data["status"] == "success") {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Daily Call Summary error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getCallsInfo({
+    String? date,
+    String? month,
+    int? distributorId,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final payload = <String, dynamic>{};
+      if (date != null) payload["date"] = date;
+      if (month != null) payload["month"] = month;
+      if (distributorId != null) payload["distributor_id"] = distributorId;
+
+      final response = await _dio.post(
+        AppUrls.callsInfo,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data["status"] == "success") {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Calls Info error", e);
+      return null;
+    }
+  }
 }

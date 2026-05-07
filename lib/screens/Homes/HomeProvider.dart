@@ -11,6 +11,8 @@ class HomeProvider extends ChangeNotifier {
   bool isAttendanceLoading = false;
   bool isLoading = false;
   String? message;
+  Map<String, dynamic>? dailyCallSummary;
+  bool isSummaryLoading = false;
 
   Future<void> loadDistributors() async {
     distributors = await SessionManager.getDistributors();
@@ -94,6 +96,28 @@ class HomeProvider extends ChangeNotifier {
     }
 
     isAttendanceLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> fetchDailyCallSummary(int? distributorId) async {
+    isSummaryLoading = true;
+    notifyListeners();
+
+    final now = DateTime.now();
+    final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+    final res = await ApiServices.getDailyCallSummary(
+      date: dateStr,
+      distributorId: distributorId,
+    );
+
+    if (res != null && res["data"] != null) {
+      dailyCallSummary = res["data"];
+    } else {
+      dailyCallSummary = null;
+    }
+
+    isSummaryLoading = false;
     notifyListeners();
   }
 }

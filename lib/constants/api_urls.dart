@@ -22,4 +22,6 @@ class AppUrls {
   static const String posTransaction = "$baseUrl/distribution/pos_transaction";
   static const String posHistory = "$baseUrl/distribution/pos_history";
   static const String getSupportTeam = "$baseUrl/distribution/get_support_team";
+  static const String dailyCallSummary = "$baseUrl/distribution/daily_call_summary";
+  static const String callsInfo = "$baseUrl/distribution/calls_info";
 }

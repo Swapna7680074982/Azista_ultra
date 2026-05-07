@@ -22,7 +22,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   @override
-  @override
   void initState() {
     super.initState();
 
@@ -34,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await homeProvider.loadDistributors();
       await homeProvider.initializeAttendance(appState);
       await homeProvider.fetchTodayAttendance();
+      await homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
     });
   }
 
@@ -117,12 +117,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                   activeThumbColor: AppColors.button,
-                  activeTrackColor: AppColors.button.withValues(
-                    alpha: 0.35,
+                  activeTrackColor: AppColors.button.withOpacity(
+                    0.35,
                   ),
                   inactiveThumbColor: AppColors.white,
-                  inactiveTrackColor: AppColors.white.withValues(
-                    alpha: 0.4,
+                  inactiveTrackColor: AppColors.white.withOpacity(
+                    0.4,
                   ),
 
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -208,6 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   }
                                 }
                                 appState.setDistributor(value, id: id);
+                                homeProvider.fetchDailyCallSummary(id);
                               },
                             );
                           },
@@ -277,22 +278,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
               child: Column(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      DonutChart(
-                        value: 2,
-                        total: 30,
-                        label: "Total Calls",
-                        color: Colors.green,
-                      ),
-                      DonutChart(
-                        value: 6,
-                        total: 30,
-                        label: "Target Productive",
-                        color: Colors.green,
-                      ),
-                    ],
+                  Consumer<HomeProvider>(
+                    builder: (context, provider, _) {
+                      if (provider.isSummaryLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final summary = provider.dailyCallSummary;
+                      final targetCalls = (summary?["target_calls"] ?? 0).toDouble();
+                      final productiveCalls = (summary?["productive_calls"] ?? 0).toDouble();
+
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          DonutChart(
+                            value: targetCalls,
+                            total: 30.0,
+                            label: "Total Calls",
+                            color: Colors.green,
+                          ),
+                          DonutChart(
+                            value: productiveCalls,
+                            total: 30.0,
+                            label: "Target Productive",
+                            color: Colors.green,
+                          ),
+                        ],
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 30),

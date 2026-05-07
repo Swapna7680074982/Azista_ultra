@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../services/api_services.dart';
 
 class ProductivityProvider extends ChangeNotifier {
   String _selectedDailyCallType = "Normal Calls";
+  Map<String, dynamic>? callsSummary;
+  List<dynamic> callsData = [];
+  bool isLoading = false;
 
   String get selectedDailyCallType => _selectedDailyCallType;
 
@@ -10,51 +14,51 @@ class ProductivityProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  final List<Map<String, String>> _dailyData = [
-    {
-      "outletName": "test 89",
-      "ownerName": "test89",
-      "phoneNumber": "8454546464",
-    },
-    {
-      "outletName": "Test 090724",
-      "ownerName": "Priyanka",
-      "phoneNumber": "8919495304",
-    },
-  ];
+  Future<void> fetchCallsInfo({String? date, String? month, int? distributorId}) async {
+    isLoading = true;
+    notifyListeners();
 
-  List<Map<String, String>> get dailyData => _dailyData;
+    final res = await ApiServices.getCallsInfo(
+      date: date,
+      month: month,
+      distributorId: distributorId,
+    );
 
-  final List<Map<String, dynamic>> _monthlyData = [
-    {
-      "date": "Nov 03, 2024",
-      "attendance": false,
-      "sale": "0",
-      "productiveCalls": "0",
-      "totalCalls": "0",
-    },
-    {
-      "date": "Nov 04, 2024",
-      "attendance": false,
-      "sale": "0",
-      "productiveCalls": "0",
-      "totalCalls": "0",
-    },
-    {
-      "date": "Nov 05, 2024",
-      "attendance": false,
-      "sale": "0",
-      "productiveCalls": "0",
-      "totalCalls": "0",
-    },
-    {
-      "date": "Nov 06, 2024",
-      "attendance": false,
-      "sale": "1340",
-      "productiveCalls": "1",
-      "totalCalls": "2",
-    },
-  ];
+    if (res != null) {
+      callsSummary = res["summary"];
+      callsData = res["data"] ?? [];
+    } else {
+      callsSummary = null;
+      callsData = [];
+    }
 
-  List<Map<String, dynamic>> get monthlyData => _monthlyData;
+    isLoading = false;
+    notifyListeners();
+  }
+
+  List<Map<String, String>> get dailyData {
+    return callsData.map<Map<String, String>>((item) {
+      return {
+        "outletName": item["outlet_name"]?.toString() ?? "-",
+        "ownerName": "N/A", // API doesn't provide owner name
+        "phoneNumber": "N/A", // API doesn't provide phone number
+        "targetCall": item["target_call"]?.toString() ?? "0",
+        "productiveCall": item["productive_call"]?.toString() ?? "0",
+        "saleValue": item["sale_value"]?.toString() ?? "0",
+      };
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> get monthlyData {
+    return callsData.map<Map<String, dynamic>>((item) {
+      return {
+        "date": item["call_date"] ?? "-",
+        "outletName": item["outlet_name"]?.toString() ?? "-",
+        "attendance": true, // Assuming attendance if there's call data
+        "sale": item["sale_value"]?.toString() ?? "0",
+        "productiveCalls": item["productive_call"]?.toString() ?? "0",
+        "totalCalls": item["target_call"]?.toString() ?? "0",
+      };
+    }).toList();
+  }
 }
