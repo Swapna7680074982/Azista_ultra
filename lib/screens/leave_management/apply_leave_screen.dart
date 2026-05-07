@@ -43,6 +43,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('APPLY LEAVE'),
         backgroundColor: const Color(0xFFC62828),

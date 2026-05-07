@@ -134,7 +134,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                 children: [
                   const Icon(Icons.person, size: 20),
                   const SizedBox(width: 8),
-                  Text(outlet.owner,style: const TextStyle(fontSize: 18)),
+                  Text(outlet.owner.toUpperCase(),style: const TextStyle(fontSize: 18)),
                 ],
               ),
 

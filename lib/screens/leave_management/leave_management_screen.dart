@@ -9,6 +9,7 @@ class LeaveManagementScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('LEAVE MANAGEMENT'),
         backgroundColor: const Color(0xFFC62828),
@@ -63,17 +64,6 @@ class LeaveManagementScreen extends StatelessWidget {
                         context,
                         MaterialPageRoute(builder: (context) => HolidayListScreen()),
                       );
-                    },
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildActionButton(
-                    context,
-                    icon: Icons.event_busy,
-                    label: 'COMP OFF',
-                    onTap: () {
-                      // Implement Comp Off logic if needed
                     },
                   ),
                 ),

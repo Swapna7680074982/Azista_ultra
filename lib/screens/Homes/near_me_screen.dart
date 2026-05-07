@@ -73,7 +73,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
                 children: [
                   Icon(Icons.person, size: 20, color: Colors.grey.shade500),
                   const SizedBox(width: 12),
-                  Text(outlet.owner, style: TextStyle(color: Colors.grey.shade800,fontSize: 18)),
+                  Text(outlet.owner.toUpperCase(), style: TextStyle(color: Colors.grey.shade800,fontSize: 18)),
                 ],
               ),
 
