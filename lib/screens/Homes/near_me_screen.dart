@@ -77,9 +77,9 @@ class _NearMeScreenState extends State<NearMeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("OUTLET ID: ${outlet.id}", style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
+                  Text("OUTLET ID: ${outlet.id}", style: TextStyle(color: Colors.grey.shade700, fontSize: 15)),
                   if (outlet.distanceKm != null)
-                    Text("${outlet.distanceKm!.toStringAsFixed(2)} km away", style: TextStyle(color: Colors.red.shade700, fontSize: 12, fontWeight: FontWeight.bold)),
+                    Text("${outlet.distanceKm!.toStringAsFixed(2)} km away", style: TextStyle(color: Colors.red.shade700, fontSize: 15, fontWeight: FontWeight.bold)),
                 ],
               ),
 
@@ -87,9 +87,9 @@ class _NearMeScreenState extends State<NearMeScreen> {
 
               Row(
                 children: [
-                  Icon(Icons.person, size: 18, color: Colors.grey.shade500),
+                  Icon(Icons.person, size: 20, color: Colors.grey.shade500),
                   const SizedBox(width: 12),
-                  Text(outlet.owner, style: TextStyle(color: Colors.grey.shade800)),
+                  Text(outlet.owner, style: TextStyle(color: Colors.grey.shade800,fontSize: 18)),
                 ],
               ),
 
@@ -97,9 +97,9 @@ class _NearMeScreenState extends State<NearMeScreen> {
 
               Row(
                 children: [
-                  Icon(Icons.phone, size: 18, color: Colors.grey.shade500),
+                  Icon(Icons.phone, size: 20, color: Colors.grey.shade500),
                   const SizedBox(width: 12),
-                  Text(outlet.phone, style: TextStyle(color: Colors.grey.shade800)),
+                  Text(outlet.phone, style: TextStyle(color: Colors.grey.shade800,fontSize: 18)),
                 ],
               ),
               
@@ -113,7 +113,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
                     Text(
                       outlet.type.toUpperCase(),
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 15,
                         color: Colors.teal.shade700,
                         fontWeight: FontWeight.w500,
                       ),

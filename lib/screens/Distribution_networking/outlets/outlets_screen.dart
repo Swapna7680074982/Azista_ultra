@@ -56,17 +56,17 @@ class _OutletsScreenState extends State<OutletsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(outlet.name.toUpperCase(),
-              style: const TextStyle(fontWeight: FontWeight.bold)),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
 
-          Text("OUTLET ID: ${outlet.id}"),
+          Text("OUTLET ID: ${outlet.id}",style: const TextStyle(fontSize: 15)),
 
           const Divider(),
 
           Row(
             children: [
-              const Icon(Icons.person, size: 18),
+              const Icon(Icons.person, size: 20),
               const SizedBox(width: 8),
-              Text(outlet.owner),
+              Text(outlet.owner,style: const TextStyle(fontSize: 18)),
             ],
           ),
 
@@ -74,9 +74,9 @@ class _OutletsScreenState extends State<OutletsScreen> {
 
           Row(
             children: [
-              const Icon(Icons.phone, size: 18),
+              const Icon(Icons.phone, size: 20),
               const SizedBox(width: 8),
-              Text(outlet.phone),
+              Text(outlet.phone,style: const TextStyle(fontSize: 18)),
             ],
           ),
 
@@ -90,8 +90,9 @@ class _OutletsScreenState extends State<OutletsScreen> {
                 Text(
                   outlet.type.toUpperCase(),
                   style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.text,
+                    fontSize: 15,
+                    color: Colors.teal.shade700,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(width: 5),

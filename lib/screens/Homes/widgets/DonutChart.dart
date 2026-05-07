@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 import 'dart:math';
 
-import 'dart:math';
-import 'package:flutter/material.dart';
-
 class DonutChart extends StatefulWidget {
   final double value;
   final double total;
@@ -26,6 +23,9 @@ class DonutChart extends StatefulWidget {
 class _DonutChartState extends State<DonutChart>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  double _manualRotation = 0.0;
+  double _startAngle = 0.0;
+  double _baseRotation = 0.0;
 
   @override
   void initState() {
@@ -50,19 +50,32 @@ class _DonutChartState extends State<DonutChart>
         SizedBox(
           width: 190,
           height: 190,
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              final sweepLength = widget.total == 0 
-                  ? 0.0 
-                  : (widget.value / widget.total) * 2 * pi * _controller.value;
-
-              final greenMidAngle = -pi / 2 + sweepLength / 2;
-              final gDx = 65 * cos(greenMidAngle);
-              final gDy = 65 * sin(greenMidAngle);
-              final redMidAngle = pi / 2 + sweepLength / 2;
-              final rDx = 65 * cos(redMidAngle);
-              final rDy = 65 * sin(redMidAngle);
+          child: GestureDetector(
+            onPanStart: (details) {
+              _startAngle = atan2(details.localPosition.dy - 95, details.localPosition.dx - 95);
+              _baseRotation = _manualRotation;
+            },
+            onPanUpdate: (details) {
+              double currentAngle = atan2(details.localPosition.dy - 95, details.localPosition.dx - 95);
+              setState(() {
+                _manualRotation = _baseRotation + (currentAngle - _startAngle);
+              });
+            },
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                final rotationAngle = (2 * pi * _controller.value) + _manualRotation;
+                final sweepLength = widget.total == 0 
+                    ? 0.0 
+                    : (widget.value / widget.total) * 2 * pi * _controller.value;
+  
+                final greenMidAngle = -pi / 2 + rotationAngle + sweepLength / 2;
+                final gDx = 65 * cos(greenMidAngle);
+                final gDy = 65 * sin(greenMidAngle);
+                
+                final redMidAngle = -pi / 2 + rotationAngle + sweepLength + (2 * pi - sweepLength) / 2;
+                final rDx = 65 * cos(redMidAngle);
+                final rDy = 65 * sin(redMidAngle);
 
               return Stack(
                 alignment: Alignment.center,
@@ -71,6 +84,7 @@ class _DonutChartState extends State<DonutChart>
                     size: const Size(170, 170),
                     painter: DonutPainter(
                       progress: _controller.value,
+                      rotationAngle: rotationAngle,
                       value: widget.value,
                       total: widget.total,
                       color: widget.color,
@@ -99,14 +113,14 @@ class _DonutChartState extends State<DonutChart>
                           Text(
                             widget.value.toStringAsFixed(1),
                             style: const TextStyle(
-                              fontSize: 12,
+                              fontSize: 10,
                               color: Colors.white,
                             ),
                           ),
                           const Text(
                             "ACHIEVED",
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 8,
                               color: Colors.white,
                             ),
                           ),
@@ -128,14 +142,14 @@ class _DonutChartState extends State<DonutChart>
                           Text(
                             widget.total.toStringAsFixed(1),
                             style: const TextStyle(
-                              fontSize: 12,
+                              fontSize: 10,
                               color: Colors.white,
                             ),
                           ),
                           Text(
                             "TARGET ${widget.label.split(" ").last.toUpperCase()}",
                             style: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 8,
                               color: Colors.white,
                             ),
                           ),
@@ -148,6 +162,7 @@ class _DonutChartState extends State<DonutChart>
             },
           ),
         ),
+      ),
 
         const SizedBox(height: 10),
         Column(
@@ -178,12 +193,14 @@ class _DonutChartState extends State<DonutChart>
 
 class DonutPainter extends CustomPainter {
   final double progress;
+  final double rotationAngle;
   final double value;
   final double total;
   final Color color;
 
   DonutPainter({
     required this.progress,
+    required this.rotationAngle,
     required this.value,
     required this.total,
     required this.color,
@@ -201,7 +218,7 @@ class DonutPainter extends CustomPainter {
 
     canvas.drawArc(
       rect.deflate(stroke / 2),
-      -pi / 2,
+      -pi / 2 + rotationAngle,
       2 * pi,
       false,
       redPaint,
@@ -216,7 +233,7 @@ class DonutPainter extends CustomPainter {
 
     canvas.drawArc(
       rect.deflate(stroke / 2),
-      -pi / 2,
+      -pi / 2 + rotationAngle,
       sweepAngle,
       false,
       greenPaint,
@@ -238,6 +255,7 @@ class DonutPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant DonutPainter oldDelegate) {
     return oldDelegate.progress != progress ||
+        oldDelegate.rotationAngle != rotationAngle ||
         oldDelegate.value != value ||
         oldDelegate.total != total;
   }
