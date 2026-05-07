@@ -56,7 +56,7 @@ class ProfileDrawer extends StatelessWidget {
 
           sectionTitle("GENERAL"),
 
-          menuItem(context, "Attendance"),
+          menuItem(context, "DashBoard"),
           menuItem(context, "Near Me"),
           menuItem(context, "Distribution Network"),
 
@@ -131,7 +131,7 @@ class ProfileDrawer extends StatelessWidget {
 
           bool allowed = true;
 
-          if (title == "Attendance") {
+          if (title == "DashBoard") {
             allowed = AccessValidator.validate(
               context: context,
               isOnline: appState.isOnline,
@@ -154,7 +154,7 @@ class ProfileDrawer extends StatelessWidget {
           Navigator.pop(context);
 
           switch (title) {
-            case "Attendance":
+            case "DashBoard":
               navProvider.setTab(0);
               break;
 

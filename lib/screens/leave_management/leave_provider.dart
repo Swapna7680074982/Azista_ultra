@@ -148,4 +148,9 @@ class LeaveProvider extends ChangeNotifier {
     _leaveHistory.insert(0, request);
     notifyListeners();
   }
+
+  Future<void> refresh() async {
+    // Placeholder for future API refresh logic
+    notifyListeners();
+  }
 }

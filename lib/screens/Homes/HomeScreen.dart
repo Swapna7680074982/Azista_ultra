@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         title: const Text(
-          "ATTENDANCE",
+          "DASHBOARD",
           style: TextStyle(
             color: AppColors.white,
             fontSize: 18,

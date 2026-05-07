@@ -8,6 +8,9 @@ import '../../permissions/AccessValidator.dart';
 import '../../permissions/AppStateProvider.dart';
 import '../Distribution_networking/outlets/outlet_provider.dart';
 import '../Distribution_networking/distribution_provider.dart';
+import 'HomeProvider.dart';
+import '../leave_management/leave_provider.dart';
+import '../attendance/attendance_provider.dart';
 import 'main_tab_provider.dart';
 
 class CustomBottomNav extends StatelessWidget {
@@ -38,7 +41,7 @@ class CustomBottomNav extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              navItemIcon(context, Icons.access_time, "Attend.", 0),
+              navItemIcon(context, Icons.access_time, "Home", 0),
               navItemIcon(context, Icons.event_note, "Leave Management", 1),
               const SizedBox(width: 70),
 
@@ -125,6 +128,26 @@ class CustomBottomNav extends StatelessWidget {
           index: index,
         )) {
           return;
+        }
+
+        if (index == 0) {
+          final homeProvider = context.read<HomeProvider>();
+          if (!homeProvider.isLoading) {
+            homeProvider.loadDistributors();
+            homeProvider.fetchTodayAttendance();
+          }
+        } else if (index == 1) {
+          context.read<LeaveProvider>().refresh();
+        } else if (index == 3) {
+          final distProvider = context.read<DistributionProvider>();
+          if (!distProvider.isLoading) {
+            distProvider.fetchRoutes();
+          }
+        } else if (index == 4) {
+          final attProvider = context.read<AttendanceProvider>();
+          if (!attProvider.isLoading) {
+            attProvider.fetchAttendance();
+          }
         }
 
         provider.setTab(index);
