@@ -4,6 +4,7 @@ import '../../constants/app_colors.dart';
 import '../../profile.dart';
 import '../../services/call_service.dart';
 import '../../services/location_service.dart';
+import '../Distribution_networking/distribution_provider.dart';
 import '../Distribution_networking/outlets/PosBaseScreen.dart';
 import '../Distribution_networking/outlets/outlet_provider.dart';
 import '../../services/directions_map_screen.dart';
@@ -16,33 +17,16 @@ class NearMeScreen extends StatefulWidget {
 }
 
 class _NearMeScreenState extends State<NearMeScreen> {
-  bool _isLoadingLocation = true;
-
   @override
   void initState() {
     super.initState();
-    _fetchLocationAndOutlets();
-  }
-
-  Future<void> _fetchLocationAndOutlets() async {
-    try {
-      final coords = await LocationService.getCoordinates();
-      final lat = double.parse(coords[0]);
-      final lng = double.parse(coords[1]);
-
-      if (mounted) {
-        Provider.of<OutletProvider>(context, listen: false)
-            .fetchNearbyOutlets(lat, lng, radius: 5);
-      }
-    } catch (e) {
-      print("Error fetching location: $e");
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingLocation = false;
-        });
-      }
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final distProvider = Provider.of<DistributionProvider>(context, listen: false);
+      final routeId = distProvider.selectedRouteId != null 
+          ? int.tryParse(distProvider.selectedRouteId!) 
+          : null;
+      context.read<OutletProvider>().refreshNearbyOutlets(routeId: routeId);
+    });
   }
 
   Widget outletCard(Outlet outlet, BuildContext context) {
@@ -286,7 +270,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
           ),
 
           Expanded(
-            child: _isLoadingLocation || provider.isLoading
+            child: provider.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : provider.nearbyOutlets.isEmpty
                     ? const Center(child: Text("No nearby outlets found"))

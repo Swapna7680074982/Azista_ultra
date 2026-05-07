@@ -17,8 +17,17 @@ class LocationService {
       throw Exception("Location permission permanently denied");
     }
 
+    final lastPosition = await Geolocator.getLastKnownPosition();
+    if (lastPosition != null) {
+      return [
+        lastPosition.latitude.toString(),
+        lastPosition.longitude.toString(),
+      ];
+    }
+
     final position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
+      desiredAccuracy: LocationAccuracy.medium,
+      timeLimit: const Duration(seconds: 5),
     );
 
     return [

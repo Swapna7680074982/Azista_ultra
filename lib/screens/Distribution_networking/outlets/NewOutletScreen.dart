@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../constants/app_colors.dart';
@@ -444,10 +445,30 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
       ),
     ));
   }
-  Widget _textField(controller, hint, icon) {
+  Widget _textField(
+      TextEditingController controller,
+      String hint,
+      IconData icon,
+      ) {
+    bool isNumberField =
+        hint.toLowerCase().contains("phone") ||
+            hint.toLowerCase().contains("mobile") ||
+            hint.toLowerCase().contains("whatsapp") ;
+
     return _buildField(
       child: TextField(
         controller: controller,
+
+        keyboardType:
+        isNumberField
+            ? TextInputType.number
+            : TextInputType.text,
+
+        inputFormatters:
+        isNumberField
+            ? [FilteringTextInputFormatter.digitsOnly]
+            : null,
+
         decoration: InputDecoration(
           hintText: hint,
           prefixIcon: Icon(icon),

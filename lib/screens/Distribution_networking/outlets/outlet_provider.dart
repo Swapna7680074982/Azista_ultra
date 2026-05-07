@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/api_services.dart';
+import '../../../services/location_service.dart';
 
 class Outlet {
   final String name;
@@ -96,7 +97,12 @@ class OutletProvider extends ChangeNotifier {
   Future<void> fetchNearbyOutlets(double latitude, double longitude, {int radius = 5, int? routeId}) async {
     isLoading = true;
     notifyListeners();
+    await _fetchNearbyOutletsInternal(latitude, longitude, radius: radius, routeId: routeId);
+    isLoading = false;
+    notifyListeners();
+  }
 
+  Future<void> _fetchNearbyOutletsInternal(double latitude, double longitude, {int radius = 5, int? routeId}) async {
     final response = await ApiServices.getNearbyOutlets(
       latitude: latitude,
       longitude: longitude,
@@ -110,8 +116,21 @@ class OutletProvider extends ChangeNotifier {
     } else {
       _nearbyOutlets = [];
     }
-
-    isLoading = false;
-    notifyListeners();
   }
-}
+
+  Future<void> refreshNearbyOutlets({int? routeId}) async {
+    isLoading = true;
+    notifyListeners();
+    try {
+      final coords = await LocationService.getCoordinates();
+      final lat = double.parse(coords[0]);
+      final lng = double.parse(coords[1]);
+      await _fetchNearbyOutletsInternal(lat, lng, radius: 5, routeId: routeId);
+    } catch (e) {
+      debugPrint("Error refreshing location/outlets: $e");
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+}

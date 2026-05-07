@@ -6,6 +6,8 @@ import '../../constants/app_colors.dart';
 import '../../constants/image_constants.dart';
 import '../../permissions/AccessValidator.dart';
 import '../../permissions/AppStateProvider.dart';
+import '../Distribution_networking/outlets/outlet_provider.dart';
+import '../Distribution_networking/distribution_provider.dart';
 import 'main_tab_provider.dart';
 
 class CustomBottomNav extends StatelessWidget {
@@ -61,6 +63,15 @@ class CustomBottomNav extends StatelessWidget {
                   return;
                 }
 
+                final outletProvider = context.read<OutletProvider>();
+                if (!outletProvider.isLoading) {
+                  final distProvider = Provider.of<DistributionProvider>(context, listen: false);
+                  final routeId = distProvider.selectedRouteId != null 
+                      ? int.tryParse(distProvider.selectedRouteId!) 
+                      : null;
+                  
+                  outletProvider.refreshNearbyOutlets(routeId: routeId);
+                }
                 provider.setTab(2);
               },
               child: Column(
