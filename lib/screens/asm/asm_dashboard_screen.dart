@@ -9,6 +9,7 @@ import 'asm_provider.dart';
 import 'select_so_screen.dart';
 import 'so_attendance_screen.dart';
 import 'travel_plan_screen.dart';
+import '../Distribution_networking/distribution_network_screen.dart';
 
 class AsmDashboardScreen extends StatefulWidget {
   const AsmDashboardScreen({super.key});
@@ -87,20 +88,20 @@ class _AsmDashboardScreenState extends State<AsmDashboardScreen> {
                   },
                 ),
                 _buildMenuItem(
-                  iconPath: Icons.calendar_today_outlined,
-                  label: "Travel Plan",
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const TravelPlanScreen()),
-                    );
-                  },
-                ),
-                _buildMenuItem(
                   iconPath: Icons.account_tree_outlined,
                   label: "Distributor Visit",
                   onTap: () {
                     // Placeholder for Distributor Visit
+                  },
+                ),
+                _buildMenuItem(
+                  iconPath: Icons.account_tree_rounded,
+                  label: "Distribution Network",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DistributionNetworkScreen()),
+                    );
                   },
                 ),
 
