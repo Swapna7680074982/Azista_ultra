@@ -70,12 +70,7 @@ class SessionManager {
   }
 
   static Future<bool> isSessionExpired() async {
-    final prefs = await SharedPreferences.getInstance();
-    final expiry = prefs.getString(_expiryKey);
-
-    if (expiry == null) return true;
-
-    return DateTime.now().isAfter(DateTime.parse(expiry));
+    return false;
   }
 
   static Future<void> clearSession() async {

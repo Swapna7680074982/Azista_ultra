@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../constants/app_colors.dart';
@@ -107,6 +108,31 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
     if (marker == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please select location on map")),
+      );
+      return;
+    }
+
+    try {
+      final coords = await LocationService.getCoordinates();
+      final currentLat = double.parse(coords[0]);
+      final currentLng = double.parse(coords[1]);
+
+      final distance = Geolocator.distanceBetween(
+        currentLat,
+        currentLng,
+        marker!.position.latitude,
+        marker!.position.longitude,
+      );
+
+      if (distance > 50) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Selected location is ${distance.toStringAsFixed(0)}m away. You must be within 50 meters to register an outlet.")),
+        );
+        return;
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to verify location. Please check GPS and try again.")),
       );
       return;
     }

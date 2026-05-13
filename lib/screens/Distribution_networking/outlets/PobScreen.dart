@@ -7,19 +7,64 @@ import 'PobHistoryScreen.dart';
 import '../../../permissions/AppStateProvider.dart';
 import '../../../utilities/common_widgets.dart';
 
+import 'package:geolocator/geolocator.dart';
+import '../../../services/location_service.dart';
+
 class PobBody extends StatefulWidget {
   final int outletId;
-  const PobBody({super.key, required this.outletId});
+  final double outletLat;
+  final double outletLng;
+  const PobBody({super.key, required this.outletId, required this.outletLat, required this.outletLng});
 
   @override
   State<PobBody> createState() => _PobBodyState();
 }
 
 class _PobBodyState extends State<PobBody> {
+  bool? isLocationValid;
+  String locationError = "";
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
+    Future.microtask(() async {
+      try {
+        final coords = await LocationService.getCoordinates();
+        final currentLat = double.parse(coords[0]);
+        final currentLng = double.parse(coords[1]);
+
+        final distance = Geolocator.distanceBetween(
+          currentLat,
+          currentLng,
+          widget.outletLat,
+          widget.outletLng,
+        );
+
+        if (distance > 50) {
+          if (mounted) {
+            setState(() {
+              isLocationValid = false;
+              locationError = "You are ${distance.toStringAsFixed(0)} meters away from the outlet. You must be within 50 meters to add POB.";
+            });
+          }
+          return;
+        } else {
+          if (mounted) {
+            setState(() {
+              isLocationValid = true;
+            });
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            isLocationValid = false;
+            locationError = "Failed to get your location. Please check GPS and permissions.";
+          });
+        }
+        return;
+      }
+
       final provider = Provider.of<OutletActivityProvider>(context, listen: false);
       provider.fetchProductsWithSkus();
       
@@ -30,6 +75,30 @@ class _PobBodyState extends State<PobBody> {
     });
   }
   Widget build(BuildContext context) {
+    if (isLocationValid == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (isLocationValid == false) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.location_off, color: Colors.red, size: 60),
+              const SizedBox(height: 16),
+              Text(
+                locationError,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.red, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Consumer<OutletActivityProvider>(
       builder: (context, provider, child) {
         return provider.isLoadingProducts

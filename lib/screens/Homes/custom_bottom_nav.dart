@@ -42,7 +42,7 @@ class CustomBottomNav extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               navItemIcon(context, Icons.access_time, "Home", 0),
-              navItemIcon(context, Icons.event_note, "Leave Management", 1),
+              const SizedBox(width: 60), // Placeholder for removed Leave Management
               const SizedBox(width: 70),
 
               navItemIcon(context, Icons.account_tree_outlined, "Dist. Net.", 3),

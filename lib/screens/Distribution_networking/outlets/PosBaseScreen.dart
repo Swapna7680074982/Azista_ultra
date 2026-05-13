@@ -63,7 +63,11 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       case "STOCK":
         return StockBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
       case "POB":
-        return PobBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
+        return PobBody(
+          outletId: int.tryParse(widget.outlet.id) ?? 0,
+          outletLat: widget.outlet.latitude,
+          outletLng: widget.outlet.longitude,
+        );
       case "BRD":
         return const BrandingBody();
       case "PRM":

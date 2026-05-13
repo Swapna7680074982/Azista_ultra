@@ -1,5 +1,6 @@
 import 'package:azista_ultra/User_transactions/SaleItem.dart';
 import 'package:azista_ultra/permissions/AppStateProvider.dart';
+import 'package:azista_ultra/screens/asm/asm_provider.dart';
 import 'package:azista_ultra/screens/Distribution_networking/distribution_provider.dart';
 import 'package:azista_ultra/screens/Distribution_networking/outlets/outlet_provider.dart';
 import 'package:azista_ultra/screens/Distribution_networking/outlets/outlet_activity_provider.dart';
@@ -49,5 +50,8 @@ List<SingleChildWidget> providerCreateList = [
   ),
   ChangeNotifierProvider<HomeProvider>(
     create: (_) => HomeProvider(),
+  ),
+  ChangeNotifierProvider<AsmProvider>(
+    create: (_) => AsmProvider(),
   ),
 ];
