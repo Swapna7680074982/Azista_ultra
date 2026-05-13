@@ -32,7 +32,8 @@ class ApiServices {
           "deviceId": deviceId,
           "deviceTS": _formatDateTime(),
           "coordinates": coords,
-          "fcmToken": token,
+          //"fcmToken": token,
+          "fcmToken": "",
         }
       };
 
