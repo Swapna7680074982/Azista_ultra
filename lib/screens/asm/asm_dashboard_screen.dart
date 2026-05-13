@@ -103,16 +103,7 @@ class _AsmDashboardScreenState extends State<AsmDashboardScreen> {
                     // Placeholder for Distributor Visit
                   },
                 ),
-                _buildMenuItem(
-                  iconPath: Icons.person_search_outlined,
-                  label: "Leave Management",
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => LeaveManagementScreen()),
-                    );
-                  },
-                ),
+
                 _buildMenuItem(
                   iconPath: Icons.person_outline,
                   label: "Profile",

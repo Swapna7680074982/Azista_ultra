@@ -387,27 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  ActionBox(
-                    Icons.person,
-                    "LEAVE\nMANAGEMENT",
-                    enabled: !appState.isOnline,
-                    onTap: () {
-                      if (AccessValidator.validate(
-                        context: context,
-                        isOnline: appState.isOnline,
-                        hasDistributor: appState.selectedDistributor != null,
-                        checkDistributor: false,
-                        isLeave: true,
-                      )) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => LeaveManagementScreen(),
-                          ),
-                        );
-                      }
-                    },
-                  ),
+
                   ActionBox(
                     Icons.access_time,
                     "ATTENDANCE",
