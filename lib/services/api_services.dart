@@ -46,17 +46,15 @@ class ApiServices {
 
       AppLogger.info("Login response: ${response.data}");
 
-      if (response.statusCode == 200 &&
-          response.data["status"] == true) {
-        AppLogger.success("Login successful");
+      if (response.statusCode == 200) {
         return response.data;
       }
 
       AppLogger.warning("Login failed: ${response.data}");
-      return null;
+      return response.data;
     } catch (e) {
       AppLogger.error("Login error", e);
-      return null;
+      return {"status": false, "message": e.toString().replaceAll("Exception: ", "")};
     }
   }
 

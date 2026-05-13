@@ -19,27 +19,32 @@ class LoginProvider extends ChangeNotifier {
       );
 
       if (response != null) {
-        final data = response["data"];
-        await SessionManager.saveSession(
-          refreshToken: data["refresh_token"],
-          token: data["access_token"],
-          distributors: data["distributors"],
-        );
+        final status = response["status"];
+        if (status == true || status == "success" || status == 1) {
+          final data = response["data"];
+          await SessionManager.saveSession(
+            refreshToken: data["refresh_token"],
+            token: data["access_token"],
+            distributors: data["distributors"],
+          );
 
-        final userInfo = data["user_info"];
-        if (userInfo != null) {
-          final name = userInfo["name"]?.toString() ?? "Unknown";
-          final rolecode = userInfo["rolecode"]?.toString().trim();
-          final role = (rolecode == null || rolecode.isEmpty) ? "Sale Off" : rolecode;
-          await SessionManager.saveUserDetails(name, role);
+          final userInfo = data["user_info"];
+          if (userInfo != null) {
+            final name = userInfo["name"]?.toString() ?? "Unknown";
+            final rolecode = userInfo["rolecode"]?.toString().trim();
+            final role = (rolecode == null || rolecode.isEmpty) ? "Sale Off" : rolecode;
+            await SessionManager.saveUserDetails(name, role);
+          }
+
+          final attendanceStatus = data["attendance_status"]?["today_status"];
+          await SessionManager.saveAttendanceStatus(attendanceStatus);
+
+          isLoading = false;
+          notifyListeners();
+          return true;
+        } else {
+          error = response["message"] ?? "Invalid login";
         }
-
-        final attendanceStatus = data["attendance_status"]?["today_status"];
-        await SessionManager.saveAttendanceStatus(attendanceStatus);
-
-        isLoading = false;
-        notifyListeners();
-        return true;
       } else {
         error = "Invalid login";
       }
