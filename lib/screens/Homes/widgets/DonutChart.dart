@@ -92,8 +92,8 @@ class _DonutChartState extends State<DonutChart>
                   ),
 
                   Container(
-                    width: 70,
-                    height: 70,
+                    width: 50,
+                    height: 50,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
@@ -209,7 +209,7 @@ class DonutPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    const stroke = 30.0;
+    const stroke = 40.0;
     final redPaint = Paint()
       ..color = AppColors.primary
       ..style = PaintingStyle.stroke
@@ -244,7 +244,7 @@ class DonutPainter extends CustomPainter {
       ..strokeWidth = 8 
       ..strokeCap = StrokeCap.butt;
     canvas.drawArc(
-      rect.deflate(26), 
+      rect.deflate(30), 
       0, 
       2 * pi, 
       false, 
