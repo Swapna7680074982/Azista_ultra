@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../Distribution_networking/distribution_network_screen.dart';
+import '../../User_transactions/UserTransactionScreen.dart';
 import '../attendance/Attendancescreen.dart';
 import '../leave_management/leave_management_screen.dart';
 import 'HomeScreen.dart';
@@ -20,7 +21,7 @@ class MainShellScreen extends StatelessWidget {
             index: nav.currentIndex,
             children: [
               const HomeScreen(),
-              LeaveManagementScreen(),
+              const UserTransactionScreen(),
               const NearMeScreen(),
               const DistributionNetworkScreen(),
               AttendanceScreen(),

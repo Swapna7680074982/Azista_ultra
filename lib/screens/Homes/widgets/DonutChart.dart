@@ -48,15 +48,15 @@ class _DonutChartState extends State<DonutChart>
     return Column(
       children: [
         SizedBox(
-          width: 190,
-          height: 190,
+          width: 130,
+          height: 130,
           child: GestureDetector(
             onPanStart: (details) {
-              _startAngle = atan2(details.localPosition.dy - 95, details.localPosition.dx - 95);
+              _startAngle = atan2(details.localPosition.dy - 65, details.localPosition.dx - 65);
               _baseRotation = _manualRotation;
             },
             onPanUpdate: (details) {
-              double currentAngle = atan2(details.localPosition.dy - 95, details.localPosition.dx - 95);
+              double currentAngle = atan2(details.localPosition.dy - 65, details.localPosition.dx - 65);
               setState(() {
                 _manualRotation = _baseRotation + (currentAngle - _startAngle);
               });
@@ -70,18 +70,18 @@ class _DonutChartState extends State<DonutChart>
                     : (widget.value / widget.total) * 2 * pi * _controller.value;
   
                 final greenMidAngle = -pi / 2 + rotationAngle + sweepLength / 2;
-                final gDx = 65 * cos(greenMidAngle);
-                final gDy = 65 * sin(greenMidAngle);
+                final gDx = 45 * cos(greenMidAngle);
+                final gDy = 45 * sin(greenMidAngle);
                 
                 final redMidAngle = -pi / 2 + rotationAngle + sweepLength + (2 * pi - sweepLength) / 2;
-                final rDx = 65 * cos(redMidAngle);
-                final rDy = 65 * sin(redMidAngle);
+                final rDx = 45 * cos(redMidAngle);
+                final rDy = 45 * sin(redMidAngle);
 
               return Stack(
                 alignment: Alignment.center,
                 children: [
                   CustomPaint(
-                    size: const Size(170, 170),
+                    size: const Size(110, 110),
                     painter: DonutPainter(
                       progress: _controller.value,
                       rotationAngle: rotationAngle,
@@ -92,8 +92,8 @@ class _DonutChartState extends State<DonutChart>
                   ),
 
                   Container(
-                    width: 90,
-                    height: 90,
+                    width: 60,
+                    height: 60,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
@@ -102,7 +102,7 @@ class _DonutChartState extends State<DonutChart>
 
                   Positioned.fromRect(
                     rect: Rect.fromCenter(
-                      center: Offset(95 + gDx, 95 + gDy), 
+                      center: Offset(65 + gDx, 65 + gDy), 
                       width: 100, 
                       height: 50
                     ),
@@ -131,7 +131,7 @@ class _DonutChartState extends State<DonutChart>
 
                   Positioned.fromRect(
                     rect: Rect.fromCenter(
-                      center: Offset(95 + rDx, 95 + rDy), 
+                      center: Offset(65 + rDx, 65 + rDy), 
                       width: 100, 
                       height: 50
                     ),
@@ -209,7 +209,7 @@ class DonutPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    const stroke = 40.0;
+    const stroke = 25.0;
     final redPaint = Paint()
       ..color = AppColors.primary
       ..style = PaintingStyle.stroke
@@ -241,10 +241,10 @@ class DonutPainter extends CustomPainter {
     final lightOverlayPaint = Paint()
       ..color = Colors.white.withOpacity(0.35)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 10 
+      ..strokeWidth = 6 
       ..strokeCap = StrokeCap.butt;
     canvas.drawArc(
-      rect.deflate(35), 
+      rect.deflate(22), 
       0, 
       2 * pi, 
       false, 
@@ -317,7 +317,6 @@ class ActionBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 120,
       height: 120,
       child: Material(
         color: Colors.transparent,

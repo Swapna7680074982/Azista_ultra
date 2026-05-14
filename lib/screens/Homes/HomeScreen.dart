@@ -32,8 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       await homeProvider.loadDistributors();
       await homeProvider.initializeAttendance(appState);
-      await homeProvider.fetchTodayAttendance();
-      await homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
+      
+      homeProvider.fetchTodayAttendance();
+      homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
     });
   }
 
@@ -263,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 12),
-              padding: const EdgeInsets.fromLTRB(0, 60, 0, 20),
+              padding: const EdgeInsets.fromLTRB(0, 20, 0, 20),
               decoration: BoxDecoration(
                 color: AppColors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -387,47 +388,51 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-
-                  ActionBox(
-                    Icons.access_time,
-                    "ATTENDANCE",
-                    enabled: appState.isOnline,
-                    onTap: () {
-                      if (AccessValidator.validate(
-                        context: context,
-                        isOnline: appState.isOnline,
-                        hasDistributor: appState.selectedDistributor != null,
-                        checkDistributor: false,
-                        isLeave: false,
-                      )) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AttendanceScreen(),
-                          ),
-                        );
-                      }
-                    },
+                  Expanded(
+                    child: ActionBox(
+                      Icons.access_time,
+                      "ATTENDANCE",
+                      enabled: appState.isOnline,
+                      onTap: () {
+                        if (AccessValidator.validate(
+                          context: context,
+                          isOnline: appState.isOnline,
+                          hasDistributor: appState.selectedDistributor != null,
+                          checkDistributor: false,
+                          isLeave: false,
+                        )) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AttendanceScreen(),
+                            ),
+                          );
+                        }
+                      },
+                    ),
                   ),
-                  ActionBox(
-                    Icons.receipt,
-                    "USER\nTRANSACTIONS",
-                    enabled: appState.isOnline,
-                    onTap: () {
-                      if (AccessValidator.validate(
-                        context: context,
-                        isOnline: appState.isOnline,
-                        hasDistributor: appState.selectedDistributor != null,
-                        isLeave: false,
-                      )) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const UserTransactionScreen(),
-                          ),
-                        );
-                      }
-                    },
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ActionBox(
+                      Icons.receipt,
+                      "USER\nTRANSACTIONS",
+                      enabled: appState.isOnline,
+                      onTap: () {
+                        if (AccessValidator.validate(
+                          context: context,
+                          isOnline: appState.isOnline,
+                          hasDistributor: appState.selectedDistributor != null,
+                          isLeave: false,
+                        )) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const UserTransactionScreen(),
+                            ),
+                          );
+                        }
+                      },
+                    ),
                   ),
                 ],
               ),
