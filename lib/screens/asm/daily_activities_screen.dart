@@ -22,8 +22,8 @@ class DailyActivitiesScreen extends StatelessWidget {
           style: TextStyle(color: Colors.white, fontSize: 18),
         ),
       ),
-      body: Consumer<AsmProvider>(
-        builder: (context, asmProvider, child) {
+      body: Consumer<AmProvider>(
+        builder: (context, amProvider, child) {
           return Column(
             children: [
               // Month Picker
@@ -60,9 +60,9 @@ class DailyActivitiesScreen extends StatelessWidget {
               Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  itemCount: asmProvider.dailyActivities.length,
+                  itemCount: amProvider.dailyActivities.length,
                   itemBuilder: (context, index) {
-                    final activity = asmProvider.dailyActivities[index];
+                    final activity = amProvider.dailyActivities[index];
                     return Card(
                       elevation: 2,
                       margin: const EdgeInsets.only(bottom: 12),

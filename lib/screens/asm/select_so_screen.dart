@@ -30,13 +30,13 @@ class SelectSoScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Consumer<AsmProvider>(
-        builder: (context, asmProvider, child) {
+      body: Consumer<AmProvider>(
+        builder: (context, amProvider, child) {
           return ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            itemCount: asmProvider.allSoList.length,
+            itemCount: amProvider.allSoList.length,
             itemBuilder: (context, index) {
-              final so = asmProvider.allSoList[index];
+              final so = amProvider.allSoList[index];
               return Card(
                 elevation: 2,
                 margin: const EdgeInsets.only(bottom: 12),

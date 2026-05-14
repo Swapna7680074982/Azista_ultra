@@ -24,4 +24,9 @@ class AppUrls {
   static const String getSupportTeam = "$baseUrl/distribution/get_support_team";
   static const String dailyCallSummary = "$baseUrl/distribution/daily_call_summary";
   static const String callsInfo = "$baseUrl/distribution/calls_info";
+  static const String addExpense = "$baseUrl/distribution/add_expense";
+  static const String submitToAm = "$baseUrl/distribution/submit_to_am";
+  static const String receiveFromSo = "$baseUrl/distribution/receive_from_so";
+  static const String submitToAdmin = "$baseUrl/distribution/submit_to_admin";
+  static const String getExpenses = "$baseUrl/distribution/get_expenses";
 }

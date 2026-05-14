@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class AsmProvider extends ChangeNotifier {
+class AmProvider extends ChangeNotifier {
   DateTime _fromDate = DateTime(2026, 4, 1);
   DateTime _toDate = DateTime(2026, 4, 23);
   String _searchQuery = "";

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../permissions/SessionManager.dart';
 import '../asm/asm_dashboard_screen.dart';
+import '../rm/rm_dashboard_screen.dart';
 import '../Homes/main_shell_screen.dart';
 import 'login_provider.dart';
 
@@ -100,11 +101,19 @@ class LoginScreen extends StatelessWidget {
 
                               if (success) {
                                 final role = await SessionManager.getUserRole();
-                                if (role.toLowerCase().trim() == "asm") {
+                                final normalizedRole = role.toLowerCase().trim();
+                                if (normalizedRole == "rm") {
                                   Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const AsmDashboardScreen(),
+                                      builder: (context) => const RmDashboardScreen(),
+                                    ),
+                                  );
+                                } else if (normalizedRole == "asm" || normalizedRole == "am") {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const AmDashboardScreen(),
                                     ),
                                   );
                                 } else {

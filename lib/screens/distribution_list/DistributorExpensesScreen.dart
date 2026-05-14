@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-
+import '../../services/api_services.dart';
 import 'DistributorStatusScreen.dart';
+import '../../models/expense_model.dart';
+import '../../permissions/SessionManager.dart';
+import '../../utilities/mylogger.dart';
+import 'package:intl/intl.dart';
+
 class DistributorExpensesScreen extends StatefulWidget {
   const DistributorExpensesScreen({super.key});
 
@@ -14,18 +19,43 @@ class DistributorExpensesScreen extends StatefulWidget {
 
 class _DistributorExpensesScreenState
     extends State<DistributorExpensesScreen> {
-
   DateTime selectedDate = DateTime.now();
-  String get formattedMonth {
-    return "${_monthName(selectedDate.month)} ${selectedDate.year}";
+  List<Expense> expenses = [];
+  bool isLoading = true;
+  String userRole = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialData();
   }
 
-  String _monthName(int month) {
-    const months = [
-      "January","February","March","April","May","June",
-      "July","August","September","October","November","December"
-    ];
-    return months[month - 1];
+  Future<void> _loadInitialData() async {
+    userRole = await SessionManager.getUserRole();
+    await _fetchExpenses();
+  }
+
+  String get formattedMonth {
+    return DateFormat('MMMM yyyy').format(selectedDate);
+  }
+
+  Future<void> _fetchExpenses() async {
+    setState(() => isLoading = true);
+    try {
+      final response = await ApiServices.getExpenses();
+      if (response != null && response['status'] == true) {
+        final List data = response['data'] ?? [];
+        setState(() {
+          expenses = data.map((e) => Expense.fromJson(e)).toList();
+        });
+      } else {
+        AppLogger.warning("Failed to fetch expenses: ${response?['message']}");
+      }
+    } catch (e) {
+      AppLogger.error("Error fetching expenses", e);
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   Future<void> _pickMonth() async {
@@ -40,7 +70,6 @@ class _DistributorExpensesScreenState
       setState(() {
         selectedDate = picked;
       });
-
     }
   }
 
@@ -48,7 +77,6 @@ class _DistributorExpensesScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.white,
-
       appBar: AppBar(
         title: const Text(
           "Distribution Expenses",
@@ -60,8 +88,13 @@ class _DistributorExpensesScreenState
         ),
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: AppColors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchExpenses,
+          ),
+        ],
       ),
-
       body: Column(
         children: [
           GestureDetector(
@@ -77,105 +110,219 @@ class _DistributorExpensesScreenState
                     formattedMonth,
                     style: const TextStyle(fontSize: 16),
                   ),
-                   Icon(Icons.calendar_today, size: 18,color: AppColors.primary),
+                  Icon(Icons.calendar_today,
+                      size: 18, color: AppColors.primary),
                 ],
               ),
             ),
           ),
-
           const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
+          Expanded(
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : expenses.isEmpty
+                    ? const Center(child: Text("No expenses found"))
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        itemCount: expenses.length,
+                        itemBuilder: (context, index) {
+                          return _buildExpenseCard(expenses[index]);
+                        },
+                      ),
+          ),
+        ],
+      ),
+      floatingActionButton: userRole == "SO"
+          ? FloatingActionButton(
+              backgroundColor: AppColors.primary,
+              onPressed: () {
+                _openAddExpensePopup(context);
+              },
+              child: const Icon(Icons.add, color: AppColors.white),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildExpenseCard(Expense expense) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
-                    const Text("Created On",
+                    const Text("Employee", style: TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 4),
+                    Text(expense.employeeName,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                Text(
+                  "₹${expense.expenseAmount}",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Expense Date",
                         style: TextStyle(color: Colors.grey)),
                     const SizedBox(height: 4),
-                    const Text("Apr 22, 2026 02:35 pm"),
-
-                    const SizedBox(height: 12),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("Payment Type",
-                                style: TextStyle(color: Colors.grey)),
-                            SizedBox(height: 4),
-                            Text("Card"),
-                          ],
-                        ),
-                        Text(
-                          "₹18.00",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    Text(expense.expenseDate),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text("Type", style: TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 4),
+                    Text(expense.expenseType),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text("Description", style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 4),
+            Text(expense.description),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(expense.trackingStatus)
+                        .withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    expense.trackingStatus,
+                    style: TextStyle(
+                      color: _getStatusColor(expense.trackingStatus),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
                     ),
-
-                    const SizedBox(height: 12),
-
-                    const Text("Comments",
-                        style: TextStyle(color: Colors.grey)),
-                    const SizedBox(height: 4),
-                    const Text("hi"),
-
-                    const SizedBox(height: 10),
-
-                    Align(
-                      alignment: Alignment.bottomRight,
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const DistributorStatusScreen(),
+                  ),
+                ),
+                Row(
+                  children: [
+                    _buildActionButtons(expense),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DistributorStatusScreen(
+                              expense: expense,
+                              userRole: userRole,
                             ),
-                          );
-                        },
-                        child: const Text(
-                          "Track Status",
-                          style: TextStyle(
-                            color: Colors.red,
-                            decoration: TextDecoration.underline,
                           ),
-                        ),
+                        ).then((_) => _fetchExpenses());
+                      },
+                      child: Text(
+                        "Track Status",
+                        style: TextStyle(color: AppColors.primary),
                       ),
                     ),
                   ],
                 ),
-              ),
+              ],
             ),
-          ),
-        ],
-      ),
-
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.primary,
-        onPressed: () {
-          _openAddExpensePopup(context);
-        },
-        child: const Icon(Icons.add, color: AppColors.white),
+          ],
+        ),
       ),
     );
   }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'submitted':
+        return Colors.blue;
+      case 'received':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget _buildActionButtons(Expense expense) {
+    if (userRole == "SO" && expense.trackingStatus.toLowerCase() == "pending") {
+      return TextButton(
+        onPressed: () => _handleAction('submit_to_am', expense.expenseId),
+        child: const Text("Submit to AM"),
+      );
+    } else if (userRole == "AM") {
+      if (expense.trackingStatus.toLowerCase() == "submitted") {
+        return TextButton(
+          onPressed: () => _handleAction('receive_from_so', expense.expenseId),
+          child: const Text("Receive"),
+        );
+      } else if (expense.trackingStatus.toLowerCase() == "received") {
+        return TextButton(
+          onPressed: () => _handleAction('submit_to_admin', expense.expenseId),
+          child: const Text("Submit to Admin"),
+        );
+      }
+    }
+    return const SizedBox.shrink();
+  }
+
+  Future<void> _handleAction(String action, String expenseId) async {
+    setState(() => isLoading = true);
+    Map<String, dynamic>? response;
+    if (action == 'submit_to_am') {
+      response = await ApiServices.submitToAm(expenseId);
+    } else if (action == 'receive_from_so') {
+      response = await ApiServices.receiveFromSo(expenseId);
+    } else if (action == 'submit_to_admin') {
+      response = await ApiServices.submitToAdmin(expenseId);
+    }
+
+    if (response != null && response['status'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response['message'] ?? "Action successful")),
+      );
+      _fetchExpenses();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response?['message'] ?? "Action failed")),
+      );
+      setState(() => isLoading = false);
+    }
+  }
+
   void _openAddExpensePopup(BuildContext context) {
-    final TextEditingController paymentTypeController = TextEditingController();
     final TextEditingController amountController = TextEditingController();
-    final TextEditingController commentController = TextEditingController();
+    final TextEditingController descriptionController = TextEditingController();
+    final TextEditingController expenseTypeController = TextEditingController();
+    final TextEditingController paymentModeController = TextEditingController();
+    final TextEditingController dateController = TextEditingController(
+      text: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+    );
 
     File? selectedImage;
 
@@ -183,7 +330,7 @@ class _DistributorExpensesScreenState
       context: context,
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (context, setPopupState) {
             return Dialog(
               insetPadding: const EdgeInsets.symmetric(horizontal: 20),
               shape: RoundedRectangleBorder(
@@ -207,7 +354,7 @@ class _DistributorExpensesScreenState
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
-                            "Collect from Distributor",
+                            "Add Expense",
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,
@@ -221,13 +368,13 @@ class _DistributorExpensesScreenState
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 16),
-                    _styledField("Payment Type", paymentTypeController),
+                    _styledField("Expense Date (YYYY-MM-DD)", dateController),
+                    _styledField("Expense Type (e.g. Fuel)", expenseTypeController),
                     _styledField("Amount", amountController,
                         keyboardType: TextInputType.number),
-                    _styledField("Comment", commentController, maxLines: 2),
-
+                    _styledField("Payment Mode (e.g. UPI)", paymentModeController),
+                    _styledField("Description", descriptionController, maxLines: 2),
                     const SizedBox(height: 10),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -243,70 +390,25 @@ class _DistributorExpensesScreenState
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text(
-                              "Upload Payment Photo",
+                              "Upload Expense Bill",
                               style: TextStyle(fontWeight: FontWeight.w500),
                             ),
                             InkWell(
                               onTap: () async {
                                 final picker = ImagePicker();
-
-                                showModalBottomSheet(
-                                  context: context,
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(16)),
-                                  ),
-                                  builder: (context) {
-                                    return SafeArea(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          ListTile(
-                                            leading: const Icon(
-                                                Icons.camera_alt_outlined),
-                                            title: const Text("Camera"),
-                                            onTap: () async {
-                                              Navigator.pop(context);
-                                              final pickedFile =
-                                              await picker.pickImage(
-                                                source: ImageSource.camera,
-                                              );
-                                              if (pickedFile != null) {
-                                                setState(() {
-                                                  selectedImage =
-                                                      File(pickedFile.path);
-                                                });
-                                              }
-                                            },
-                                          ),
-                                          ListTile(
-                                            leading:
-                                            const Icon(Icons.photo_outlined),
-                                            title: const Text("Gallery"),
-                                            onTap: () async {
-                                              Navigator.pop(context);
-                                              final pickedFile =
-                                              await picker.pickImage(
-                                                source: ImageSource.gallery,
-                                              );
-                                              if (pickedFile != null) {
-                                                setState(() {
-                                                  selectedImage =
-                                                      File(pickedFile.path);
-                                                });
-                                              }
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
+                                final pickedFile = await picker.pickImage(
+                                  source: ImageSource.gallery,
                                 );
+                                if (pickedFile != null) {
+                                  setPopupState(() {
+                                    selectedImage = File(pickedFile.path);
+                                  });
+                                }
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha:0.1),
+                                  color: AppColors.primary.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(Icons.image,
@@ -317,7 +419,6 @@ class _DistributorExpensesScreenState
                         ),
                       ),
                     ),
-
                     if (selectedImage != null)
                       Padding(
                         padding: const EdgeInsets.all(12),
@@ -326,7 +427,6 @@ class _DistributorExpensesScreenState
                           child: Image.file(selectedImage!, height: 100),
                         ),
                       ),
-
                     const SizedBox(height: 10),
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -341,8 +441,41 @@ class _DistributorExpensesScreenState
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          onPressed: () {
-                            Navigator.pop(context);
+                          onPressed: () async {
+                            if (amountController.text.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Please enter amount")),
+                              );
+                              return;
+                            }
+                            
+                            final distributors = await SessionManager.getDistributors();
+                            String distId = "1";
+                            if (distributors.isNotEmpty) {
+                              distId = distributors[0]['distributor_id']?.toString() ?? "1";
+                            }
+
+                            final response = await ApiServices.addExpense(
+                              distributorId: distId,
+                              expenseDate: dateController.text,
+                              expenseAmount: amountController.text,
+                              description: descriptionController.text,
+                              expenseType: expenseTypeController.text,
+                              paymentMode: paymentModeController.text,
+                              expenseBill: selectedImage,
+                            );
+
+                            if (response != null && response['status'] == true) {
+                              Navigator.pop(context);
+                              _fetchExpenses();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Expense added successfully")),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(response?['message'] ?? "Failed to add expense")),
+                              );
+                            }
                           },
                           child: const Text(
                             "SUBMIT",
@@ -362,6 +495,7 @@ class _DistributorExpensesScreenState
       },
     );
   }
+
   Widget _styledField(
       String hint,
       TextEditingController controller, {

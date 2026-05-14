@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
 
 import '../constants/api_urls.dart';
@@ -763,6 +764,139 @@ class ApiServices {
       return null;
     } catch (e) {
       AppLogger.error("Get Calls Info error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getExpenses() async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.get(
+        AppUrls.getExpenses,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      return response.data;
+    } catch (e) {
+      AppLogger.error("Get Expenses error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> addExpense({
+    required String distributorId,
+    required String expenseDate,
+    required String expenseAmount,
+    required String description,
+    required String expenseType,
+    required String paymentMode,
+    File? expenseBill,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      FormData formData = FormData.fromMap({
+        "distributor_id": distributorId,
+        "expense_date": expenseDate,
+        "expense_amount": expenseAmount,
+        "description": description,
+        "expense_type": expenseType,
+        "payment_mode": paymentMode,
+      });
+
+      if (expenseBill != null) {
+        formData.files.add(MapEntry(
+          "Expense_bill",
+          await MultipartFile.fromFile(expenseBill.path),
+        ));
+      }
+
+      final response = await _dio.post(
+        AppUrls.addExpense,
+        data: formData,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      return response.data;
+    } catch (e) {
+      AppLogger.error("Add Expense error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> submitToAm(String expenseId) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.post(
+        AppUrls.submitToAm,
+        data: {"expense_id": expenseId},
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      return response.data;
+    } catch (e) {
+      AppLogger.error("Submit to AM error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> receiveFromSo(String expenseId) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.post(
+        AppUrls.receiveFromSo,
+        data: {"expense_id": expenseId},
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      return response.data;
+    } catch (e) {
+      AppLogger.error("Receive from SO error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> submitToAdmin(String expenseId) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.post(
+        AppUrls.submitToAdmin,
+        data: {"expense_id": expenseId},
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      return response.data;
+    } catch (e) {
+      AppLogger.error("Submit to Admin error", e);
       return null;
     }
   }

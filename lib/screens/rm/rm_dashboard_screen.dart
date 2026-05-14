@@ -4,21 +4,18 @@ import '../../constants/app_colors.dart';
 import '../../permissions/AppStateProvider.dart';
 import '../../profile.dart';
 import '../Homes/HomeProvider.dart';
-import '../leave_management/leave_management_screen.dart';
-import 'asm_provider.dart';
-import 'select_so_screen.dart';
-import 'so_attendance_screen.dart';
-import 'travel_plan_screen.dart';
+import '../asm/select_so_screen.dart';
+import '../asm/so_attendance_screen.dart';
 import '../Distribution_networking/distribution_network_screen.dart';
 
-class AmDashboardScreen extends StatefulWidget {
-  const AmDashboardScreen({super.key});
+class RmDashboardScreen extends StatefulWidget {
+  const RmDashboardScreen({super.key});
 
   @override
-  State<AmDashboardScreen> createState() => _AmDashboardScreenState();
+  State<RmDashboardScreen> createState() => _RmDashboardScreenState();
 }
 
-class _AmDashboardScreenState extends State<AmDashboardScreen> {
+class _RmDashboardScreenState extends State<RmDashboardScreen> {
   @override
   void initState() {
     super.initState();
@@ -49,10 +46,10 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
             ),
             child: const Center(
               child: Text(
-                "AZISTA AM",
+                "AZISTA RM",
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 48,
+                  fontSize: 40,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 2,
                 ),
@@ -69,6 +66,16 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
               children: [
                 _buildMenuItem(
                   iconPath: Icons.people_outline,
+                  label: "AM Attendance",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SoAttendanceScreen()), // Reusing for now
+                    );
+                  },
+                ),
+                _buildMenuItem(
+                  iconPath: Icons.person_search_outlined,
                   label: "SO Attendance",
                   onTap: () {
                     Navigator.push(
@@ -88,13 +95,6 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                   },
                 ),
                 _buildMenuItem(
-                  iconPath: Icons.account_tree_outlined,
-                  label: "Distributor Visit",
-                  onTap: () {
-                    // Placeholder for Distributor Visit
-                  },
-                ),
-                _buildMenuItem(
                   iconPath: Icons.account_tree_rounded,
                   label: "Distribution Network",
                   onTap: () {
@@ -104,7 +104,6 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                     );
                   },
                 ),
-
                 _buildMenuItem(
                   iconPath: Icons.person_outline,
                   label: "Profile",
@@ -126,7 +125,7 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
     required VoidCallback onTap,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 30),
+      padding: const EdgeInsets.only(bottom: 25),
       child: InkWell(
         onTap: onTap,
         child: Row(

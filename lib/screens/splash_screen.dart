@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../constants/image_constants.dart';
 import '../permissions/SessionManager.dart';
 import 'asm/asm_dashboard_screen.dart';
+import 'rm/rm_dashboard_screen.dart';
 import 'Homes/main_shell_screen.dart';
 import 'login/login_screen.dart';
 
@@ -30,10 +31,16 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (token != null && !isExpired) {
       final role = await SessionManager.getUserRole();
-      if (role.toLowerCase().trim() == "asm") {
+      final normalizedRole = role.toLowerCase().trim();
+      if (normalizedRole == "rm") {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const AsmDashboardScreen()),
+          MaterialPageRoute(builder: (_) => const RmDashboardScreen()),
+        );
+      } else if (normalizedRole == "asm" || normalizedRole == "am") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AmDashboardScreen()),
         );
       } else {
         Navigator.pushReplacement(

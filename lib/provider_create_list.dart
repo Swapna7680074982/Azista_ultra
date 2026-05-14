@@ -51,7 +51,7 @@ List<SingleChildWidget> providerCreateList = [
   ChangeNotifierProvider<HomeProvider>(
     create: (_) => HomeProvider(),
   ),
-  ChangeNotifierProvider<AsmProvider>(
-    create: (_) => AsmProvider(),
+  ChangeNotifierProvider<AmProvider>(
+    create: (_) => AmProvider(),
   ),
 ];
