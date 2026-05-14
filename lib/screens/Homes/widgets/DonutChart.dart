@@ -48,15 +48,15 @@ class _DonutChartState extends State<DonutChart>
     return Column(
       children: [
         SizedBox(
-          width: 150,
-          height: 150,
+          width: 160,
+          height: 160,
           child: GestureDetector(
             onPanStart: (details) {
-              _startAngle = atan2(details.localPosition.dy - 75, details.localPosition.dx - 75);
+              _startAngle = atan2(details.localPosition.dy - 80, details.localPosition.dx - 80);
               _baseRotation = _manualRotation;
             },
             onPanUpdate: (details) {
-              double currentAngle = atan2(details.localPosition.dy - 75, details.localPosition.dx - 75);
+              double currentAngle = atan2(details.localPosition.dy - 80, details.localPosition.dx - 80);
               setState(() {
                 _manualRotation = _baseRotation + (currentAngle - _startAngle);
               });
@@ -70,18 +70,18 @@ class _DonutChartState extends State<DonutChart>
                     : (widget.value / widget.total) * 2 * pi * _controller.value;
   
                 final greenMidAngle = -pi / 2 + rotationAngle + sweepLength / 2;
-                final gDx = 55 * cos(greenMidAngle);
-                final gDy = 55 * sin(greenMidAngle);
+                final gDx = 60 * cos(greenMidAngle);
+                final gDy = 60 * sin(greenMidAngle);
                 
                 final redMidAngle = -pi / 2 + rotationAngle + sweepLength + (2 * pi - sweepLength) / 2;
-                final rDx = 55 * cos(redMidAngle);
-                final rDy = 55 * sin(redMidAngle);
+                final rDx = 60 * cos(redMidAngle);
+                final rDy = 60 * sin(redMidAngle);
 
               return Stack(
                 alignment: Alignment.center,
                 children: [
                   CustomPaint(
-                    size: const Size(130, 130),
+                    size: const Size(140, 140),
                     painter: DonutPainter(
                       progress: _controller.value,
                       rotationAngle: rotationAngle,
@@ -92,8 +92,8 @@ class _DonutChartState extends State<DonutChart>
                   ),
 
                   Container(
-                    width: 50,
-                    height: 50,
+                    width: 75,
+                    height: 75,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
@@ -102,7 +102,7 @@ class _DonutChartState extends State<DonutChart>
 
                   Positioned.fromRect(
                     rect: Rect.fromCenter(
-                      center: Offset(75 + gDx, 75 + gDy), 
+                      center: Offset(80 + gDx, 80 + gDy), 
                       width: 100, 
                       height: 50
                     ),
@@ -131,7 +131,7 @@ class _DonutChartState extends State<DonutChart>
 
                   Positioned.fromRect(
                     rect: Rect.fromCenter(
-                      center: Offset(75 + rDx, 75 + rDy), 
+                      center: Offset(80 + rDx, 80 + rDy), 
                       width: 100, 
                       height: 50
                     ),
@@ -209,7 +209,7 @@ class DonutPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    const stroke = 40.0;
+    const stroke = 32.0;
     final redPaint = Paint()
       ..color = AppColors.primary
       ..style = PaintingStyle.stroke
@@ -241,10 +241,10 @@ class DonutPainter extends CustomPainter {
     final lightOverlayPaint = Paint()
       ..color = Colors.white.withOpacity(0.35)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 8 
+      ..strokeWidth = 9 
       ..strokeCap = StrokeCap.butt;
     canvas.drawArc(
-      rect.deflate(30), 
+      rect.deflate(28), 
       0, 
       2 * pi, 
       false, 
