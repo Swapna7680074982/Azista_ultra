@@ -832,7 +832,7 @@ class ApiServices {
 
       if (expenseBill != null) {
         formData.files.add(MapEntry(
-          "Expense_bill",
+          "expense_bill",
           await MultipartFile.fromFile(
             expenseBill.path,
             filename: fileName,

@@ -7,6 +7,7 @@ import '../../models/expense_model.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'distributor_expense_provider.dart';
+import '../../utilities/date_formatter.dart';
 
 class DistributorExpensesScreen extends StatefulWidget {
   const DistributorExpensesScreen({super.key});
@@ -18,6 +19,18 @@ class DistributorExpensesScreen extends StatefulWidget {
 
 class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
   DateTime selectedDate = DateTime.now();
+
+  // Status filter: null means "All"
+  String? _selectedStatusFilter;
+
+  // Status options matching the workflow table
+  final List<Map<String, String>> _statusOptions = [
+    {'label': 'All', 'value': ''},
+    {'label': 'Collected', 'value': 'collected'},
+    {'label': 'SO (Submitted to AM)', 'value': 'so'},
+    {'label': 'AM (Received from SO)', 'value': 'am'},
+    {'label': 'Submitted', 'value': 'submitted'},
+  ];
 
   @override
   void initState() {
@@ -46,13 +59,27 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
     }
   }
 
+  List<Expense> _filterExpenses(List<Expense> expenses) {
+    if (_selectedStatusFilter == null || _selectedStatusFilter!.isEmpty) {
+      return expenses;
+    }
+    return expenses.where((e) {
+      final status = e.trackingStatus.toLowerCase().trim();
+      if (_selectedStatusFilter == 'am') {
+        return status == 'am' || status == 'asm' || status == 'received';
+      }
+      return status == _selectedStatusFilter;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<DistributorExpenseProvider>();
     final userRole = provider.userRole.toLowerCase();
+    final filteredExpenses = _filterExpenses(provider.expenses);
 
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: const Color(0xFFF5F5F5), // light grey background
       appBar: AppBar(
         title: const Text(
           "Distribution Expenses",
@@ -73,12 +100,13 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
       ),
       body: Column(
         children: [
+          // Month picker
           GestureDetector(
             onTap: _pickMonth,
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              color: AppColors.text.withValues(alpha:0.1),
+              color: AppColors.text.withValues(alpha: 0.1),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -99,17 +127,57 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
               ),
             ),
           ),
+
+          // ── Status Filter Row ──
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            color: Colors.white.withValues(alpha: 0.6),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _statusOptions.map((opt) {
+                  final isSelected =
+                      (_selectedStatusFilter ?? '') == opt['value'];
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(
+                        opt['label']!,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : AppColors.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      selected: isSelected,
+                      selectedColor: AppColors.primary,
+                      backgroundColor: Colors.white,
+                      checkmarkColor: Colors.white,
+                      side: BorderSide(color: AppColors.primary),
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedStatusFilter = opt['value'];
+                        });
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+
           if (provider.isLoading && provider.expenses.isEmpty)
             const Expanded(child: Center(child: CircularProgressIndicator()))
-          else if (provider.expenses.isEmpty)
+          else if (filteredExpenses.isEmpty)
             const Expanded(child: Center(child: Text("No expenses found")))
           else
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
-                itemCount: provider.expenses.length,
+                itemCount: filteredExpenses.length,
                 itemBuilder: (context, index) {
-                  final expense = provider.expenses[index];
+                  final expense = filteredExpenses[index];
                   return _buildExpenseCard(expense, provider);
                 },
               ),
@@ -132,8 +200,10 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
     DistributorExpenseProvider provider,
   ) {
     return Card(
+      color: Colors.white, // white card
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -178,7 +248,7 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                       style: TextStyle(color: Colors.grey),
                     ),
                     const SizedBox(height: 4),
-                    Text(expense.expenseDate),
+                    Text(DateFormatter.formatDateTime(expense.expenseDate)),
                   ],
                 ),
                 Column(
@@ -199,15 +269,15 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // Status badge
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(
-                      expense.trackingStatus,
-                    ).withValues(alpha:0.1),
+                    color: _getStatusColor(expense.trackingStatus)
+                        .withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -219,10 +289,9 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                     ),
                   ),
                 ),
+                // Action buttons + Track Status
                 Row(
                   children: [
-                    _buildActionButtons(expense, provider),
-                    const SizedBox(width: 8),
                     TextButton(
                       onPressed: () {
                         Navigator.push(
@@ -251,99 +320,45 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
   }
 
   Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
+    switch (status.toLowerCase().trim()) {
       case 'submitted':
-        return Colors.blue;
+        return Colors.green; // ← green for "Submitted"
       case 'received':
         return Colors.green;
       case 'pending':
       case 'so':
       case 'collected':
         return Colors.orange;
+      case 'am':
       case 'asm':
         return Colors.purple;
       default:
         return Colors.grey;
     }
   }
-
-  Widget _buildActionButtons(
-    Expense expense,
-    DistributorExpenseProvider provider,
-  ) {
-    final userRole = provider.userRole.toLowerCase();
-
-    // Check if we should show a button
-    bool shouldShowSubmitToAm =
-        (userRole.contains("so") || userRole.contains("sale")) &&
-        (expense.trackingStatus.toLowerCase().trim() == "pending" ||
-            expense.trackingStatus.toLowerCase().trim() == "0" ||
-            expense.trackingStatus.toLowerCase().trim() == "collected");
-
-    bool shouldShowReceive =
-        (userRole.contains("am") || userRole.contains("asm")) &&
-        expense.trackingStatus.toLowerCase().trim() == "so";
-
-    bool shouldShowSubmitToAdmin =
-        (userRole.contains("am") || userRole.contains("asm")) &&
-        (expense.trackingStatus.toLowerCase().trim() == "received" ||
-            expense.trackingStatus.toLowerCase().trim() == "asm");
-
-    if (shouldShowSubmitToAm) {
-      return provider.isLoading
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : TextButton(
-              onPressed: () =>
-                  _handleAction('submit_to_am', expense.expenseId, provider),
-              child: const Text("Submit to AM"),
-            );
-    } else if (shouldShowReceive) {
-      return provider.isLoading
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : TextButton(
-              onPressed: () =>
-                  _handleAction('receive_from_so', expense.expenseId, provider),
-              child: const Text("Receive"),
-            );
-    } else if (shouldShowSubmitToAdmin) {
-      return provider.isLoading
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : TextButton(
-              onPressed: () =>
-                  _handleAction('submit_to_admin', expense.expenseId, provider),
-              child: const Text("Submit to Admin"),
-            );
-    }
-    return const SizedBox.shrink();
-  }
-
-  Future<void> _handleAction(
-    String action,
-    String expenseId,
-    DistributorExpenseProvider provider,
-  ) async {
-    final response = await provider.updateStatus(action, expenseId);
-    if (response != null && response['status'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['message'] ?? "Action successful")),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response?['message'] ?? "Action failed")),
-      );
-    }
+  void _showFullScreenImage(File imageFile) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              child: Image.file(
+                imageFile,
+                fit: BoxFit.contain,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _openAddExpensePopup(BuildContext context) {
@@ -373,13 +388,14 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Header
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 12,
                           ),
-                          decoration: BoxDecoration(
+                          decoration:  BoxDecoration(
                             color: AppColors.primary,
                             borderRadius: BorderRadius.vertical(
                               top: Radius.circular(12),
@@ -431,17 +447,19 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                         ),
                                       ),
                                       onTap: () async {
-                                        DateTime? picked = await showDatePicker(
-                                          context: context,
-                                          initialDate: DateTime.now(),
-                                          firstDate: DateTime(2020),
-                                          lastDate: DateTime(2100),
-                                        );
+                                        DateTime? picked =
+                                            await showDatePicker(
+                                              context: context,
+                                              initialDate: DateTime.now(),
+                                              firstDate: DateTime(2020),
+                                              lastDate: DateTime(2100),
+                                            );
                                         if (picked != null) {
                                           setPopupState(() {
-                                            dateController.text = DateFormat(
-                                              'yyyy-MM-dd',
-                                            ).format(picked);
+                                            dateController.text =
+                                                DateFormat(
+                                                  'yyyy-MM-dd',
+                                                ).format(picked);
                                           });
                                         }
                                       },
@@ -522,10 +540,15 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                               const SizedBox(height: 6),
                               GestureDetector(
                                 onTap: () async {
+                                  // If image already selected, show full screen on tap
+                                  if (selectedImage != null) {
+                                    _showFullScreenImage(selectedImage!);
+                                    return;
+                                  }
                                   final picker = ImagePicker();
                                   showModalBottomSheet(
                                     context: context,
-                                    builder: (context) => SafeArea(
+                                    builder: (ctx) => SafeArea(
                                       child: Wrap(
                                         children: [
                                           ListTile(
@@ -534,10 +557,11 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                             ),
                                             title: const Text('Gallery'),
                                             onTap: () async {
-                                              Navigator.pop(context);
-                                              final pickedFile = await picker
-                                                  .pickImage(
-                                                    source: ImageSource.gallery,
+                                              Navigator.pop(ctx);
+                                              final pickedFile =
+                                                  await picker.pickImage(
+                                                    source:
+                                                        ImageSource.gallery,
                                                   );
                                               if (pickedFile != null) {
                                                 setPopupState(() {
@@ -554,9 +578,9 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                             ),
                                             title: const Text('Camera'),
                                             onTap: () async {
-                                              Navigator.pop(context);
-                                              final pickedFile = await picker
-                                                  .pickImage(
+                                              Navigator.pop(ctx);
+                                              final pickedFile =
+                                                  await picker.pickImage(
                                                     source: ImageSource.camera,
                                                   );
                                               if (pickedFile != null) {
@@ -574,37 +598,144 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                   );
                                 },
                                 child: Container(
-                                  height: 80,
                                   width: double.infinity,
                                   decoration: BoxDecoration(
                                     border: Border.all(
-                                      color: Colors.grey.withValues(alpha:0.5),
+                                      color: Colors.grey.withValues(alpha: 0.5),
                                     ),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
+                                  // Show full image height when selected
                                   child: selectedImage == null
-                                      ? const Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.add_a_photo,
-                                              color: Colors.grey,
-                                              size: 18,
-                                            ),
-                                            SizedBox(width: 8),
-                                            Text(
-                                              "Upload bill",
-                                              style: TextStyle(
+                                      ? Container(
+                                          height: 80,
+                                          alignment: Alignment.center,
+                                          child: const Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.add_a_photo,
                                                 color: Colors.grey,
-                                                fontSize: 12,
+                                                size: 18,
+                                              ),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                "Upload bill",
+                                                style: TextStyle(
+                                                  color: Colors.grey,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : Stack(
+                                          children: [
+                                            ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Image.file(
+                                                selectedImage!,
+                                                fit: BoxFit.contain,
+                                                width: double.infinity,
+                                              ),
+                                            ),
+                                            // Change button
+                                            Positioned(
+                                              top: 4,
+                                              right: 4,
+                                              child: GestureDetector(
+                                                onTap: () async {
+                                                  final picker = ImagePicker();
+                                                  showModalBottomSheet(
+                                                    context: context,
+                                                    builder: (ctx) => SafeArea(
+                                                      child: Wrap(
+                                                        children: [
+                                                          ListTile(
+                                                            leading: const Icon(
+                                                              Icons.photo_library,
+                                                            ),
+                                                            title: const Text(
+                                                              'Gallery',
+                                                            ),
+                                                            onTap: () async {
+                                                              Navigator.pop(
+                                                                ctx,
+                                                              );
+                                                              final p =
+                                                                  await picker.pickImage(
+                                                                    source:
+                                                                        ImageSource.gallery,
+                                                                  );
+                                                              if (p != null) {
+                                                                setPopupState(
+                                                                  () =>
+                                                                      selectedImage =
+                                                                          File(
+                                                                            p.path,
+                                                                          ),
+                                                                );
+                                                              }
+                                                            },
+                                                          ),
+                                                          ListTile(
+                                                            leading: const Icon(
+                                                              Icons.camera_alt,
+                                                            ),
+                                                            title: const Text(
+                                                              'Camera',
+                                                            ),
+                                                            onTap: () async {
+                                                              Navigator.pop(
+                                                                ctx,
+                                                              );
+                                                              final p =
+                                                                  await picker.pickImage(
+                                                                    source:
+                                                                        ImageSource.camera,
+                                                                  );
+                                                              if (p != null) {
+                                                                setPopupState(
+                                                                  () =>
+                                                                      selectedImage =
+                                                                          File(
+                                                                            p.path,
+                                                                          ),
+                                                                );
+                                                              }
+                                                            },
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                child: Container(
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.black54,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          4,
+                                                        ),
+                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 3,
+                                                      ),
+                                                  child: const Text(
+                                                    "Change",
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 11,
+                                                    ),
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ],
-                                        )
-                                      : Image.file(
-                                          selectedImage!,
-                                          fit: BoxFit.cover,
                                         ),
                                 ),
                               ),
@@ -617,7 +748,8 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                       ? null
                                       : () async {
                                           if (amountController.text.isEmpty ||
-                                              expenseTypeController.text.isEmpty) {
+                                              expenseTypeController
+                                                  .text.isEmpty) {
                                             ScaffoldMessenger.of(
                                               context,
                                             ).showSnackBar(
@@ -667,7 +799,7 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                           }
                                         },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
+                                    backgroundColor: Colors.green, // green submit button
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -684,7 +816,7 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                       : const Text(
                                           "SUBMIT",
                                           style: TextStyle(
-                                            color: AppColors.white,
+                                            color: Colors.white,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),

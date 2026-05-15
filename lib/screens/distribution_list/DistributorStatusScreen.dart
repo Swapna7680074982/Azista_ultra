@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../models/expense_model.dart';
 import 'distributor_expense_provider.dart';
+import '../../utilities/date_formatter.dart';
 
 class DistributorStatusScreen extends StatefulWidget {
   final Expense expense;
@@ -119,7 +120,7 @@ class _DistributorStatusScreenState extends State<DistributorStatusScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _infoColumn("Created On", widget.expense.createdOn),
+                _infoColumn("Created On", DateFormatter.formatDateTime(widget.expense.createdOn)),
                 const SizedBox(height: 16),
                 _infoColumn("Expense Type ${widget.expense.expenseType}",
                     "₹${widget.expense.expenseAmount}"),
@@ -155,23 +156,55 @@ class _DistributorStatusScreenState extends State<DistributorStatusScreen> {
   }
 
   Widget _buildBillThumbnail() {
-    return Container(
-      width: 100,
-      height: 100,
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withValues(alpha:0.3)),
+    return GestureDetector(
+      onTap: () {
+        if (imageBytes != null) {
+          _showFullScreenImage(imageBytes!);
+        }
+      },
+      child: Container(
+        width: 100,
+        height: 100,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+        ),
+        child: isImageLoading
+            ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+            : imageBytes != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(imageBytes!, fit: BoxFit.cover),
+                  )
+                : const Center(
+                    child: Icon(Icons.image_not_supported, color: Colors.grey),
+                  ),
       ),
-      child: isImageLoading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-          : imageBytes != null
-          ? ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.memory(imageBytes!, fit: BoxFit.cover),
-      )
-          : const Center(
-        child: Icon(Icons.image_not_supported, color: Colors.grey),
+    );
+  }
+
+  void _showFullScreenImage(Uint8List bytes) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              child: Image.memory(
+                bytes,
+                fit: BoxFit.contain,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -182,26 +215,24 @@ class _DistributorStatusScreenState extends State<DistributorStatusScreen> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.text.withValues(alpha:0.1)),
+        border: Border.all(color: AppColors.text.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
           _statusStep(
             index: 0,
             title: "Collected from Distributor",
-            subtitle: widget.expense.createdOn,
+            subtitle: _getStepSubtitle(provider, 0, "Collected"),
             isCompleted: provider.isStepCompleted(currentStatus, 0),
             provider: provider,
           ),
           _statusStep(
             index: 1,
             title: "Submitted to ASM",
-            subtitle: provider.isStepCompleted(currentStatus, 1)
-                ? "Completed"
-                : "Pending",
+            subtitle: _getStepSubtitle(provider, 1, "SO"),
             isCompleted: provider.isStepCompleted(currentStatus, 1),
             showButton: (widget.userRole.toLowerCase().contains("so") ||
-                widget.userRole.toLowerCase().contains("sale")) &&
+                    widget.userRole.toLowerCase().contains("sale")) &&
                 (currentStatus.toLowerCase().trim() == 'pending' ||
                     currentStatus.toLowerCase().trim() == '0' ||
                     currentStatus.toLowerCase().trim() == 'collected'),
@@ -211,12 +242,10 @@ class _DistributorStatusScreenState extends State<DistributorStatusScreen> {
           _statusStep(
             index: 2,
             title: "Received from SO to ASM",
-            subtitle: provider.isStepCompleted(currentStatus, 2)
-                ? "Completed"
-                : "Pending",
+            subtitle: _getStepSubtitle(provider, 2, "ASM"),
             isCompleted: provider.isStepCompleted(currentStatus, 2),
             showButton: (widget.userRole.toLowerCase().contains("am") ||
-                widget.userRole.toLowerCase().contains("asm")) &&
+                    widget.userRole.toLowerCase().contains("asm")) &&
                 currentStatus.toLowerCase().trim() == 'so',
             onAction: () => _handleUpdate('receive_from_so'),
             provider: provider,
@@ -224,12 +253,10 @@ class _DistributorStatusScreenState extends State<DistributorStatusScreen> {
           _statusStep(
             index: 3,
             title: "Submitted to Admin",
-            subtitle: provider.isStepCompleted(currentStatus, 3)
-                ? "Completed"
-                : "Pending",
+            subtitle: _getStepSubtitle(provider, 3, "Submitted"),
             isCompleted: provider.isStepCompleted(currentStatus, 3),
             showButton: (widget.userRole.toLowerCase().contains("am") ||
-                widget.userRole.toLowerCase().contains("asm")) &&
+                    widget.userRole.toLowerCase().contains("asm")) &&
                 (currentStatus.toLowerCase().trim() == 'received' ||
                     currentStatus.toLowerCase().trim() == 'asm'),
             onAction: () => _handleUpdate('submit_to_admin'),
@@ -238,6 +265,31 @@ class _DistributorStatusScreenState extends State<DistributorStatusScreen> {
         ],
       ),
     );
+  }
+
+  String _getStepSubtitle(DistributorExpenseProvider provider, int index, String statusKey) {
+    bool isCompleted = provider.isStepCompleted(currentStatus, index);
+    if (!isCompleted) return "Pending";
+
+    // Find the log entry for this status
+    final log = widget.expense.trackingLogs.firstWhere(
+      (l) => l.expenseStatus.toLowerCase().trim() == statusKey.toLowerCase().trim(),
+      orElse: () => TrackingLog(
+        logId: '',
+        expenseStatus: '',
+        remarks: '',
+        actionBy: '',
+        actionByName: '',
+        actionRole: '',
+        createdOn: index == 0 ? widget.expense.createdOn : '',
+      ),
+    );
+
+    if (log.createdOn.isNotEmpty) {
+      return DateFormatter.formatDateTime(log.createdOn);
+    }
+
+    return "Completed";
   }
 
   Widget _statusStep({
