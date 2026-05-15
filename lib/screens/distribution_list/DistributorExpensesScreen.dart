@@ -79,7 +79,7 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
     final filteredExpenses = _filterExpenses(provider.expenses);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5), // light grey background
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text(
           "Distribution Expenses",
@@ -534,6 +534,7 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                 "Expense Bill",
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
+                                  color: Colors.black,
                                   fontSize: 12,
                                 ),
                               ),
@@ -799,7 +800,7 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                           }
                                         },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green, // green submit button
+                                    backgroundColor: AppColors.primary,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
