@@ -7,6 +7,7 @@ import '../Homes/HomeProvider.dart';
 import '../asm/select_so_screen.dart';
 import '../asm/so_attendance_screen.dart';
 import '../Distribution_networking/distribution_network_screen.dart';
+import '../distribution_list/DistributorExpensesScreen.dart';
 
 class RmDashboardScreen extends StatefulWidget {
   const RmDashboardScreen({super.key});
@@ -95,12 +96,22 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                   },
                 ),
                 _buildMenuItem(
-                  iconPath: Icons.account_tree_rounded,
+                  iconPath: Icons.track_changes,
                   label: "Distribution Network",
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const DistributionNetworkScreen()),
+                    );
+                  },
+                ),
+                _buildMenuItem(
+                  iconPath: Icons.currency_rupee,
+                  label: "Distributor Expenses",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DistributorExpensesScreen()),
                     );
                   },
                 ),

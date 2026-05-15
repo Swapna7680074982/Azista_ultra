@@ -55,7 +55,7 @@ class ApiServices {
       return response.data;
     } catch (e) {
       AppLogger.error("Login error", e);
-      return {"status": false, "message": e.toString().replaceAll("Exception: ", "")};
+      return {"status": false, "message": "Login failed"};
     }
   }
 
@@ -178,7 +178,10 @@ class ApiServices {
         return null;
       }
 
-      AppLogger.info("Get Routes API called");
+      AppLogger.info("Get Routes API called: ${AppUrls.routes}");
+      AppLogger.info("Headers: ${jsonEncode({
+        "Authorization": token.length > 10 ? "${token.substring(0, 10)}..." : "Bearer $token",
+      })}");
 
       final response = await _dio.get(
         AppUrls.routes,
@@ -186,13 +189,23 @@ class ApiServices {
           headers: {
             "Authorization": "Bearer $token",
           },
+          validateStatus: (status) => status! < 500,
         ),
       );
 
-      AppLogger.info("Get Routes response: ${response.data}");
+      AppLogger.info("Get Routes response: ${response.statusCode} - ${response.data}");
 
       if (response.statusCode == 200 && response.data["status"] == true) {
         return response.data;
+      }
+      
+      if (response.statusCode == 404) {
+        AppLogger.warning("Get Routes returned 404 - treating as empty routes");
+        return {
+          "status": true,
+          "message": "No routes found",
+          "routes": <String, dynamic>{}
+        };
       }
 
       return null;
@@ -773,6 +786,7 @@ class ApiServices {
       final token = await SessionManager.getToken();
       if (token == null) return null;
 
+      AppLogger.info("Get Expenses API called: ${AppUrls.getExpenses}");
       final response = await _dio.get(
         AppUrls.getExpenses,
         options: Options(
@@ -782,6 +796,7 @@ class ApiServices {
         ),
       );
 
+      AppLogger.info("Get Expenses response: ${jsonEncode(response.data)}");
       return response.data;
     } catch (e) {
       AppLogger.error("Get Expenses error", e);
@@ -818,6 +833,7 @@ class ApiServices {
         ));
       }
 
+      AppLogger.info("Add Expense API called: ${AppUrls.addExpense}");
       final response = await _dio.post(
         AppUrls.addExpense,
         data: formData,
@@ -828,6 +844,7 @@ class ApiServices {
         ),
       );
 
+      AppLogger.info("Add Expense response: ${jsonEncode(response.data)}");
       return response.data;
     } catch (e) {
       AppLogger.error("Add Expense error", e);
@@ -840,6 +857,8 @@ class ApiServices {
       final token = await SessionManager.getToken();
       if (token == null) return null;
 
+      AppLogger.info("Submit to AM API called: ${AppUrls.submitToAm}");
+      AppLogger.info("Payload: ${jsonEncode({"expense_id": expenseId})}");
       final response = await _dio.post(
         AppUrls.submitToAm,
         data: {"expense_id": expenseId},
@@ -850,6 +869,7 @@ class ApiServices {
         ),
       );
 
+      AppLogger.info("Submit to AM response: ${jsonEncode(response.data)}");
       return response.data;
     } catch (e) {
       AppLogger.error("Submit to AM error", e);
@@ -862,6 +882,8 @@ class ApiServices {
       final token = await SessionManager.getToken();
       if (token == null) return null;
 
+      AppLogger.info("Receive from SO API called: ${AppUrls.receiveFromSo}");
+      AppLogger.info("Payload: ${jsonEncode({"expense_id": expenseId})}");
       final response = await _dio.post(
         AppUrls.receiveFromSo,
         data: {"expense_id": expenseId},
@@ -872,6 +894,7 @@ class ApiServices {
         ),
       );
 
+      AppLogger.info("Receive from SO response: ${jsonEncode(response.data)}");
       return response.data;
     } catch (e) {
       AppLogger.error("Receive from SO error", e);
@@ -884,6 +907,8 @@ class ApiServices {
       final token = await SessionManager.getToken();
       if (token == null) return null;
 
+      AppLogger.info("Submit to Admin API called: ${AppUrls.submitToAdmin}");
+      AppLogger.info("Payload: ${jsonEncode({"expense_id": expenseId})}");
       final response = await _dio.post(
         AppUrls.submitToAdmin,
         data: {"expense_id": expenseId},
@@ -894,6 +919,7 @@ class ApiServices {
         ),
       );
 
+      AppLogger.info("Submit to Admin response: ${jsonEncode(response.data)}");
       return response.data;
     } catch (e) {
       AppLogger.error("Submit to Admin error", e);

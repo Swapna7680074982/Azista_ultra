@@ -49,7 +49,7 @@ class LoginProvider extends ChangeNotifier {
         error = "Invalid login";
       }
     } catch (e) {
-      error = e.toString();
+      error = "Operation failed";
     }
 
     isLoading = false;
@@ -83,7 +83,7 @@ class LoginProvider extends ChangeNotifier {
         error = response?["message"] ?? "Change password failed";
       }
     } catch (e) {
-      error = e.toString();
+      error = "Operation failed";
     }
 
     isLoading = false;

@@ -10,6 +10,7 @@ import 'select_so_screen.dart';
 import 'so_attendance_screen.dart';
 import 'travel_plan_screen.dart';
 import '../Distribution_networking/distribution_network_screen.dart';
+import '../distribution_list/DistributorExpensesScreen.dart';
 
 class AmDashboardScreen extends StatefulWidget {
   const AmDashboardScreen({super.key});
@@ -95,12 +96,22 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                   },
                 ),
                 _buildMenuItem(
-                  iconPath: Icons.account_tree_rounded,
+                  iconPath: Icons.track_changes,
                   label: "Distribution Network",
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const DistributionNetworkScreen()),
+                    );
+                  },
+                ),
+                _buildMenuItem(
+                  iconPath: Icons.currency_rupee,
+                  label: "Distributor Expenses",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DistributorExpensesScreen()),
                     );
                   },
                 ),

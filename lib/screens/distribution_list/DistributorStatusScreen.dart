@@ -1,11 +1,14 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../models/expense_model.dart';
-import '../../services/api_services.dart';
+import 'distributor_expense_provider.dart';
 
 class DistributorStatusScreen extends StatefulWidget {
   final Expense expense;
   final String userRole;
+
   const DistributorStatusScreen({
     super.key,
     required this.expense,
@@ -17,41 +20,41 @@ class DistributorStatusScreen extends StatefulWidget {
 }
 
 class _DistributorStatusScreenState extends State<DistributorStatusScreen> {
-  bool isLoading = false;
   late String currentStatus;
+  Uint8List? imageBytes;
+  bool isImageLoading = false;
 
   @override
   void initState() {
     super.initState();
     currentStatus = widget.expense.trackingStatus;
+    _loadImage();
   }
 
-  bool isStepCompleted(int step) {
-    String status = currentStatus.toLowerCase();
-    if (step == 0) return true; // Collected is always true if it exists
-    if (step == 1) return status == 'submitted' || status == 'received' || status == 'submitted to admin';
-    if (step == 2) return status == 'received' || status == 'submitted to admin';
-    if (step == 3) return status == 'submitted to admin';
-    return false;
-  }
-
-  Future<void> _updateStatus(String action) async {
-    setState(() => isLoading = true);
-    Map<String, dynamic>? response;
-
-    if (action == 'submit_to_am') {
-      response = await ApiServices.submitToAm(widget.expense.expenseId);
-    } else if (action == 'receive_from_so') {
-      response = await ApiServices.receiveFromSo(widget.expense.expenseId);
-    } else if (action == 'submit_to_admin') {
-      response = await ApiServices.submitToAdmin(widget.expense.expenseId);
+  Future<void> _loadImage() async {
+    setState(() => isImageLoading = true);
+    final provider = Provider.of<DistributorExpenseProvider>(
+        context, listen: false);
+    final bytes = await provider.loadImage(widget.expense.expenseBill);
+    if (mounted) {
+      setState(() {
+        imageBytes = bytes;
+        isImageLoading = false;
+      });
     }
+  }
+
+  Future<void> _handleUpdate(String action) async {
+    final provider = Provider.of<DistributorExpenseProvider>(
+        context, listen: false);
+    final response = await provider.updateStatus(
+        action, widget.expense.expenseId);
 
     if (response != null && response['status'] == true) {
       setState(() {
-        if (action == 'submit_to_am') currentStatus = 'Submitted';
-        if (action == 'receive_from_so') currentStatus = 'Received';
-        if (action == 'submit_to_admin') currentStatus = 'Submitted to Admin';
+        if (action == 'submit_to_am') currentStatus = 'SO';
+        if (action == 'receive_from_so') currentStatus = 'ASM';
+        if (action == 'submit_to_admin') currentStatus = 'Submitted';
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(response['message'] ?? "Updated successfully")),
@@ -61,230 +64,268 @@ class _DistributorStatusScreenState extends State<DistributorStatusScreen> {
         SnackBar(content: Text(response?['message'] ?? "Update failed")),
       );
     }
-    setState(() => isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         title: const Text(
-          "Distribution Expenses status",
-          style: TextStyle(
-            color: AppColors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+            "Expense Tracking", style: TextStyle(color: AppColors.white)),
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: AppColors.white),
       ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
+      body: Consumer<DistributorExpenseProvider>(
+        builder: (context, provider, child) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  color: Colors.white,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text("Created On", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                            const SizedBox(height: 4),
-                            Text(widget.expense.createdOn,
-                                style: const TextStyle(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 10),
-                            Text("Expense Type", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                            const SizedBox(height: 4),
-                            Text(widget.expense.expenseType,
-                                style: const TextStyle(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 10),
-                            Text("Amount", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                             SizedBox(height: 4),
-                            Text("₹${widget.expense.expenseAmount}",
-                                style:  TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 16)),
-                            const SizedBox(height: 10),
-                            Text("Description", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                            const SizedBox(height: 4),
-                            Text(widget.expense.description),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        height: 120,
-                        width: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: widget.expense.expenseBill.isNotEmpty
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  widget.expense.expenseBill,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.image_not_supported, color: Colors.grey),
-                                ),
-                              )
-                            : const Icon(Icons.image, color: Colors.grey),
-                      )
-                    ],
-                  ),
+                _buildExpenseHeader(),
+                const SizedBox(height: 24),
+                const Text(
+                  "Tracking Timeline",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Column(
-                        children: [
-                          _timelineIcon(isStepCompleted(0)),
-                          _dottedLine(),
-                          _timelineIcon(isStepCompleted(1)),
-                          _dottedLine(),
-                          _timelineIcon(isStepCompleted(2)),
-                          _dottedLine(),
-                          _timelineIcon(isStepCompleted(3)),
-                        ],
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _statusCard(
-                              index: 0,
-                              title: "Collected from Distributor",
-                              date: widget.expense.createdOn,
-                            ),
-                            _statusCard(
-                              index: 1,
-                              title: "Submitted to ASM",
-                              date: isStepCompleted(1) ? "Completed" : "Pending",
-                              showButton: widget.userRole == "SO" && currentStatus.toLowerCase() == 'pending',
-                              onButtonPressed: () => _updateStatus('submit_to_am'),
-                            ),
-                            _statusCard(
-                              index: 2,
-                              title: "Received from SO to ASM",
-                              date: isStepCompleted(2) ? "Completed" : "Pending",
-                              showButton: widget.userRole == "AM" && currentStatus.toLowerCase() == 'submitted',
-                              onButtonPressed: () => _updateStatus('receive_from_so'),
-                            ),
-                            _statusCard(
-                              index: 3,
-                              title: "Submitted to Admin",
-                              date: isStepCompleted(3) ? "Completed" : "Pending",
-                              showButton: widget.userRole == "AM" && currentStatus.toLowerCase() == 'received',
-                              onButtonPressed: () => _updateStatus('submit_to_admin'),
-                            ),
-                          ],
-                        ),
-                      )
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 16),
+                _buildTimeline(provider),
               ],
             ),
-          ),
-          if (isLoading)
-            Container(
-              color: Colors.black26,
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  Widget _timelineIcon(bool isCompleted) {
+  Widget _buildExpenseHeader() {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: Icon(
-        isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-        color: isCompleted ? AppColors.primary : Colors.grey,
-        size: 24,
-      ),
-    );
-  }
-
-  Widget _dottedLine() {
-    return Container(
-      width: 2,
-      height: 40,
-      color: Colors.grey.shade300,
-    );
-  }
-
-  Widget _statusCard({
-    required int index,
-    required String title,
-    required String date,
-    bool showButton = false,
-    VoidCallback? onButtonPressed,
-  }) {
-    bool isCompleted = isStepCompleted(index);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha:0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: isCompleted ? Colors.black : Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  date,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
+                _infoColumn("Created On", widget.expense.createdOn),
+                const SizedBox(height: 16),
+                _infoColumn("Expense Type ${widget.expense.expenseType}",
+                    "₹${widget.expense.expenseAmount}"),
+                const SizedBox(height: 16),
+                _infoColumn("Comments",
+                    widget.expense.description.isNotEmpty ? widget.expense
+                        .description : "No comments"),
               ],
             ),
           ),
-          if (showButton)
-            ElevatedButton(
-              onPressed: onButtonPressed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                "Update",
-                style: TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ),
+          const SizedBox(width: 16),
+          _buildBillThumbnail(),
         ],
       ),
+    );
+  }
+
+  Widget _infoColumn(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(color: Colors.grey[600], fontSize: 13),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBillThumbnail() {
+    return Container(
+      width: 100,
+      height: 100,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.withValues(alpha:0.3)),
+      ),
+      child: isImageLoading
+          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          : imageBytes != null
+          ? ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.memory(imageBytes!, fit: BoxFit.cover),
+      )
+          : const Center(
+        child: Icon(Icons.image_not_supported, color: Colors.grey),
+      ),
+    );
+  }
+
+  Widget _buildTimeline(DistributorExpenseProvider provider) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.text.withValues(alpha:0.1)),
+      ),
+      child: Column(
+        children: [
+          _statusStep(
+            index: 0,
+            title: "Collected from Distributor",
+            subtitle: widget.expense.createdOn,
+            isCompleted: provider.isStepCompleted(currentStatus, 0),
+            provider: provider,
+          ),
+          _statusStep(
+            index: 1,
+            title: "Submitted to ASM",
+            subtitle: provider.isStepCompleted(currentStatus, 1)
+                ? "Completed"
+                : "Pending",
+            isCompleted: provider.isStepCompleted(currentStatus, 1),
+            showButton: (widget.userRole.toLowerCase().contains("so") ||
+                widget.userRole.toLowerCase().contains("sale")) &&
+                (currentStatus.toLowerCase().trim() == 'pending' ||
+                    currentStatus.toLowerCase().trim() == '0' ||
+                    currentStatus.toLowerCase().trim() == 'collected'),
+            onAction: () => _handleUpdate('submit_to_am'),
+            provider: provider,
+          ),
+          _statusStep(
+            index: 2,
+            title: "Received from SO to ASM",
+            subtitle: provider.isStepCompleted(currentStatus, 2)
+                ? "Completed"
+                : "Pending",
+            isCompleted: provider.isStepCompleted(currentStatus, 2),
+            showButton: (widget.userRole.toLowerCase().contains("am") ||
+                widget.userRole.toLowerCase().contains("asm")) &&
+                currentStatus.toLowerCase().trim() == 'so',
+            onAction: () => _handleUpdate('receive_from_so'),
+            provider: provider,
+          ),
+          _statusStep(
+            index: 3,
+            title: "Submitted to Admin",
+            subtitle: provider.isStepCompleted(currentStatus, 3)
+                ? "Completed"
+                : "Pending",
+            isCompleted: provider.isStepCompleted(currentStatus, 3),
+            showButton: (widget.userRole.toLowerCase().contains("am") ||
+                widget.userRole.toLowerCase().contains("asm")) &&
+                (currentStatus.toLowerCase().trim() == 'received' ||
+                    currentStatus.toLowerCase().trim() == 'asm'),
+            onAction: () => _handleUpdate('submit_to_admin'),
+            provider: provider,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusStep({
+    required int index,
+    required String title,
+    required String subtitle,
+    required bool isCompleted,
+    required DistributorExpenseProvider provider,
+    bool showButton = false,
+    VoidCallback? onAction,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: isCompleted ? Colors.green : Colors.grey.withValues(alpha:
+                    0.3),
+                shape: BoxShape.circle,
+              ),
+              child: isCompleted
+                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                  : null,
+            ),
+            if (index < 3)
+              Container(
+                width: 2,
+                height: 50,
+                color: isCompleted ? Colors.green : Colors.grey.withValues(alpha:
+                    0.3),
+              ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isCompleted ? Colors.black : Colors.grey,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+              if (showButton)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12, bottom: 16),
+                  child: SizedBox(
+                    width: 200,
+                    height: 40,
+                    child: ElevatedButton(
+                      onPressed: provider.isLoading ? null : onAction,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: provider.isLoading 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text(
+                            "Update status",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                    ),
+                  ),
+                )
+              else
+                const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -183,16 +183,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             return DropdownButton<String>(
                               isExpanded: true,
                               hint: const Text("SELECT DISTRIBUTOR"),
-                              value: appState.selectedDistributor,
-
-                              items: homeProvider.distributors
-                                  .map<DropdownMenuItem<String>>((d) {
+                              value: homeProvider.distributors.any((d) => d["distributor_name"] == appState.selectedDistributor)
+                                  ? appState.selectedDistributor
+                                  : null,
+                              items: homeProvider.distributors.map<DropdownMenuItem<String>>((d) {
                                 return DropdownMenuItem<String>(
                                   value: d["distributor_name"],
                                   child: Text(d["distributor_name"]),
                                 );
-                              })
-                                  .toList(),
+                              }).toList(),
 
                               onChanged: (value) {
                                 final selected = homeProvider.distributors.firstWhere(
