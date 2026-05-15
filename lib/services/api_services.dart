@@ -817,6 +817,10 @@ class ApiServices {
       final token = await SessionManager.getToken();
       if (token == null) return null;
 
+      final String? fileName = expenseBill != null
+          ? expenseBill.path.split('/').last.split('\\').last
+          : null;
+
       FormData formData = FormData.fromMap({
         "distributor_id": distributorId,
         "expense_date": expenseDate,
@@ -829,11 +833,27 @@ class ApiServices {
       if (expenseBill != null) {
         formData.files.add(MapEntry(
           "Expense_bill",
-          await MultipartFile.fromFile(expenseBill.path),
+          await MultipartFile.fromFile(
+            expenseBill.path,
+            filename: fileName,
+          ),
         ));
       }
 
-      AppLogger.info("Add Expense API called: ${AppUrls.addExpense}");
+      // ── DEBUG: Print full payload before sending ──
+      AppLogger.info("━━━━━━━ ADD EXPENSE PAYLOAD ━━━━━━━");
+      AppLogger.info("URL       : ${AppUrls.addExpense}");
+      AppLogger.info("distributor_id  : $distributorId");
+      AppLogger.info("expense_date    : $expenseDate");
+      AppLogger.info("expense_amount  : $expenseAmount");
+      AppLogger.info("description     : $description");
+      AppLogger.info("expense_type    : $expenseType");
+      AppLogger.info("payment_mode    : $paymentMode");
+      AppLogger.info("Expense_bill    : ${expenseBill != null ? '✅ File attached → $fileName (${expenseBill.lengthSync()} bytes)' : '❌ No file'}");
+      AppLogger.info("FormData files  : ${formData.files.map((e) => '${e.key}=${e.value.filename}').toList()}");
+      AppLogger.info("FormData fields : ${formData.fields.map((e) => '${e.key}=${e.value}').toList()}");
+      AppLogger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
       final response = await _dio.post(
         AppUrls.addExpense,
         data: formData,

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../constants/app_colors.dart';
+import '../screens/Homes/main_tab_provider.dart';
 import 'SaleItem.dart';
 import 'TransactionDetailsScreen.dart';
 import '../services/api_services.dart';
@@ -17,10 +18,40 @@ class UserTransactionScreen extends StatefulWidget {
 }
 
 class _UserTransactionScreenState extends State<UserTransactionScreen> {
-
   DateTime? fromDate;
   DateTime? toDate;
 
+  late Future<Map<String, Map<String, dynamic>>> _dataFuture;
+  late MainTabProvider _tabProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _dataFuture = _fetchData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tabProvider = Provider.of<MainTabProvider>(context, listen: false);
+      _tabProvider.addListener(_onTabChanged);
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabProvider.removeListener(_onTabChanged);
+    super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (_tabProvider.currentIndex == 1) {
+      _reload();
+    }
+  }
+
+  void _reload() {
+    if (!mounted) return;
+    setState(() {
+      _dataFuture = _fetchData();
+    });
+  }
 
   Future<void> pickDate(BuildContext context, bool isFrom) async {
     final picked = await showDatePicker(
@@ -37,14 +68,13 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
         } else {
           toDate = picked;
         }
+        _dataFuture = _fetchData(); // reload when date changes
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<TransactionProvider>(context);
-
     return Scaffold(
       backgroundColor: Colors.white,
 
@@ -107,7 +137,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
 
             Expanded(
               child: FutureBuilder<Map<String, Map<String, dynamic>>>(
-                future: _fetchData(context),
+                future: _dataFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -217,7 +247,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
     );
   }
 
-  Future<Map<String, Map<String, dynamic>>> _fetchData(BuildContext context) async {
+  Future<Map<String, Map<String, dynamic>>> _fetchData() async {
     final appState = Provider.of<AppStateProvider>(context, listen: false);
     final distributorId = appState.selectedDistributorId ?? 6;
     Map<String, dynamic> payload = {

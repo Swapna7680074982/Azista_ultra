@@ -10,6 +10,7 @@ import '../distribution_list/DistributorStockScreen.dart';
 import '../leave_management/leave_management_screen.dart';
 import '../productivity/ProductivityScreen.dart';
 import 'HomeProvider.dart';
+import 'main_tab_provider.dart';
 import 'widgets/DonutChart.dart';
 import '../../utilities/date_formatter.dart';
 
@@ -21,21 +22,46 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late MainTabProvider _tabProvider;
+
+  void _onTabChanged() {
+    if (_tabProvider.currentIndex == 0) {
+      _refreshData();
+    }
+  }
+
+  Future<void> _refreshData() async {
+    if (!mounted) return;
+    final homeProvider = Provider.of<HomeProvider>(context, listen: false);
+    final appState = Provider.of<AppStateProvider>(context, listen: false);
+    homeProvider.fetchTodayAttendance();
+    homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
+  }
+
   @override
   void initState() {
     super.initState();
 
     Future.microtask(() async {
+      if (!mounted) return;
       final homeProvider = Provider.of<HomeProvider>(context, listen: false);
-
       final appState = Provider.of<AppStateProvider>(context, listen: false);
 
       await homeProvider.loadDistributors();
       await homeProvider.initializeAttendance(appState);
-      
+
       homeProvider.fetchTodayAttendance();
       homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
+
+      _tabProvider = Provider.of<MainTabProvider>(context, listen: false);
+      _tabProvider.addListener(_onTabChanged);
     });
+  }
+
+  @override
+  void dispose() {
+    _tabProvider.removeListener(_onTabChanged);
+    super.dispose();
   }
 
   @override

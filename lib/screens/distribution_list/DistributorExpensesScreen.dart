@@ -617,16 +617,13 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                       ? null
                                       : () async {
                                           if (amountController.text.isEmpty ||
-                                              expenseTypeController
-                                                  .text
-                                                  .isEmpty ||
-                                              selectedImage == null) {
+                                              expenseTypeController.text.isEmpty) {
                                             ScaffoldMessenger.of(
                                               context,
                                             ).showSnackBar(
                                               const SnackBar(
                                                 content: Text(
-                                                  "Please fill all fields",
+                                                  "Please enter amount and expense type",
                                                 ),
                                               ),
                                             );
