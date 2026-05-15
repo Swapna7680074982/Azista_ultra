@@ -71,7 +71,7 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const SoAttendanceScreen()), // Reusing for now
+                      MaterialPageRoute(builder: (_) => const SoAttendanceScreen()),
                     );
                   },
                 ),
@@ -102,16 +102,6 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const DistributionNetworkScreen()),
-                    );
-                  },
-                ),
-                _buildMenuItem(
-                  iconPath: Icons.currency_rupee,
-                  label: "Distributor Expenses",
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const DistributorExpensesScreen()),
                     );
                   },
                 ),
