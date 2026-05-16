@@ -4,9 +4,15 @@ class AppStateProvider extends ChangeNotifier {
   bool isOnline = false;
   String? selectedDistributor;
   int? selectedDistributorId;
+  String? userRole;
 
   void setOnline(bool value) {
     isOnline = value;
+    notifyListeners();
+  }
+
+  void setUserRole(String? role) {
+    userRole = role;
     notifyListeners();
   }
 

@@ -33,7 +33,7 @@ class LoginProvider extends ChangeNotifier {
             final name = userInfo["name"]?.toString() ?? "Unknown";
             final rolecode = userInfo["rolecode"]?.toString().trim();
             final role = (rolecode == null || rolecode.isEmpty) ? "Sale Off" : rolecode;
-            await SessionManager.saveUserDetails(name, role);
+            await SessionManager.saveUserDetails(name, role, userInfo: userInfo);
           }
 
           final attendanceStatus = data["attendance_status"]?["today_status"];

@@ -946,4 +946,42 @@ class ApiServices {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>?> getTeamAttendanceReport({
+    String? month,
+    int? today,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final payload = <String, dynamic>{};
+      if (month != null) payload["month"] = month;
+      if (today != null) payload["today"] = today;
+
+      AppLogger.info("Team Attendance Report API called");
+      AppLogger.info("Payload: $payload");
+
+      final response = await _dio.post(
+        AppUrls.teamAttendanceReport,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      AppLogger.info("Team Attendance Report response: ${response.data}");
+
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Team Attendance Report error", e);
+      return null;
+    }
+  }
 }

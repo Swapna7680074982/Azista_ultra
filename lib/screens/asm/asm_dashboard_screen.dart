@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../permissions/AppStateProvider.dart';
-import '../../profile.dart';
 import '../Homes/HomeProvider.dart';
 import '../leave_management/leave_management_screen.dart';
+import '../profile_screen.dart';
 import 'asm_provider.dart';
 import 'select_so_screen.dart';
 import 'so_attendance_screen.dart';
 import 'travel_plan_screen.dart';
 import '../Distribution_networking/distribution_network_screen.dart';
 import '../distribution_list/DistributorExpensesScreen.dart';
+import '../../utilities/date_formatter.dart';
+import '../attendance/TeamAttendanceScreen.dart';
 
 class AmDashboardScreen extends StatefulWidget {
   const AmDashboardScreen({super.key});
@@ -33,13 +35,16 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = Provider.of<AppStateProvider>(context);
+    final homeProvider = Provider.of<HomeProvider>(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
           // Header
           Container(
-            height: MediaQuery.of(context).size.height * 0.35,
+            height: MediaQuery.of(context).size.height * 0.4,
             width: double.infinity,
             decoration: BoxDecoration(
               color: AppColors.primary,
@@ -48,20 +53,80 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                 bottomRight: Radius.circular(80),
               ),
             ),
-            child: const Center(
-              child: Text(
-                "AZISTA AM",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2,
-                ),
+            child: SafeArea(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    "AZISTA AM",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 40,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Attendance Toggle
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "ATTENDANCE: ",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                      homeProvider.isLoading
+                          ? const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            )
+                          : Transform.scale(
+                              scale: 0.8,
+                              child: Switch(
+                                value: appState.isOnline,
+                                activeColor: Colors.white,
+                                activeTrackColor: Colors.greenAccent,
+                                onChanged: (val) async {
+                                  bool success = false;
+                                  if (val) {
+                                    success = await homeProvider.checkIn();
+                                    if (success) {
+                                      appState.setOnline(true);
+                                      await homeProvider.fetchTodayAttendance();
+                                    }
+                                  } else {
+                                    success = await homeProvider.checkOut();
+                                    if (success) {
+                                      appState.setOnline(false);
+                                      await homeProvider.fetchTodayAttendance();
+                                    }
+                                  }
+                                  if (homeProvider.message != null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(homeProvider.message!)),
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                    ],
+                  ),
+                  // Session Details
+                  if (appState.isOnline && homeProvider.todayAttendance != null)
+                    _buildSessionInfo(homeProvider.todayAttendance!),
+                ],
               ),
             ),
           ),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 20),
 
           // Menu List
           Expanded(
@@ -70,17 +135,19 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
               children: [
                 _buildMenuItem(
                   iconPath: Icons.people_outline,
-                  label: "SO Attendance",
+                  label: "Team Attendance",
+                  enabled: appState.isOnline,
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const SoAttendanceScreen()),
+                      MaterialPageRoute(builder: (_) => const TeamAttendanceScreen()),
                     );
                   },
                 ),
                 _buildMenuItem(
                   iconPath: Icons.track_changes,
                   label: "SO Daily Targets",
+                  enabled: appState.isOnline,
                   onTap: () {
                     Navigator.push(
                       context,
@@ -89,15 +156,9 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                   },
                 ),
                 _buildMenuItem(
-                  iconPath: Icons.account_tree_outlined,
-                  label: "Distributor Visit",
-                  onTap: () {
-                    // Placeholder for Distributor Visit
-                  },
-                ),
-                _buildMenuItem(
                   iconPath: Icons.track_changes,
                   label: "Distribution Network",
+                  enabled: appState.isOnline,
                   onTap: () {
                     Navigator.push(
                       context,
@@ -108,6 +169,7 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                 _buildMenuItem(
                   iconPath: Icons.currency_rupee,
                   label: "Distributor Expenses",
+                  enabled: appState.isOnline,
                   onTap: () {
                     Navigator.push(
                       context,
@@ -119,8 +181,12 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                 _buildMenuItem(
                   iconPath: Icons.person_outline,
                   label: "Profile",
+                  enabled: true, // Profile usually always accessible
                   onTap: () {
-                    _showProfileDrawer(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                    );
                   },
                 ),
               ],
@@ -131,55 +197,69 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
     );
   }
 
+  Widget _buildSessionInfo(Map<String, dynamic> data) {
+    final sessions = data["sessions"] ?? [];
+    String checkIn = "-";
+    String workingHours = "0";
+
+    if (sessions.isNotEmpty) {
+      final lastSession = sessions.last;
+      checkIn = lastSession["check_in"] ?? "-";
+      workingHours = lastSession["working_hours"]?.toString() ?? "0";
+    }
+
+    return Column(
+      children: [
+        Text(
+          "CHECK-IN: ${checkIn != "-" ? DateFormatter.formatDateTime(checkIn) : "-"}",
+          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+        ),
+        Text(
+          "WORKING HOURS: $workingHours hrs",
+          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+        ),
+      ],
+    );
+  }
+
   Widget _buildMenuItem({
     required IconData iconPath,
     required String label,
     required VoidCallback onTap,
+    bool enabled = true,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 30),
+      padding: const EdgeInsets.only(bottom: 25),
       child: InkWell(
-        onTap: onTap,
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.red, width: 1.5),
+        onTap: enabled ? onTap : () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Please turn on attendance first")),
+          );
+        },
+        child: Opacity(
+          opacity: enabled ? 1.0 : 0.4,
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.red, width: 1.5),
+                ),
+                child: Icon(iconPath, color: Colors.red, size: 28),
               ),
-              child: Icon(iconPath, color: Colors.red, size: 28),
-            ),
-            const SizedBox(width: 25),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
+              const SizedBox(width: 25),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showProfileDrawer(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(25),
-            topRight: Radius.circular(25),
+            ],
           ),
         ),
-        child: const ProfileDrawer(selectedMenu: "Profile"),
       ),
     );
   }

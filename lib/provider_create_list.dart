@@ -12,6 +12,7 @@ import 'package:azista_ultra/screens/login/login_provider.dart';
 import 'package:azista_ultra/screens/productivity/productivity_provider.dart';
 import 'package:azista_ultra/screens/leave_management/leave_provider.dart';
 import 'package:azista_ultra/screens/distribution_list/distributor_expense_provider.dart';
+import 'package:azista_ultra/screens/attendance/team_attendance_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
@@ -57,5 +58,8 @@ List<SingleChildWidget> providerCreateList = [
   ),
   ChangeNotifierProvider<DistributorExpenseProvider>(
     create: (_) => DistributorExpenseProvider(),
+  ),
+  ChangeNotifierProvider<TeamAttendanceProvider>(
+    create: (_) => TeamAttendanceProvider(),
   ),
 ];

@@ -24,11 +24,21 @@ class SessionManager {
 
   static const _nameKey = "user_name";
   static const _roleKey = "user_role";
+  static const _userInfoKey = "user_info";
 
-  static Future<void> saveUserDetails(String name, String role) async {
+  static Future<void> saveUserDetails(String name, String role, {Map<String, dynamic>? userInfo}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_nameKey, name);
     await prefs.setString(_roleKey, role);
+    if (userInfo != null) {
+      await prefs.setString(_userInfoKey, jsonEncode(userInfo));
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getUserInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getString(_userInfoKey);
+    return data != null ? jsonDecode(data) : null;
   }
 
   static Future<String> getUserName() async {
