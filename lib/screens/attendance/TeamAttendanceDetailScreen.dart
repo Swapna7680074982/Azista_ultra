@@ -97,8 +97,8 @@ class TeamAttendanceDetailScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildTimeInfo("IN", log['first_checkin'] ?? "--:--"),
-                    _buildTimeInfo("OUT", log['last_checkout'] ?? "--:--"),
+                    _buildTimeInfo("IN", DateFormatter.formatTimeOnly(log['first_checkin'])),
+                    _buildTimeInfo("OUT", DateFormatter.formatTimeOnly(log['last_checkout'])),
                   ],
                 ),
                 const Divider(height: 20),
@@ -106,7 +106,7 @@ class TeamAttendanceDetailScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Date: ${log['attendance_date']}",
+                      "Date: ${DateFormatter.formatDateOnly(log['attendance_date'])}",
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     Text(
@@ -124,15 +124,11 @@ class TeamAttendanceDetailScreen extends StatelessWidget {
   }
 
   Widget _buildTimeInfo(String type, String time) {
-    String formattedTime = time;
-    if (time != "--:--" && time.contains(" ")) {
-      formattedTime = time.split(" ")[1];
-    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(type, style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.bold)),
-        Text(formattedTime, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        Text(time, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
       ],
     );
   }

@@ -77,7 +77,13 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
                                     "${user.employeeId} - ${user.employeeName}",
                                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
                                   ),
-                                  subtitle: Text("Role: ${user.roleCode}", style: const TextStyle(fontSize: 12)),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text("Role: ${user.roleCode}", style: const TextStyle(fontSize: 12)),
+                                      Text("Date: ${DateFormatter.formatDateOnly(user.attendanceDate)}", style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                    ],
+                                  ),
                                   children: logs.map<Widget>((log) {
                                     return _buildDetailLogItem(log);
                                   }).toList(),
@@ -94,12 +100,8 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
   }
 
   Widget _buildDetailLogItem(dynamic log) {
-    String checkIn = log['first_checkin'] ?? "--:--";
-    String checkOut = log['last_checkout'] ?? "--:--";
-    
-    // Extract time from YYYY-MM-DD HH:mm:ss
-    if (checkIn.contains(" ")) checkIn = checkIn.split(" ")[1];
-    if (checkOut.contains(" ")) checkOut = checkOut.split(" ")[1];
+    String checkIn = DateFormatter.formatTimeOnly(log['first_checkin']);
+    String checkOut = DateFormatter.formatTimeOnly(log['last_checkout']);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
@@ -211,10 +213,6 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
   }
 
   Widget _buildTimeInfo(String label, String time) {
-    String formattedTime = time;
-    if (time != "--:--" && time.contains(" ")) {
-      formattedTime = time.split(" ")[1];
-    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -224,7 +222,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
         ),
         const SizedBox(height: 2),
         Text(
-          formattedTime,
+          time,
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
