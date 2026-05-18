@@ -47,11 +47,36 @@ class Outlet {
   }
 }
 
+class OutletCategory {
+  final String categoryId;
+  final String categoryName;
+  final String categoryImage;
+
+  OutletCategory({
+    required this.categoryId,
+    required this.categoryName,
+    required this.categoryImage,
+  });
+
+  factory OutletCategory.fromJson(Map<String, dynamic> json) {
+    return OutletCategory(
+      categoryId: json['category_id']?.toString() ?? '',
+      categoryName: json['category_name']?.toString() ?? '',
+      categoryImage: json['category_image']?.toString() ?? '',
+    );
+  }
+}
+
 class OutletProvider extends ChangeNotifier {
   List<Outlet> _outlets = [];
   List<Outlet> _nearbyOutlets = [];
   bool isLoading = false;
   String _searchQuery = "";
+
+  List<OutletCategory> _categories = [];
+  bool isCategoriesLoading = false;
+
+  List<OutletCategory> get categories => _categories;
 
   void updateSearch(String value) {
     _searchQuery = value.toLowerCase();
@@ -130,6 +155,27 @@ class OutletProvider extends ChangeNotifier {
       debugPrint("Error refreshing location/outlets: $e");
     } finally {
       isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchCategories() async {
+    isCategoriesLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await ApiServices.getOutletCategories();
+      if (response != null && response['data'] != null) {
+        final List<dynamic> data = response['data'];
+        _categories = data.map((json) => OutletCategory.fromJson(json)).toList();
+      } else {
+        _categories = [];
+      }
+    } catch (e) {
+      debugPrint("Error fetching categories: $e");
+      _categories = [];
+    } finally {
+      isCategoriesLoading = false;
       notifyListeners();
     }
   }

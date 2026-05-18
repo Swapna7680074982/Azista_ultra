@@ -133,7 +133,7 @@ class CustomBottomNav extends StatelessWidget {
         if (index == 0) {
           final homeProvider = context.read<HomeProvider>();
           if (!homeProvider.isLoading) {
-            homeProvider.loadDistributors();
+            homeProvider.loadDistributors(appState);
             homeProvider.fetchTodayAttendance();
           }
         } else if (index == 3) {

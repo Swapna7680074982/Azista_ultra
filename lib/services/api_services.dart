@@ -804,6 +804,36 @@ class ApiServices {
     }
   }
 
+  static Future<Map<String, dynamic>?> getOutletCategories() async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getOutletCategories");
+        return null;
+      }
+
+      AppLogger.info("Get Outlet Categories API called: ${AppUrls.outletCategories}");
+      final response = await _dio.get(
+        AppUrls.outletCategories,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status! < 500,
+        ),
+      );
+
+      AppLogger.info("Get Outlet Categories response: ${response.statusCode}");
+      if (response.statusCode == 200 && response.data["status"] == true) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Outlet Categories error", e);
+      return null;
+    }
+  }
+
   static Future<Map<String, dynamic>?> addExpense({
     required String distributorId,
     required String expenseDate,

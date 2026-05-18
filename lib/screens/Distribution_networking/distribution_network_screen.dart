@@ -7,7 +7,8 @@ import 'distribution_provider.dart';
 import 'outlets/outlets_screen.dart';
 
 class DistributionNetworkScreen extends StatefulWidget {
-  const DistributionNetworkScreen({super.key});
+  final bool isFromDashboard;
+  const DistributionNetworkScreen({super.key, this.isFromDashboard = false});
 
   @override
   State<DistributionNetworkScreen> createState() =>
@@ -31,22 +32,27 @@ class _DistributionNetworkScreenState
 
     return Scaffold(
       backgroundColor: AppColors.white,
-      drawer: const ProfileDrawer(selectedMenu: "Distribution Network"),
+      drawer: widget.isFromDashboard ? null : const ProfileDrawer(selectedMenu: "Distribution Network"),
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
         toolbarHeight: 60,
         titleSpacing: 0,
-        leading: Builder(
-          builder: (context) => Padding(
-            padding: const EdgeInsets.only(left: 12),
-            child: GestureDetector(
-              onTap: () => Scaffold.of(context).openDrawer(),
-              child: const Icon(Icons.menu,
-                  color: AppColors.white, size: 26),
-            ),
-          ),
-        ),
+        leading: widget.isFromDashboard
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: AppColors.white, size: 24),
+                onPressed: () => Navigator.pop(context),
+              )
+            : Builder(
+                builder: (context) => Padding(
+                  padding: const EdgeInsets.only(left: 12),
+                  child: GestureDetector(
+                    onTap: () => Scaffold.of(context).openDrawer(),
+                    child: const Icon(Icons.menu,
+                        color: AppColors.white, size: 26),
+                  ),
+                ),
+              ),
         title: const Text(
           "Distribution Network",
           style: TextStyle(
@@ -145,6 +151,7 @@ class _DistributionNetworkScreenState
               ),
             ),
           ),
+          const SizedBox(height: 25),
         ],
       ),
     );

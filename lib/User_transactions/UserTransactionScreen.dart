@@ -181,18 +181,9 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                 Text(
                                   "OUTLET NAME: ${outlet['outlet_name']}".toUpperCase(),
                                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 5),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text("POB COUNT: ${outlet['pob_count']}".toUpperCase()),
-                                    Text("SALE COUNT: ${outlet['sale_count']}".toUpperCase()),
-                                    Text("STOCK COUNT: ${outlet['stock_count']}".toUpperCase()),
-                                  ],
                                 ),
                               ],
                             ),

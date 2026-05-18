@@ -30,4 +30,5 @@ class AppUrls {
   static const String submitToAdmin = "$baseUrl/distribution/submit_to_admin";
   static const String getExpenses = "$baseUrl/distribution/get_expenses";
   static const String teamAttendanceReport = "$baseUrl/user/attendance_report";
+  static const String outletCategories = "$baseUrl/user/outlet_categories";
 }

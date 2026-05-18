@@ -49,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final homeProvider = Provider.of<HomeProvider>(context, listen: false);
       final appState = Provider.of<AppStateProvider>(context, listen: false);
 
-      await homeProvider.loadDistributors();
+      await homeProvider.loadDistributors(appState);
       await homeProvider.initializeAttendance(appState);
 
       homeProvider.fetchTodayAttendance();

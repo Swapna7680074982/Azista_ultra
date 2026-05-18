@@ -4,13 +4,9 @@ import '../../constants/app_colors.dart';
 import '../../permissions/AppStateProvider.dart';
 import '../profile_screen.dart';
 import '../Homes/HomeProvider.dart';
-import '../asm/select_so_screen.dart';
-import '../asm/so_attendance_screen.dart';
 import '../Distribution_networking/distribution_network_screen.dart';
-import '../distribution_list/DistributorExpensesScreen.dart';
 import '../../utilities/date_formatter.dart';
 import '../attendance/TeamAttendanceScreen.dart';
-import '../asm/select_so_screen.dart';
 
 class RmDashboardScreen extends StatefulWidget {
   const RmDashboardScreen({super.key});
@@ -27,6 +23,7 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
       final homeProvider = Provider.of<HomeProvider>(context, listen: false);
       final appState = Provider.of<AppStateProvider>(context, listen: false);
       await homeProvider.initializeAttendance(appState);
+      await homeProvider.loadDistributors(appState);
       await homeProvider.fetchTodayAttendance();
     });
   }
@@ -35,6 +32,8 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppStateProvider>(context);
     final homeProvider = Provider.of<HomeProvider>(context);
+    final hasValidDistributor = appState.selectedDistributor != null &&
+        homeProvider.distributors.any((d) => d["distributor_name"] == appState.selectedDistributor);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -124,7 +123,91 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
+            child: Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade400),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  hint: const Text("SELECT DISTRIBUTOR", style: TextStyle(fontSize: 13)),
+                  value: homeProvider.distributors.any((d) => d["distributor_name"] == appState.selectedDistributor)
+                      ? appState.selectedDistributor
+                      : null,
+                  items: homeProvider.distributors.map<DropdownMenuItem<String>>((d) {
+                    return DropdownMenuItem<String>(
+                      value: d["distributor_name"],
+                      child: Text(d["distributor_name"], style: const TextStyle(fontSize: 13)),
+                    );
+                  }).toList(),
+
+                  onChanged: appState.isOnline ? (value) {
+                    final selected = homeProvider.distributors.firstWhere(
+                          (d) => d["distributor_name"] == value,
+                      orElse: () => null,
+                    );
+                    int? id;
+                    if (selected != null) {
+                      if (selected["distributor_id"] is int) {
+                        id = selected["distributor_id"];
+                      } else if (selected["distributor_id"] != null) {
+                        id = int.tryParse(selected["distributor_id"].toString());
+                      }
+                    }
+                    appState.setDistributor(value, id: id);
+                  } : null,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // Error Message Box
+          if (!appState.isOnline || !hasValidDistributor)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.shade200, width: 1),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Colors.red.shade700,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        !appState.isOnline
+                            ? "Please turn on attendance to access dashboard features."
+                            : "Please select a distributor to continue.",
+                        style: TextStyle(
+                          color: Colors.red.shade900,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          const SizedBox(height: 10),
 
           // Menu List
           Expanded(
@@ -142,25 +225,27 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                     );
                   },
                 ),
-                _buildMenuItem(
-                  iconPath: Icons.track_changes,
-                  label: "SO Daily Targets",
-                  enabled: appState.isOnline,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SelectSoScreen()),
-                    );
-                  },
-                ),
+                // _buildMenuItem(
+                //   iconPath: Icons.track_changes,
+                //   label: "SO Daily Targets",
+                //   enabled: appState.isOnline,
+                //   onTap: () {
+                //     Navigator.push(
+                //       context,
+                //       MaterialPageRoute(builder: (_) => const SelectSoScreen()),
+                //     );
+                //   },
+                // ),
                 _buildMenuItem(
                   iconPath: Icons.track_changes,
                   label: "Distribution Network",
-                  enabled: appState.isOnline,
+                  enabled: appState.isOnline && hasValidDistributor,
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const DistributionNetworkScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const DistributionNetworkScreen(isFromDashboard: true),
+                      ),
                     );
                   },
                 ),
@@ -217,11 +302,7 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 25),
       child: InkWell(
-        onTap: enabled ? onTap : () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Please turn on attendance first")),
-          );
-        },
+        onTap: enabled ? onTap : null,
         child: Opacity(
           opacity: enabled ? 1.0 : 0.4,
           child: Row(

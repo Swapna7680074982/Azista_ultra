@@ -17,8 +17,19 @@ class HomeProvider extends ChangeNotifier {
   bool isSummaryLoading = false;
   StreamSubscription? _autoCheckoutSubscription;
 
-  Future<void> loadDistributors() async {
+  Future<void> loadDistributors([AppStateProvider? appState]) async {
     distributors = await SessionManager.getDistributors();
+    if (appState != null && distributors.isNotEmpty && appState.selectedDistributor == null) {
+      final defaultDistributor = distributors.first;
+      final name = defaultDistributor["distributor_name"];
+      int? id;
+      if (defaultDistributor["distributor_id"] is int) {
+        id = defaultDistributor["distributor_id"];
+      } else if (defaultDistributor["distributor_id"] != null) {
+        id = int.tryParse(defaultDistributor["distributor_id"].toString());
+      }
+      appState.setDistributor(name, id: id);
+    }
     notifyListeners();
   }
 
