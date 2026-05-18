@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../permissions/SessionManager.dart';
+import '../../permissions/AppStateProvider.dart';
+import 'Homes/HomeProvider.dart';
 import '../../services/api_services.dart';
 import 'login/login_screen.dart';
 
@@ -202,6 +205,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       
       await SessionManager.clearSession();
       if (mounted) {
+        // Reset providers to prevent state leakage to next session
+        Provider.of<AppStateProvider>(context, listen: false).reset();
+        Provider.of<HomeProvider>(context, listen: false).reset();
+
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) =>  LoginScreen()),
           (route) => false,

@@ -21,4 +21,12 @@ class AppStateProvider extends ChangeNotifier {
     selectedDistributorId = id;
     notifyListeners();
   }
+
+  void reset() {
+    isOnline = false;
+    selectedDistributor = null;
+    selectedDistributorId = null;
+    userRole = null;
+    notifyListeners();
+  }
 }

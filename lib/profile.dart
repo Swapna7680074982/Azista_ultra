@@ -1,6 +1,7 @@
 import 'package:azista_ultra/permissions/AccessValidator.dart';
 import 'package:azista_ultra/permissions/AppStateProvider.dart';
 import 'package:azista_ultra/permissions/SessionManager.dart';
+import 'package:azista_ultra/screens/Homes/HomeProvider.dart';
 import 'package:azista_ultra/screens/Distribution_networking/distribution_network_screen.dart';
 import 'package:azista_ultra/screens/Homes/HomeScreen.dart';
 import 'package:azista_ultra/screens/Homes/change_password.dart';
@@ -210,6 +211,11 @@ class ProfileDrawer extends StatelessWidget {
                 navigator.pop();
                 await ApiServices.logout();
                 await SessionManager.clearSession();
+
+                // Clear active in-memory providers to prevent leakage
+                Provider.of<AppStateProvider>(context, listen: false).reset();
+                Provider.of<HomeProvider>(context, listen: false).reset();
+
                 navigator.pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => LoginScreen()),
                       (route) => false,

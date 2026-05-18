@@ -175,6 +175,18 @@ class HomeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void reset() {
+    distributors = [];
+    selectedDistributor = null;
+    todayAttendance = null;
+    isLoading = false;
+    message = null;
+    dailyCallSummary = null;
+    isSummaryLoading = false;
+    _autoCheckoutSubscription?.cancel();
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _autoCheckoutSubscription?.cancel();

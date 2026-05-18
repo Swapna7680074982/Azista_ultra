@@ -8,6 +8,8 @@ import '../asm/asm_dashboard_screen.dart';
 import '../rm/rm_dashboard_screen.dart';
 import '../Homes/main_shell_screen.dart';
 import 'login_provider.dart';
+import '../../permissions/AppStateProvider.dart';
+import '../Homes/HomeProvider.dart';
 
 class LoginScreen extends StatelessWidget {
   LoginScreen({super.key});
@@ -94,6 +96,10 @@ class LoginScreen extends StatelessWidget {
                             onPressed: provider.isLoading
                                 ? null
                                 : () async {
+                              // Reset providers to prevent state leakage from previous user/distributor
+                              Provider.of<AppStateProvider>(context, listen: false).reset();
+                              Provider.of<HomeProvider>(context, listen: false).reset();
+
                               final success = await provider.login(
                                 phoneController.text.trim(),
                                 passwordController.text.trim(),
