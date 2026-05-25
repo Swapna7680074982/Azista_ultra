@@ -1,15 +1,77 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 
 import '../constants/api_urls.dart';
 import '../permissions/SessionManager.dart';
+import '../screens/login/login_screen.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
 import '../utilities/mylogger.dart';
+import 'navigation_service.dart';
 
 
 class ApiServices {
-  static final Dio _dio = Dio();
+  static final Dio _dio = Dio()..interceptors.add(
+    InterceptorsWrapper(
+      onResponse: (response, handler) async {
+        if (response.statusCode == 401 ||
+            (response.data is Map &&
+                response.data["message"]?.toString().contains("Token expired") == true)) {
+          await _handleTokenExpired();
+        }
+        return handler.next(response);
+      },
+      onError: (DioException e, handler) async {
+        if (e.response?.statusCode == 401 ||
+            (e.response?.data is Map &&
+                e.response?.data["message"]?.toString().contains("Token expired") == true)) {
+          await _handleTokenExpired();
+        }
+        return handler.next(e);
+      },
+    ),
+  );
+
+  static bool _isRedirecting = false;
+
+  static Future<void> _handleTokenExpired() async {
+    if (_isRedirecting) return;
+    _isRedirecting = true;
+
+    try {
+      AppLogger.warning("Token expired or 401 Unauthorized detected. Clearing session & redirecting to LoginScreen.");
+      await SessionManager.clearSession();
+      
+      navigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+        (route) => false,
+      );
+
+      // Show a snackbar message once redirected
+      Future.delayed(const Duration(milliseconds: 300), () {
+        final context = navigatorKey.currentContext;
+        if (context != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Session expired. Please login again.",
+                style: TextStyle(color: Colors.white),
+              ),
+              backgroundColor: Colors.redAccent,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      });
+    } catch (e) {
+      AppLogger.error("Failed to redirect to LoginScreen", e);
+    } finally {
+      await Future.delayed(const Duration(seconds: 2));
+      _isRedirecting = false;
+    }
+  }
 
   static Future<Map<String, dynamic>?> login({
     required String phone,
@@ -46,17 +108,15 @@ class ApiServices {
 
       AppLogger.info("Login response: ${response.data}");
 
-      if (response.statusCode == 200 &&
-          response.data["status"] == true) {
-        AppLogger.success("Login successful");
+      if (response.statusCode == 200) {
         return response.data;
       }
 
       AppLogger.warning("Login failed: ${response.data}");
-      return null;
+      return response.data;
     } catch (e) {
       AppLogger.error("Login error", e);
-      return null;
+      return {"status": false, "message": "Login failed"};
     }
   }
 
@@ -179,7 +239,10 @@ class ApiServices {
         return null;
       }
 
-      AppLogger.info("Get Routes API called");
+      AppLogger.info("Get Routes API called: ${AppUrls.routes}");
+      AppLogger.info("Headers: ${jsonEncode({
+        "Authorization": token.length > 10 ? "${token.substring(0, 10)}..." : "Bearer $token",
+      })}");
 
       final response = await _dio.get(
         AppUrls.routes,
@@ -187,13 +250,23 @@ class ApiServices {
           headers: {
             "Authorization": "Bearer $token",
           },
+          validateStatus: (status) => status! < 500,
         ),
       );
 
-      AppLogger.info("Get Routes response: ${response.data}");
+      AppLogger.info("Get Routes response: ${response.statusCode} - ${response.data}");
 
       if (response.statusCode == 200 && response.data["status"] == true) {
         return response.data;
+      }
+      
+      if (response.statusCode == 404) {
+        AppLogger.warning("Get Routes returned 404 - treating as empty routes");
+        return {
+          "status": true,
+          "message": "No routes found",
+          "routes": <String, dynamic>{}
+        };
       }
 
       return null;
@@ -765,6 +838,240 @@ class ApiServices {
       return null;
     } catch (e) {
       AppLogger.error("Get Calls Info error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getExpenses() async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      AppLogger.info("Get Expenses API called: ${AppUrls.getExpenses}");
+      final response = await _dio.get(
+        AppUrls.getExpenses,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      AppLogger.info("Get Expenses response: ${jsonEncode(response.data)}");
+      return response.data;
+    } catch (e) {
+      AppLogger.error("Get Expenses error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getOutletCategories() async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getOutletCategories");
+        return null;
+      }
+
+      AppLogger.info("Get Outlet Categories API called: ${AppUrls.outletCategories}");
+      final response = await _dio.get(
+        AppUrls.outletCategories,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status! < 500,
+        ),
+      );
+
+      AppLogger.info("Get Outlet Categories response: ${response.statusCode}");
+      if (response.statusCode == 200 && response.data["status"] == true) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Outlet Categories error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> addExpense({
+    required String distributorId,
+    required String expenseDate,
+    required String expenseAmount,
+    required String description,
+    required String expenseType,
+    required String paymentMode,
+    File? expenseBill,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final String? fileName = expenseBill != null
+          ? expenseBill.path.split('/').last.split('\\').last
+          : null;
+
+      FormData formData = FormData.fromMap({
+        "distributor_id": distributorId,
+        "expense_date": expenseDate,
+        "expense_amount": expenseAmount,
+        "description": description,
+        "expense_type": expenseType,
+        "payment_mode": paymentMode,
+      });
+
+      if (expenseBill != null) {
+        formData.files.add(MapEntry(
+          "expense_bill",
+          await MultipartFile.fromFile(
+            expenseBill.path,
+            filename: fileName,
+          ),
+        ));
+      }
+
+      // ── DEBUG: Print full payload before sending ──
+      AppLogger.info("━━━━━━━ ADD EXPENSE PAYLOAD ━━━━━━━");
+      AppLogger.info("URL       : ${AppUrls.addExpense}");
+      AppLogger.info("distributor_id  : $distributorId");
+      AppLogger.info("expense_date    : $expenseDate");
+      AppLogger.info("expense_amount  : $expenseAmount");
+      AppLogger.info("description     : $description");
+      AppLogger.info("expense_type    : $expenseType");
+      AppLogger.info("payment_mode    : $paymentMode");
+      AppLogger.info("Expense_bill    : ${expenseBill != null ? '✅ File attached → $fileName (${expenseBill.lengthSync()} bytes)' : '❌ No file'}");
+      AppLogger.info("FormData files  : ${formData.files.map((e) => '${e.key}=${e.value.filename}').toList()}");
+      AppLogger.info("FormData fields : ${formData.fields.map((e) => '${e.key}=${e.value}').toList()}");
+      AppLogger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+      final response = await _dio.post(
+        AppUrls.addExpense,
+        data: formData,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      AppLogger.info("Add Expense response: ${jsonEncode(response.data)}");
+      return response.data;
+    } catch (e) {
+      AppLogger.error("Add Expense error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> submitToAm(String expenseId) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      AppLogger.info("Submit to AM API called: ${AppUrls.submitToAm}");
+      AppLogger.info("Payload: ${jsonEncode({"expense_id": expenseId})}");
+      final response = await _dio.post(
+        AppUrls.submitToAm,
+        data: {"expense_id": expenseId},
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      AppLogger.info("Submit to AM response: ${jsonEncode(response.data)}");
+      return response.data;
+    } catch (e) {
+      AppLogger.error("Submit to AM error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> receiveFromSo(String expenseId) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      AppLogger.info("Receive from SO API called: ${AppUrls.receiveFromSo}");
+      AppLogger.info("Payload: ${jsonEncode({"expense_id": expenseId})}");
+      final response = await _dio.post(
+        AppUrls.receiveFromSo,
+        data: {"expense_id": expenseId},
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      AppLogger.info("Receive from SO response: ${jsonEncode(response.data)}");
+      return response.data;
+    } catch (e) {
+      AppLogger.error("Receive from SO error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> submitToAdmin(String expenseId) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      AppLogger.info("Submit to Admin API called: ${AppUrls.submitToAdmin}");
+      AppLogger.info("Payload: ${jsonEncode({"expense_id": expenseId})}");
+      final response = await _dio.post(
+        AppUrls.submitToAdmin,
+        data: {"expense_id": expenseId},
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      AppLogger.info("Submit to Admin response: ${jsonEncode(response.data)}");
+      return response.data;
+    } catch (e) {
+      AppLogger.error("Submit to Admin error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getTeamAttendanceReport({
+    String? month,
+    int? today,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final payload = <String, dynamic>{};
+      if (month != null) payload["month"] = month;
+      if (today != null) payload["today"] = today;
+
+      AppLogger.info("Team Attendance Report API called");
+      AppLogger.info("Payload: $payload");
+
+      final response = await _dio.post(
+        AppUrls.teamAttendanceReport,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      AppLogger.info("Team Attendance Report response: ${response.data}");
+
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Team Attendance Report error", e);
       return null;
     }
   }

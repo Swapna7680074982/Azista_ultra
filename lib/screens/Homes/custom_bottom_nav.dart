@@ -42,7 +42,7 @@ class CustomBottomNav extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               navItemIcon(context, Icons.access_time, "Home", 0),
-              const SizedBox(width: 60), // Placeholder for removed Leave Management
+              navItemIcon(context, Icons.receipt_long, "User Trans.", 1),
               const SizedBox(width: 70),
 
               navItemIcon(context, Icons.account_tree_outlined, "Dist. Net.", 3),
@@ -133,11 +133,9 @@ class CustomBottomNav extends StatelessWidget {
         if (index == 0) {
           final homeProvider = context.read<HomeProvider>();
           if (!homeProvider.isLoading) {
-            homeProvider.loadDistributors();
+            homeProvider.loadDistributors(appState);
             homeProvider.fetchTodayAttendance();
           }
-        } else if (index == 1) {
-          context.read<LeaveProvider>().refresh();
         } else if (index == 3) {
           final distProvider = context.read<DistributionProvider>();
           if (!distProvider.isLoading) {

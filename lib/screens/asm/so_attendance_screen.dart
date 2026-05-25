@@ -9,8 +9,8 @@ class SoAttendanceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AsmProvider>(
-      builder: (context, asmProvider, child) {
+    return Consumer<AmProvider>(
+      builder: (context, amProvider, child) {
         return Scaffold(
           backgroundColor: Colors.white,
           appBar: AppBar(
@@ -42,16 +42,16 @@ class SoAttendanceScreen extends StatelessWidget {
                     Expanded(
                       child: _buildDatePicker(
                         context,
-                        DateFormat('MMM dd, yyyy').format(asmProvider.fromDate),
+                        DateFormat('MMM dd, yyyy').format(amProvider.fromDate),
                         () async {
                           final picked = await showDatePicker(
                             context: context,
-                            initialDate: asmProvider.fromDate,
+                            initialDate: amProvider.fromDate,
                             firstDate: DateTime(2020),
                             lastDate: DateTime(2030),
                           );
                           if (picked != null) {
-                            asmProvider.updateDateRange(picked, asmProvider.toDate);
+                            amProvider.updateDateRange(picked, amProvider.toDate);
                           }
                         },
                       ),
@@ -60,16 +60,16 @@ class SoAttendanceScreen extends StatelessWidget {
                     Expanded(
                       child: _buildDatePicker(
                         context,
-                        DateFormat('MMM dd, yyyy').format(asmProvider.toDate),
+                        DateFormat('MMM dd, yyyy').format(amProvider.toDate),
                         () async {
                           final picked = await showDatePicker(
                             context: context,
-                            initialDate: asmProvider.toDate,
+                            initialDate: amProvider.toDate,
                             firstDate: DateTime(2020),
                             lastDate: DateTime(2030),
                           );
                           if (picked != null) {
-                            asmProvider.updateDateRange(asmProvider.fromDate, picked);
+                            amProvider.updateDateRange(amProvider.fromDate, picked);
                           }
                         },
                       ),
@@ -82,7 +82,7 @@ class SoAttendanceScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: TextField(
-                  onChanged: (val) => asmProvider.updateSearchQuery(val),
+                  onChanged: (val) => amProvider.updateSearchQuery(val),
                   decoration: InputDecoration(
                     hintText: "Search by Employee Id or Name",
                     hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
@@ -94,16 +94,16 @@ class SoAttendanceScreen extends StatelessWidget {
                 ),
               ),
 
-              if (asmProvider.isLoading)
+              if (amProvider.isLoading)
                 const Expanded(
                   child: Center(child: CircularProgressIndicator()),
                 )
               else
                 Expanded(
                   child: ListView.builder(
-                    itemCount: asmProvider.filteredSoList.length,
+                    itemCount: amProvider.filteredSoList.length,
                     itemBuilder: (context, index) {
-                      final so = asmProvider.filteredSoList[index];
+                      final so = amProvider.filteredSoList[index];
                       return ExpansionTile(
                         shape: const Border(),
                         leading: const Icon(Icons.arrow_right, color: Colors.grey),

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../permissions/AppStateProvider.dart';
 import '../../permissions/SessionManager.dart';
@@ -13,9 +15,21 @@ class HomeProvider extends ChangeNotifier {
   String? message;
   Map<String, dynamic>? dailyCallSummary;
   bool isSummaryLoading = false;
+  StreamSubscription? _autoCheckoutSubscription;
 
-  Future<void> loadDistributors() async {
+  Future<void> loadDistributors([AppStateProvider? appState]) async {
     distributors = await SessionManager.getDistributors();
+    if (appState != null && distributors.isNotEmpty && appState.selectedDistributor == null) {
+      final defaultDistributor = distributors.first;
+      final name = defaultDistributor["distributor_name"];
+      int? id;
+      if (defaultDistributor["distributor_id"] is int) {
+        id = defaultDistributor["distributor_id"];
+      } else if (defaultDistributor["distributor_id"] != null) {
+        id = int.tryParse(defaultDistributor["distributor_id"].toString());
+      }
+      appState.setDistributor(name, id: id);
+    }
     notifyListeners();
   }
 
@@ -24,8 +38,48 @@ class HomeProvider extends ChangeNotifier {
 
     if (status == "CHECKED_IN") {
       appState.setOnline(true);
+      await checkAutoCheckout(appState);
     } else {
       appState.setOnline(false);
+    }
+
+    // Start a timer to check for auto-checkout every 15 minutes
+    _startAutoCheckoutTimer(appState);
+  }
+
+  void _startAutoCheckoutTimer(AppStateProvider appState) {
+    _autoCheckoutSubscription?.cancel();
+    _autoCheckoutSubscription = Stream.periodic(const Duration(minutes: 15)).listen((_) {
+      checkAutoCheckout(appState);
+    });
+  }
+
+  Future<void> checkAutoCheckout(AppStateProvider appState) async {
+    final status = await SessionManager.getAttendanceStatus();
+    if (status != "CHECKED_IN") return;
+
+    final checkInTime = await SessionManager.getCheckInTime();
+    if (checkInTime == null) return;
+
+    final now = DateTime.now();
+
+    // Condition 1: Midnight check (Current day is different from check-in day)
+    final isMidnightPassed = now.year != checkInTime.year ||
+        now.month != checkInTime.month ||
+        now.day != checkInTime.day;
+
+    // Condition 2: 12 hours check
+    final duration = now.difference(checkInTime);
+    final is12HoursPassed = duration.inHours >= 12;
+
+    if (isMidnightPassed || is12HoursPassed) {
+      debugPrint("Auto-checkout triggered: Midnight=$isMidnightPassed, 12h=$is12HoursPassed");
+      final success = await checkOut();
+      if (success) {
+        appState.setOnline(false);
+        message = "Auto checked out (12h or Midnight)";
+        notifyListeners();
+      }
     }
   }
 
@@ -119,5 +173,23 @@ class HomeProvider extends ChangeNotifier {
 
     isSummaryLoading = false;
     notifyListeners();
+  }
+
+  void reset() {
+    distributors = [];
+    selectedDistributor = null;
+    todayAttendance = null;
+    isLoading = false;
+    message = null;
+    dailyCallSummary = null;
+    isSummaryLoading = false;
+    _autoCheckoutSubscription?.cancel();
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _autoCheckoutSubscription?.cancel();
+    super.dispose();
   }
 }

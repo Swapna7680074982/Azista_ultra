@@ -31,8 +31,8 @@ class DistributionProvider extends ChangeNotifier {
 
     final response = await ApiServices.getRoutes();
 
-    if (response != null) {
-      final routes = response["routes"] as Map<String, dynamic>;
+    if (response != null && response["routes"] != null) {
+      final routes = Map<String, dynamic>.from(response["routes"]);
 
       Map<String, List<String>> tempMap = {};
       Map<String, String> tempIds = {};

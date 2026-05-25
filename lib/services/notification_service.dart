@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+// import 'package:firebase_core/firebase_core.dart';
+// import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 
 class NotificationService {
@@ -17,6 +17,7 @@ class NotificationService {
   Future<void> init() async {
     print("🔥 NotificationService INIT CALLED");
     try {
+      /*
       await Firebase.initializeApp();
       final messaging = FirebaseMessaging.instance;
 
@@ -29,6 +30,9 @@ class NotificationService {
         _fcmToken = token;
         debugPrint("FCM TOKEN REFRESHED: $token");
       });
+      */
+      
+      _fcmToken = "dummy_token";
 
       _deviceId = await _getDeviceId();
 

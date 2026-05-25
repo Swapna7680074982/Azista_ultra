@@ -2,21 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../permissions/AppStateProvider.dart';
-import '../Homes/HomeProvider.dart';
-import '../distribution_list/DistributorExpensesScreen.dart';
 import '../profile_screen.dart';
+import '../Homes/HomeProvider.dart';
 import '../Distribution_networking/distribution_network_screen.dart';
 import '../../utilities/date_formatter.dart';
 import '../attendance/TeamAttendanceScreen.dart';
 
-class AmDashboardScreen extends StatefulWidget {
-  const AmDashboardScreen({super.key});
+class RmDashboardScreen extends StatefulWidget {
+  const RmDashboardScreen({super.key});
 
   @override
-  State<AmDashboardScreen> createState() => _AmDashboardScreenState();
+  State<RmDashboardScreen> createState() => _RmDashboardScreenState();
 }
 
-class _AmDashboardScreenState extends State<AmDashboardScreen> {
+class _RmDashboardScreenState extends State<RmDashboardScreen> {
   @override
   void initState() {
     super.initState();
@@ -56,7 +55,7 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
-                    "AZISTA AM",
+                    "AZISTA RM",
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 40,
@@ -126,7 +125,6 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
 
           const SizedBox(height: 10),
 
-          // Distributor Selector
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
             child: Container(
@@ -252,21 +250,9 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                   },
                 ),
                 _buildMenuItem(
-                  iconPath: Icons.currency_rupee,
-                  label: "Distributor Expenses",
-                  enabled: appState.isOnline,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const DistributorExpensesScreen()),
-                    );
-                  },
-                ),
-
-                _buildMenuItem(
                   iconPath: Icons.person_outline,
                   label: "Profile",
-                  enabled: true, // Profile usually always accessible
+                  enabled: true,
                   onTap: () {
                     Navigator.push(
                       context,

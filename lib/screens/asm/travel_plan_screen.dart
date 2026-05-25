@@ -21,8 +21,8 @@ class TravelPlanScreen extends StatelessWidget {
           style: TextStyle(color: Colors.white, fontSize: 18),
         ),
       ),
-      body: Consumer<AsmProvider>(
-        builder: (context, asmProvider, child) {
+      body: Consumer<AmProvider>(
+        builder: (context, amProvider, child) {
           return Column(
             children: [
               // Month Picker
@@ -45,13 +45,13 @@ class TravelPlanScreen extends StatelessWidget {
 
               // Plans List
               Expanded(
-                child: asmProvider.travelPlans.isEmpty
+                child: amProvider.travelPlans.isEmpty
                     ? const Center(child: Text("No travel plans for this month"))
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: asmProvider.travelPlans.length,
+                        itemCount: amProvider.travelPlans.length,
                         itemBuilder: (context, index) {
-                          final plan = asmProvider.travelPlans[index];
+                          final plan = amProvider.travelPlans[index];
                           return Card(
                             margin: const EdgeInsets.only(bottom: 10),
                             child: ListTile(
@@ -184,7 +184,7 @@ class TravelPlanScreen extends StatelessWidget {
                           child: ElevatedButton(
                             onPressed: () {
                               if (areaController.text.isNotEmpty && selectedDate != "Select Date") {
-                                Provider.of<AsmProvider>(context, listen: false).addTravelRequest({
+                                Provider.of<AmProvider>(context, listen: false).addTravelRequest({
                                   "date": selectedDate,
                                   "area": areaController.text,
                                   "reason": reasonController.text,

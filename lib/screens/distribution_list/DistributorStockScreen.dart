@@ -69,17 +69,17 @@ class _DistributorStockScreenState extends State<DistributorStockScreen> {
                 },
                 icon: const Icon(Icons.currency_rupee),
               ),
-              IconButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const DistributorVisitScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.account_tree_outlined, color: Colors.white),
-              ),
+              // IconButton(
+              //   onPressed: () {
+              //     Navigator.push(
+              //       context,
+              //       MaterialPageRoute(
+              //         builder: (context) => const DistributorVisitScreen(),
+              //       ),
+              //     );
+              //   },
+              //   icon: const Icon(Icons.account_tree_outlined, color: Colors.white),
+              // ),
               const SizedBox(width: 10),
             ],
           ),

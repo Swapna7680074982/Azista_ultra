@@ -6,6 +6,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../constants/app_colors.dart';
 import '../../../services/api_services.dart';
 import '../../../services/location_service.dart';
+import 'package:provider/provider.dart';
+import 'outlet_provider.dart';
 
 class NewOutletScreen extends StatefulWidget {
   final int routeId;
@@ -42,6 +44,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
   final TextEditingController altPositionController = TextEditingController();
   final TextEditingController altEmailController = TextEditingController();
   String selectedType = "Retailer";
+  OutletCategory? selectedCategory;
   String gender = "Male";
   String vicinityType = "Near";
   String outletShape = "Square";
@@ -60,6 +63,11 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
   void initState() {
     super.initState();
     _loadCurrentLocation();
+    Future.microtask(() {
+      if (mounted) {
+        context.read<OutletProvider>().fetchCategories();
+      }
+    });
   }
 
 
@@ -94,6 +102,13 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
         addressController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill required fields")),
+      );
+      return;
+    }
+
+    if (selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select an Outlet Category")),
       );
       return;
     }
@@ -143,7 +158,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
 
     final payload = {
       "route_id": widget.routeId,
-      "outlet_type": selectedType,
+      "outlet_type": selectedCategory!.categoryName,
       "outlet_name": nameController.text.trim(),
       "owner_name": contactController.text.trim(),
       "mobile": phoneController.text.trim(),
@@ -300,11 +315,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
           Column(
             children: [
 
-                  _dropdownField(
-                      value: selectedType,
-                      list: ["Outlet Types", "Retailer", "Pharmacy"],
-                      icon: Icons.list,
-                      onChanged: (v) => setState(() => selectedType = v)),
+                  _categorySelectField(context.watch<OutletProvider>()),
 
                   _textField(nameController, "Outlet Name", Icons.store),
                   _textField(contactController, "Contact Person", Icons.person),
@@ -559,6 +570,209 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
         borderRadius: BorderRadius.circular(6),
       ),
       child: child,
+    );
+  }
+
+  void _showCategoryPicker(BuildContext context, OutletProvider provider) {
+    String searchKeyword = "";
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final filteredCategories = provider.categories.where((cat) {
+              return cat.categoryName.toLowerCase().contains(searchKeyword.toLowerCase());
+            }).toList();
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "SELECT OUTLET CATEGORY",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    onChanged: (value) {
+                      setModalState(() {
+                        searchKeyword = value;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: "SEARCH CATEGORY...",
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: AppColors.inputFill,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: provider.isCategoriesLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : filteredCategories.isEmpty
+                            ? const Center(child: Text("No categories found"))
+                            : GridView.builder(
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 12,
+                                  childAspectRatio: 1.1,
+                                ),
+                                itemCount: filteredCategories.length,
+                                itemBuilder: (context, index) {
+                                  final category = filteredCategories[index];
+                                  final isSelected = selectedCategory?.categoryId == category.categoryId;
+
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        selectedCategory = category;
+                                      });
+                                      Navigator.pop(context);
+                                    },
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? Colors.green.shade50 : Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: isSelected ? Colors.green : Colors.grey.shade300,
+                                          width: isSelected ? 2 : 1,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.04),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Stack(
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.all(12),
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                                              children: [
+                                                Expanded(
+                                                  child: Image.network(
+                                                    category.categoryImage,
+                                                    errorBuilder: (context, error, stackTrace) {
+                                                      return const Icon(
+                                                        Icons.storefront,
+                                                        size: 40,
+                                                        color: Colors.grey,
+                                                      );
+                                                    },
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  category.categoryName,
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          if (isSelected)
+                                            const Positioned(
+                                              top: 8,
+                                              right: 8,
+                                              child: CircleAvatar(
+                                                radius: 10,
+                                                backgroundColor: Colors.green,
+                                                child: Icon(
+                                                  Icons.check,
+                                                  size: 12,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _categorySelectField(OutletProvider provider) {
+    return _buildField(
+      child: InkWell(
+        onTap: () => _showCategoryPicker(context, provider),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              const Icon(Icons.list, color: Colors.grey),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  selectedCategory != null
+                      ? selectedCategory!.categoryName
+                      : "Select Outlet Category",
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: selectedCategory != null ? Colors.black : Colors.grey.shade600,
+                  ),
+                ),
+              ),
+              if (selectedCategory != null) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: Image.network(
+                    selectedCategory!.categoryImage,
+                    width: 28,
+                    height: 28,
+                    errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              const Icon(Icons.arrow_drop_down, color: Colors.grey),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

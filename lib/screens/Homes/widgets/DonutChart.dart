@@ -65,104 +65,104 @@ class _DonutChartState extends State<DonutChart>
               animation: _controller,
               builder: (context, child) {
                 final rotationAngle = (2 * pi * _controller.value) + _manualRotation;
-                final sweepLength = widget.total == 0 
-                    ? 0.0 
+                final sweepLength = widget.total == 0
+                    ? 0.0
                     : (widget.value / widget.total) * 2 * pi * _controller.value;
-  
+
                 final greenMidAngle = -pi / 2 + rotationAngle + sweepLength / 2;
                 final gDx = 65 * cos(greenMidAngle);
                 final gDy = 65 * sin(greenMidAngle);
-                
+
                 final redMidAngle = -pi / 2 + rotationAngle + sweepLength + (2 * pi - sweepLength) / 2;
                 final rDx = 65 * cos(redMidAngle);
                 final rDy = 65 * sin(redMidAngle);
 
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  CustomPaint(
-                    size: const Size(170, 170),
-                    painter: DonutPainter(
-                      progress: _controller.value,
-                      rotationAngle: rotationAngle,
-                      value: widget.value,
-                      total: widget.total,
-                      color: widget.color,
-                    ),
-                  ),
-
-                  Container(
-                    width: 90,
-                    height: 90,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                    ),
-                  ),
-
-                  Positioned.fromRect(
-                    rect: Rect.fromCenter(
-                      center: Offset(95 + gDx, 95 + gDy), 
-                      width: 100, 
-                      height: 50
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                         children: [
-                          Text(
-                            widget.value.toStringAsFixed(1),
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const Text(
-                            "ACHIEVED",
-                            style: TextStyle(
-                              fontSize: 8,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
+                return Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CustomPaint(
+                      size: const Size(170, 170),
+                      painter: DonutPainter(
+                        progress: _controller.value,
+                        rotationAngle: rotationAngle,
+                        value: widget.value,
+                        total: widget.total,
+                        color: widget.color,
                       ),
                     ),
-                  ),
 
-                  Positioned.fromRect(
-                    rect: Rect.fromCenter(
-                      center: Offset(95 + rDx, 95 + rDy), 
-                      width: 100, 
-                      height: 50
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            widget.total.toStringAsFixed(1),
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            "TARGET ${widget.label.split(" ").last.toUpperCase()}",
-                            style: const TextStyle(
-                              fontSize: 8,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
+                    Container(
+                      width: 90,
+                      height: 90,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
                       ),
                     ),
-                  ),
-                ],
-              );
-            },
+
+                    Positioned.fromRect(
+                      rect: Rect.fromCenter(
+                          center: Offset(95 + gDx, 95 + gDy),
+                          width: 100,
+                          height: 50
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              widget.value.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const Text(
+                              "ACHIEVED",
+                              style: TextStyle(
+                                fontSize: 8,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    Positioned.fromRect(
+                      rect: Rect.fromCenter(
+                          center: Offset(95 + rDx, 95 + rDy),
+                          width: 100,
+                          height: 50
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              widget.total.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              "TARGET ${widget.label.split(" ").last.toUpperCase()}",
+                              style: const TextStyle(
+                                fontSize: 8,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
-      ),
 
         const SizedBox(height: 10),
         Column(
@@ -241,13 +241,13 @@ class DonutPainter extends CustomPainter {
     final lightOverlayPaint = Paint()
       ..color = Colors.white.withOpacity(0.35)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 10 
+      ..strokeWidth = 10
       ..strokeCap = StrokeCap.butt;
     canvas.drawArc(
-      rect.deflate(35), 
-      0, 
-      2 * pi, 
-      false, 
+      rect.deflate(35),
+      0,
+      2 * pi,
+      false,
       lightOverlayPaint,
     );
   }

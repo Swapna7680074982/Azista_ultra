@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../permissions/SessionManager.dart';
 import '../asm/asm_dashboard_screen.dart';
+import '../rm/rm_dashboard_screen.dart';
 import '../Homes/main_shell_screen.dart';
 import 'login_provider.dart';
+import '../../permissions/AppStateProvider.dart';
+import '../Homes/HomeProvider.dart';
 
 class LoginScreen extends StatelessWidget {
   LoginScreen({super.key});
@@ -93,6 +96,13 @@ class LoginScreen extends StatelessWidget {
                             onPressed: provider.isLoading
                                 ? null
                                 : () async {
+                              final navigator = Navigator.of(context);
+                              final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+                              // Reset providers to prevent state leakage from previous user/distributor
+                              Provider.of<AppStateProvider>(context, listen: false).reset();
+                              Provider.of<HomeProvider>(context, listen: false).reset();
+
                               final success = await provider.login(
                                 phoneController.text.trim(),
                                 passwordController.text.trim(),
@@ -100,23 +110,28 @@ class LoginScreen extends StatelessWidget {
 
                               if (success) {
                                 final role = await SessionManager.getUserRole();
-                                if (role.toLowerCase().trim() == "asm") {
-                                  Navigator.pushReplacement(
-                                    context,
+                                final normalizedRole = role.toLowerCase().trim();
+                                if (normalizedRole == "rm") {
+                                  navigator.pushReplacement(
                                     MaterialPageRoute(
-                                      builder: (context) => const AsmDashboardScreen(),
+                                      builder: (context) => const RmDashboardScreen(),
+                                    ),
+                                  );
+                                } else if (normalizedRole == "asm" || normalizedRole == "am") {
+                                  navigator.pushReplacement(
+                                    MaterialPageRoute(
+                                      builder: (context) => const AmDashboardScreen(),
                                     ),
                                   );
                                 } else {
-                                  Navigator.pushReplacement(
-                                    context,
+                                  navigator.pushReplacement(
                                     MaterialPageRoute(
                                       builder: (context) => const MainShellScreen(),
                                     ),
                                   );
                                 }
                               } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                scaffoldMessenger.showSnackBar(
                                   SnackBar(
                                     content: Text(
                                       provider.error ?? "Login Failed",

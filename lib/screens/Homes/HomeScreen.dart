@@ -10,8 +10,11 @@ import '../distribution_list/DistributorStockScreen.dart';
 import '../leave_management/leave_management_screen.dart';
 import '../productivity/ProductivityScreen.dart';
 import 'HomeProvider.dart';
+import 'main_tab_provider.dart';
 import 'widgets/DonutChart.dart';
 import '../../utilities/date_formatter.dart';
+import '../../permissions/SessionManager.dart';
+import '../attendance/TeamAttendanceScreen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,20 +24,49 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late MainTabProvider _tabProvider;
+
+  void _onTabChanged() {
+    if (_tabProvider.currentIndex == 0) {
+      _refreshData();
+    }
+  }
+
+  Future<void> _refreshData() async {
+    if (!mounted) return;
+    final homeProvider = Provider.of<HomeProvider>(context, listen: false);
+    final appState = Provider.of<AppStateProvider>(context, listen: false);
+    homeProvider.fetchTodayAttendance();
+    homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
+  }
+
   @override
   void initState() {
     super.initState();
 
     Future.microtask(() async {
+      if (!mounted) return;
       final homeProvider = Provider.of<HomeProvider>(context, listen: false);
-
       final appState = Provider.of<AppStateProvider>(context, listen: false);
 
-      await homeProvider.loadDistributors();
+      await homeProvider.loadDistributors(appState);
       await homeProvider.initializeAttendance(appState);
-      await homeProvider.fetchTodayAttendance();
-      await homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
+
+      homeProvider.fetchTodayAttendance();
+      homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
+
+      final role = await SessionManager.getUserRole();
+      appState.setUserRole(role);
+
+      _tabProvider = Provider.of<MainTabProvider>(context, listen: false);
+      _tabProvider.addListener(_onTabChanged);
     });
+  }
+
+  @override
+  void dispose() {
+    _tabProvider.removeListener(_onTabChanged);
+    super.dispose();
   }
 
   @override
@@ -182,18 +214,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             return DropdownButton<String>(
                               isExpanded: true,
                               hint: const Text("SELECT DISTRIBUTOR"),
-                              value: appState.selectedDistributor,
-
-                              items: homeProvider.distributors
-                                  .map<DropdownMenuItem<String>>((d) {
+                              value: homeProvider.distributors.any((d) => d["distributor_name"] == appState.selectedDistributor)
+                                  ? appState.selectedDistributor
+                                  : null,
+                              items: homeProvider.distributors.map<DropdownMenuItem<String>>((d) {
                                 return DropdownMenuItem<String>(
                                   value: d["distributor_name"],
                                   child: Text(d["distributor_name"]),
                                 );
-                              })
-                                  .toList(),
+                              }).toList(),
 
-                              onChanged: (value) {
+                              onChanged: appState.isOnline ? (value) {
                                 final selected = homeProvider.distributors.firstWhere(
                                       (d) => d["distributor_name"] == value,
                                   orElse: () => null,
@@ -209,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 }
                                 appState.setDistributor(value, id: id);
                                 homeProvider.fetchDailyCallSummary(id);
-                              },
+                              } : null,
                             );
                           },
                         ),
@@ -219,6 +250,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 10),
                   GestureDetector(
                     onTap: () {
+                      if (!appState.isOnline) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Please turn on attendance first"),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        return;
+                      }
+
                       if (appState.selectedDistributor == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -240,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       height: 45,
                       width: 65,
                       decoration: BoxDecoration(
-                        color: appState.selectedDistributor == null
+                        color: (appState.selectedDistributor == null || !appState.isOnline)
                             ? Colors.grey.shade400
                             : AppColors.primary,
                         borderRadius: BorderRadius.circular(8),
@@ -263,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 12),
-              padding: const EdgeInsets.fromLTRB(0, 60, 0, 20),
+              padding: const EdgeInsets.fromLTRB(0, 20, 0, 20),
               decoration: BoxDecoration(
                 color: AppColors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -316,6 +357,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       alignment: Alignment.centerRight,
                       child: GestureDetector(
                         onTap: () {
+                          if (!appState.isOnline) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Please turn on attendance first"),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            return;
+                          }
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -326,7 +376,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Text(
                           "VIEW DETAILS >>",
                           style: TextStyle(
-                            color: Colors.red.shade700,
+                            color: appState.isOnline ? Colors.red.shade700 : Colors.grey,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -387,51 +437,89 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-
-                  ActionBox(
-                    Icons.access_time,
-                    "ATTENDANCE",
-                    enabled: appState.isOnline,
-                    onTap: () {
-                      if (AccessValidator.validate(
-                        context: context,
-                        isOnline: appState.isOnline,
-                        hasDistributor: appState.selectedDistributor != null,
-                        checkDistributor: false,
-                        isLeave: false,
-                      )) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AttendanceScreen(),
-                          ),
-                        );
-                      }
-                    },
+                  Expanded(
+                    child: ActionBox(
+                      Icons.access_time,
+                      "ATTENDANCE",
+                      enabled: appState.isOnline,
+                      onTap: () {
+                        if (AccessValidator.validate(
+                          context: context,
+                          isOnline: appState.isOnline,
+                          hasDistributor: appState.selectedDistributor != null,
+                          checkDistributor: false,
+                          isLeave: false,
+                        )) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AttendanceScreen(),
+                            ),
+                          );
+                        }
+                      },
+                    ),
                   ),
-                  ActionBox(
-                    Icons.receipt,
-                    "USER\nTRANSACTIONS",
-                    enabled: appState.isOnline,
-                    onTap: () {
-                      if (AccessValidator.validate(
-                        context: context,
-                        isOnline: appState.isOnline,
-                        hasDistributor: appState.selectedDistributor != null,
-                        isLeave: false,
-                      )) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const UserTransactionScreen(),
-                          ),
-                        );
-                      }
-                    },
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ActionBox(
+                      Icons.receipt,
+                      "USER\nTRANSACTIONS",
+                      enabled: appState.isOnline,
+                      onTap: () {
+                        if (AccessValidator.validate(
+                          context: context,
+                          isOnline: appState.isOnline,
+                          hasDistributor: appState.selectedDistributor != null,
+                          isLeave: false,
+                        )) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const UserTransactionScreen(),
+                            ),
+                          );
+                        }
+                      },
+                    ),
                   ),
                 ],
               ),
             ),
+            if (appState.userRole == 'AM' || appState.userRole == 'RM')
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: ActionBox(
+                        Icons.group,
+                        "TEAM\nATTENDANCE",
+                        enabled: appState.isOnline,
+                        onTap: () {
+                          if (AccessValidator.validate(
+                            context: context,
+                            isOnline: appState.isOnline,
+                            hasDistributor: appState.selectedDistributor != null,
+                            checkDistributor: false,
+                            isLeave: false,
+                          )) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const TeamAttendanceScreen(),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Spacer(),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
