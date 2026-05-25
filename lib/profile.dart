@@ -193,7 +193,7 @@ class ProfileDrawer extends StatelessWidget {
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: Colors.grey[900],
           content: const Text(
@@ -202,19 +202,22 @@ class ProfileDrawer extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text("CANCEL", style: TextStyle(color: Colors.pink)),
             ),
             TextButton(
               onPressed: () async {
-                final navigator = Navigator.of(context, rootNavigator: true);
+                final appState = Provider.of<AppStateProvider>(dialogContext, listen: false);
+                final homeProvider = Provider.of<HomeProvider>(dialogContext, listen: false);
+                final navigator = Navigator.of(dialogContext, rootNavigator: true);
+
                 navigator.pop();
                 await ApiServices.logout();
                 await SessionManager.clearSession();
 
                 // Clear active in-memory providers to prevent leakage
-                Provider.of<AppStateProvider>(context, listen: false).reset();
-                Provider.of<HomeProvider>(context, listen: false).reset();
+                appState.reset();
+                homeProvider.reset();
 
                 navigator.pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => LoginScreen()),

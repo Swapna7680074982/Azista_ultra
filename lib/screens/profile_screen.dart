@@ -200,20 +200,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (confirm == true) {
+      // Pre-capture providers and navigator before async operations
+      final appState = Provider.of<AppStateProvider>(context, listen: false);
+      final homeProvider = Provider.of<HomeProvider>(context, listen: false);
+      final navigator = Navigator.of(context);
+
       // Call server-side logout first (same as SO)
       await ApiServices.logout();
       
       await SessionManager.clearSession();
-      if (mounted) {
-        // Reset providers to prevent state leakage to next session
-        Provider.of<AppStateProvider>(context, listen: false).reset();
-        Provider.of<HomeProvider>(context, listen: false).reset();
 
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) =>  LoginScreen()),
-          (route) => false,
-        );
-      }
+      // Reset providers to prevent state leakage to next session
+      appState.reset();
+      homeProvider.reset();
+
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) =>  LoginScreen()),
+        (route) => false,
+      );
     }
   }
 }

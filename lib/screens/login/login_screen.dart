@@ -96,6 +96,9 @@ class LoginScreen extends StatelessWidget {
                             onPressed: provider.isLoading
                                 ? null
                                 : () async {
+                              final navigator = Navigator.of(context);
+                              final scaffoldMessenger = ScaffoldMessenger.of(context);
+
                               // Reset providers to prevent state leakage from previous user/distributor
                               Provider.of<AppStateProvider>(context, listen: false).reset();
                               Provider.of<HomeProvider>(context, listen: false).reset();
@@ -109,29 +112,26 @@ class LoginScreen extends StatelessWidget {
                                 final role = await SessionManager.getUserRole();
                                 final normalizedRole = role.toLowerCase().trim();
                                 if (normalizedRole == "rm") {
-                                  Navigator.pushReplacement(
-                                    context,
+                                  navigator.pushReplacement(
                                     MaterialPageRoute(
                                       builder: (context) => const RmDashboardScreen(),
                                     ),
                                   );
                                 } else if (normalizedRole == "asm" || normalizedRole == "am") {
-                                  Navigator.pushReplacement(
-                                    context,
+                                  navigator.pushReplacement(
                                     MaterialPageRoute(
                                       builder: (context) => const AmDashboardScreen(),
                                     ),
                                   );
                                 } else {
-                                  Navigator.pushReplacement(
-                                    context,
+                                  navigator.pushReplacement(
                                     MaterialPageRoute(
                                       builder: (context) => const MainShellScreen(),
                                     ),
                                   );
                                 }
                               } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                scaffoldMessenger.showSnackBar(
                                   SnackBar(
                                     content: Text(
                                       provider.error ?? "Login Failed",
