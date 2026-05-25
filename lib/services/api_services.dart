@@ -1,16 +1,77 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 
 import '../constants/api_urls.dart';
 import '../permissions/SessionManager.dart';
+import '../screens/login/login_screen.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
 import '../utilities/mylogger.dart';
+import 'navigation_service.dart';
 
 
 class ApiServices {
-  static final Dio _dio = Dio();
+  static final Dio _dio = Dio()..interceptors.add(
+    InterceptorsWrapper(
+      onResponse: (response, handler) async {
+        if (response.statusCode == 401 ||
+            (response.data is Map &&
+                response.data["message"]?.toString().contains("Token expired") == true)) {
+          await _handleTokenExpired();
+        }
+        return handler.next(response);
+      },
+      onError: (DioException e, handler) async {
+        if (e.response?.statusCode == 401 ||
+            (e.response?.data is Map &&
+                e.response?.data["message"]?.toString().contains("Token expired") == true)) {
+          await _handleTokenExpired();
+        }
+        return handler.next(e);
+      },
+    ),
+  );
+
+  static bool _isRedirecting = false;
+
+  static Future<void> _handleTokenExpired() async {
+    if (_isRedirecting) return;
+    _isRedirecting = true;
+
+    try {
+      AppLogger.warning("Token expired or 401 Unauthorized detected. Clearing session & redirecting to LoginScreen.");
+      await SessionManager.clearSession();
+      
+      navigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+        (route) => false,
+      );
+
+      // Show a snackbar message once redirected
+      Future.delayed(const Duration(milliseconds: 300), () {
+        final context = navigatorKey.currentContext;
+        if (context != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Session expired. Please login again.",
+                style: TextStyle(color: Colors.white),
+              ),
+              backgroundColor: Colors.redAccent,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      });
+    } catch (e) {
+      AppLogger.error("Failed to redirect to LoginScreen", e);
+    } finally {
+      await Future.delayed(const Duration(seconds: 2));
+      _isRedirecting = false;
+    }
+  }
 
   static Future<Map<String, dynamic>?> login({
     required String phone,
