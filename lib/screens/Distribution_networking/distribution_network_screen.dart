@@ -5,6 +5,7 @@ import '../../constants/app_colors.dart';
 import '../../profile.dart';
 import 'distribution_provider.dart';
 import 'outlets/outlets_screen.dart';
+import '../../utilities/common_widgets.dart';
 
 class DistributionNetworkScreen extends StatefulWidget {
   final bool isFromDashboard;
@@ -64,7 +65,7 @@ class _DistributionNetworkScreenState
       ),
 
       body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: LogoProgressIndicator())
           : Column(
         children: [
           const SizedBox(height: 10),
@@ -73,6 +74,29 @@ class _DistributionNetworkScreenState
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
+                DropdownButtonFormField<String>(
+                  value: provider.selectedState,
+                  hint: const Text("Select State"),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: AppColors.inputFill,
+                    border: InputBorder.none,
+                  ),
+                  items: provider.states.map((state) {
+                    return DropdownMenuItem(
+                      value: state,
+                      child: Text(state),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      provider.setStateName(value);
+                    }
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
                 DropdownButtonFormField<String>(
                   value: provider.selectedCity,
                   hint: const Text("Select City"),

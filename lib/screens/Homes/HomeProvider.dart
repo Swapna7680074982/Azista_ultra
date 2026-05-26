@@ -19,6 +19,8 @@ class HomeProvider extends ChangeNotifier {
 
   Future<void> loadDistributors([AppStateProvider? appState]) async {
     distributors = await SessionManager.getDistributors();
+    // Do not auto-select the first distributor
+    /*
     if (appState != null && distributors.isNotEmpty && appState.selectedDistributor == null) {
       final defaultDistributor = distributors.first;
       final name = defaultDistributor["distributor_name"];
@@ -30,6 +32,7 @@ class HomeProvider extends ChangeNotifier {
       }
       appState.setDistributor(name, id: id);
     }
+    */
     notifyListeners();
   }
 

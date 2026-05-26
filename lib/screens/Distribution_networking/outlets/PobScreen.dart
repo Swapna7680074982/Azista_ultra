@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'outlet_activity_provider.dart';
-import '../../../constants/app_colors.dart';
 import 'PobHistoryScreen.dart';
 import '../../../permissions/AppStateProvider.dart';
 import '../../../utilities/common_widgets.dart';
@@ -76,7 +75,7 @@ class _PobBodyState extends State<PobBody> {
   }
   Widget build(BuildContext context) {
     if (isLocationValid == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: LogoProgressIndicator());
     }
 
     if (isLocationValid == false) {
@@ -102,105 +101,153 @@ class _PobBodyState extends State<PobBody> {
     return Consumer<OutletActivityProvider>(
       builder: (context, provider, child) {
         return provider.isLoadingProducts
-            ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                padding: const EdgeInsets.all(8),
+            ? const Center(child: LogoProgressIndicator())
+            : Column(
                 children: [
-                  if (provider.productsWithSkus.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(20.0),
-                        child: Text("No products found"),
-                      ),
-                    )
-                  else
-                    ...provider.productsWithSkus.map((product) {
-                      return _buildProductSection(product, provider);
-                    }).toList(),
-
                   Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    height: 45,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      onPressed: () async {
-                        final appState = Provider.of<AppStateProvider>(context, listen: false);
-                        if (appState.selectedDistributorId == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("No distributor selected")),
-                          );
-                          return;
-                        }
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Submitting POB...")),
-                        );
-
-                        bool success = await provider.submitPob(
-                          widget.outletId,
-                          appState.selectedDistributorId!,
-                        );
-
-                        if (!mounted) return;
-
-                        if (success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("POB Submitted Successfully!")),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Failed to submit POB or no items selected.")),
-                          );
-                        }
-                      },
-                      child: const Text(
-                        "SUBMIT POB",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    height: 45,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => PobHistoryScreen(outletId: widget.outletId),
+                    color: Colors.grey.shade200,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "Product name",
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           ),
-                        );
-                      },
-                      child: const Text(
-                        "POS HISTORY",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: Colors.white,
                         ),
-                      ),
+                        Container(
+                          width: 60,
+                          alignment: Alignment.center,
+                          child: Text(
+                            "DSA.QTY",
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          width: 60,
+                          alignment: Alignment.center,
+                          child: Text(
+                            "R.QTY",
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.all(8),
+                      children: [
+                        if (provider.productsWithSkus.isEmpty)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20.0),
+                              child: Text("No products found"),
+                            ),
+                          )
+                        else
+                          ...provider.productsWithSkus.map((product) {
+                            return _buildProductSection(product, provider);
+                          }).toList(),
 
-                  const SizedBox(height: 40),
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          height: 45,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            onPressed: () async {
+                              final appState = Provider.of<AppStateProvider>(context, listen: false);
+                              if (appState.selectedDistributorId == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("No distributor selected")),
+                                );
+                                return;
+                              }
+
+                              LoadingDialog.show(context, message: "Submitting POB...");
+
+                              bool success = await provider.submitPob(
+                                widget.outletId,
+                                appState.selectedDistributorId!,
+                              );
+
+                              if (!mounted) return;
+                              LoadingDialog.hide(context);
+
+                              if (success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("POB Submitted Successfully!")),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("Failed to submit POB or no items selected.")),
+                                );
+                              }
+                            },
+                            child: const Text(
+                              "SUBMIT POB",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          height: 45,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PobHistoryScreen(outletId: widget.outletId),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              "POS HISTORY",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
                 ],
               );
       },
@@ -214,9 +261,24 @@ class _PobBodyState extends State<PobBody> {
 
     if (skus.isEmpty) return const SizedBox.shrink();
 
-    return ProductCard(
-      title: title,
-      children: skus.map((sku) => _buildSkuRow(productId, sku, provider)).toList(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Center(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ),
+        ...skus.map((sku) => _buildSkuRow(productId, sku, provider)).toList(),
+      ],
     );
   }
 

@@ -8,6 +8,7 @@ import '../../../services/api_services.dart';
 import '../../../services/location_service.dart';
 import 'package:provider/provider.dart';
 import 'outlet_provider.dart';
+import '../../../utilities/common_widgets.dart';
 
 class NewOutletScreen extends StatefulWidget {
   final int routeId;
@@ -116,6 +117,20 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
     if (phoneController.text.length != 10) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Invalid phone number")),
+      );
+      return;
+    }
+
+    if (whatsappController.text.isNotEmpty && whatsappController.text.length != 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("WhatsApp number must be exactly 10 digits")),
+      );
+      return;
+    }
+
+    if (altMobileController.text.isNotEmpty && altMobileController.text.length != 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Alternative mobile number must be exactly 10 digits")),
       );
       return;
     }
@@ -276,7 +291,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
           SizedBox(
             height: 200,
             child: isLoadingLocation
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: LogoProgressIndicator())
                 : GoogleMap(
               initialCameraPosition: CameraPosition(
                 target: currentPosition,
@@ -503,7 +518,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
 
         inputFormatters:
         isNumberField
-            ? [FilteringTextInputFormatter.digitsOnly]
+            ? [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)]
             : null,
 
         decoration: InputDecoration(
@@ -633,15 +648,15 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                   const SizedBox(height: 16),
                   Expanded(
                     child: provider.isCategoriesLoading
-                        ? const Center(child: CircularProgressIndicator())
+                        ? const Center(child: LogoProgressIndicator())
                         : filteredCategories.isEmpty
                             ? const Center(child: Text("No categories found"))
                             : GridView.builder(
                                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
-                                  childAspectRatio: 1.1,
+                                  crossAxisCount: 3,
+                                  crossAxisSpacing: 8,
+                                  mainAxisSpacing: 8,
+                                  childAspectRatio: 0.85,
                                 ),
                                 itemCount: filteredCategories.length,
                                 itemBuilder: (context, index) {
@@ -658,23 +673,23 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                                     child: Container(
                                       decoration: BoxDecoration(
                                         color: isSelected ? Colors.green.shade50 : Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
                                           color: isSelected ? Colors.green : Colors.grey.shade300,
-                                          width: isSelected ? 2 : 1,
+                                          width: isSelected ? 1.5 : 1,
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.04),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
+                                            color: Colors.black.withOpacity(0.03),
+                                            blurRadius: 3,
+                                            offset: const Offset(0, 1),
                                           ),
                                         ],
                                       ),
                                       child: Stack(
                                         children: [
                                           Padding(
-                                            padding: const EdgeInsets.all(12),
+                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                                             child: Column(
                                               mainAxisAlignment: MainAxisAlignment.center,
                                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -685,20 +700,20 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                                                     errorBuilder: (context, error, stackTrace) {
                                                       return const Icon(
                                                         Icons.storefront,
-                                                        size: 40,
+                                                        size: 28,
                                                         color: Colors.grey,
                                                       );
                                                     },
                                                   ),
                                                 ),
-                                                const SizedBox(height: 8),
+                                                const SizedBox(height: 4),
                                                 Text(
                                                   category.categoryName,
                                                   textAlign: TextAlign.center,
                                                   maxLines: 2,
                                                   overflow: TextOverflow.ellipsis,
                                                   style: const TextStyle(
-                                                    fontSize: 12,
+                                                    fontSize: 10,
                                                     fontWeight: FontWeight.w600,
                                                   ),
                                                 ),
@@ -707,14 +722,14 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                                           ),
                                           if (isSelected)
                                             const Positioned(
-                                              top: 8,
-                                              right: 8,
+                                              top: 4,
+                                              right: 4,
                                               child: CircleAvatar(
-                                                radius: 10,
+                                                radius: 8,
                                                 backgroundColor: Colors.green,
                                                 child: Icon(
                                                   Icons.check,
-                                                  size: 12,
+                                                  size: 10,
                                                   color: Colors.white,
                                                 ),
                                               ),

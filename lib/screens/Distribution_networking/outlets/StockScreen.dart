@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'outlet_activity_provider.dart';
-import '../../../constants/app_colors.dart';
 import '../../../permissions/AppStateProvider.dart';
 import '../../../utilities/common_widgets.dart';
 
@@ -28,7 +27,7 @@ class _StockBodyState extends State<StockBody> {
     return Consumer<OutletActivityProvider>(
       builder: (context, provider, child) {
         return provider.isLoadingProducts
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: LogoProgressIndicator())
             : ListView(
                 padding: const EdgeInsets.all(8),
                 children: [
@@ -58,24 +57,12 @@ class _StockBodyState extends State<StockBody> {
                         final appState = Provider.of<AppStateProvider>(context, listen: false);
                         final distributorId = appState.selectedDistributorId ?? 6;
 
-                        ScaffoldMessenger.of(context).showSnackBar(
-                           const SnackBar(content: Text('Submitting Stock...')),
-                        );
+                        LoadingDialog.show(context, message: "Submitting Stock...");
 
                         final result = await provider.submitPosTransaction("stock", widget.outletId, distributorId);
 
                         if (!context.mounted) return;
-                        
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                        if (result != null && result['status'] == true) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                             SnackBar(content: Text(result['message'] ?? 'Stock submitted successfully!'), backgroundColor: Colors.green),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                             SnackBar(content: Text(result?['message'] ?? 'Failed to submit stock'), backgroundColor: Colors.red),
-                          );
-                        }
+                        LoadingDialog.hide(context);
                       },
                       child: const Text(
                         "SUBMIT STOCK",

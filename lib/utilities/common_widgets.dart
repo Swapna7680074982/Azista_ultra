@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/app_colors.dart';
+import '../constants/image_constants.dart';
 
 class QtyBox extends StatelessWidget {
   final String? initialValue;
@@ -26,13 +27,12 @@ class QtyBox extends StatelessWidget {
         height: 35,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: AppColors.white,
-          border: Border.all(color: Colors.grey),
+          color: Colors.grey.shade200,
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
           initialValue?.isEmpty ?? true ? "0" : initialValue!,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
         ),
       );
     }
@@ -118,5 +118,90 @@ class ProductCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class LogoProgressIndicator extends StatelessWidget {
+  final double size;
+  const LogoProgressIndicator({super.key, this.size = 60});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: size,
+            height: size,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+          ),
+          Image.asset(
+            ImageConstants.appLogo,
+            width: size * 0.55,
+            height: size * 0.55,
+            errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class LoadingDialog {
+  static void show(BuildContext context, {String message = "Please wait..."}) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return PopScope(
+          canPop: false,
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    LogoProgressIndicator(size: 70),
+                    const SizedBox(height: 20),
+                    Text(
+                      message,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  static void hide(BuildContext context) {
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
   }
 }

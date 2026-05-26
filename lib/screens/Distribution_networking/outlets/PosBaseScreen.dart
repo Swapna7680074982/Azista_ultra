@@ -10,8 +10,8 @@ import 'SamplingScreen.dart';
 import 'StockScreen.dart';
 import 'SaleScreen.dart';
 import 'outlet_provider.dart';
-
 import '../../../services/api_services.dart';
+import '../../../utilities/common_widgets.dart';
 
 class PosBaseScreen extends StatefulWidget {
   final Outlet outlet;
@@ -98,7 +98,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         ),
       ),
       body: isLoadingTabs 
-          ? const Center(child: CircularProgressIndicator()) 
+          ? const Center(child: LogoProgressIndicator()) 
           : Column(
         children: [
           outletCard(widget.outlet),
