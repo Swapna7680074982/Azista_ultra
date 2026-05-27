@@ -48,42 +48,54 @@ class DistributorExpenseProvider extends ChangeNotifier {
   }) async {
     _isLoading = true;
     notifyListeners();
-    final result = await ApiServices.addExpense(
-      distributorId: distributorId,
-      expenseDate: expenseDate,
-      expenseAmount: expenseAmount,
-      description: description,
-      expenseType: expenseType,
-      paymentMode: paymentMode,
-      expenseBill: expenseBill,
-    );
-    if (result != null && result['status'] == true) {
-      await fetchExpenses();
+    try {
+      final result = await ApiServices.addExpense(
+        distributorId: distributorId,
+        expenseDate: expenseDate,
+        expenseAmount: expenseAmount,
+        description: description,
+        expenseType: expenseType,
+        paymentMode: paymentMode,
+        expenseBill: expenseBill,
+      );
+      if (result != null && result['status'] == true) {
+        await fetchExpenses();
+      }
+      return result;
+    } catch (e) {
+      debugPrint("Error adding expense: $e");
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-    _isLoading = false;
-    notifyListeners();
-    return result;
   }
 
   Future<Map<String, dynamic>?> updateStatus(String action, String expenseId) async {
     _isLoading = true;
     notifyListeners();
-    Map<String, dynamic>? response;
+    try {
+      Map<String, dynamic>? response;
 
-    if (action == 'submit_to_am') {
-      response = await ApiServices.submitToAm(expenseId);
-    } else if (action == 'receive_from_so') {
-      response = await ApiServices.receiveFromSo(expenseId);
-    } else if (action == 'submit_to_admin') {
-      response = await ApiServices.submitToAdmin(expenseId);
-    }
+      if (action == 'submit_to_am') {
+        response = await ApiServices.submitToAm(expenseId);
+      } else if (action == 'receive_from_so') {
+        response = await ApiServices.receiveFromSo(expenseId);
+      } else if (action == 'submit_to_admin') {
+        response = await ApiServices.submitToAdmin(expenseId);
+      }
 
-    if (response != null && response['status'] == true) {
-      await fetchExpenses();
+      if (response != null && response['status'] == true) {
+        await fetchExpenses();
+      }
+      return response;
+    } catch (e) {
+      debugPrint("Error updating status: $e");
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-    _isLoading = false;
-    notifyListeners();
-    return response;
   }
 
   // Image loading helper

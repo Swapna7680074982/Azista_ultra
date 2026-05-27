@@ -130,10 +130,11 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                     builder: (context) => ProductListScreen(pobData: pob),
                   ),
                 );
+                if (!mounted) return;
                 if (result == true) {
-                  final appState = Provider.of<AppStateProvider>(context, listen: false);
+                  final appState = Provider.of<AppStateProvider>(this.context, listen: false);
                   if (appState.selectedDistributorId != null) {
-                    Provider.of<OutletActivityProvider>(context, listen: false)
+                    Provider.of<OutletActivityProvider>(this.context, listen: false)
                         .fetchPobHistory(widget.outletId, appState.selectedDistributorId!);
                   }
                 }

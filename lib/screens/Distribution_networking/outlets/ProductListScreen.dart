@@ -227,6 +227,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
               SuccessDialog.show(
                 context,
                 message: "${response['message'] ?? 'POB Supplied successfully!'} - $statusMsg",
+                onDismiss: () {
+                  Navigator.pop(context, true);
+                },
               );
 
               setState(() {

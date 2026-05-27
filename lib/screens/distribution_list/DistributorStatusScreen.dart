@@ -128,6 +128,23 @@ class _DistributorStatusScreenState extends State<DistributorStatusScreen> {
                 _infoColumn("Comments",
                     widget.expense.description.isNotEmpty ? widget.expense
                         .description : "No comments"),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _infoColumn(
+                        "Employee",
+                        widget.expense.employeeId.isNotEmpty
+                            ? "${widget.expense.employeeName} (${widget.expense.employeeId})"
+                            : widget.expense.employeeName,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _infoColumn("Role", widget.expense.role),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

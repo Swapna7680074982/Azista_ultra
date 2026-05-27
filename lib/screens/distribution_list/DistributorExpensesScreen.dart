@@ -232,7 +232,7 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                         provider.userRole.toLowerCase().contains("asm")) ...[
                       const SizedBox(height: 4),
                       Text(
-                        "Role: ${expense.role} | Mgr: ${expense.reportingManager}",
+                        "Role: ${expense.role}",
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -264,7 +264,7 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                       style: TextStyle(color: Colors.grey),
                     ),
                     const SizedBox(height: 4),
-                    Text(DateFormatter.formatDateTime(expense.expenseDate)),
+                    Text(DateFormatter.formatDateOnly(expense.expenseDate)),
                   ],
                 ),
                 Column(
@@ -391,6 +391,7 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
     showDialog(
       context: context,
       builder: (context) {
+        bool isSubmitting = false;
         return StatefulBuilder(
           builder: (context, setPopupState) {
             return Consumer<DistributorExpenseProvider>(
@@ -761,7 +762,7 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                 width: double.infinity,
                                 height: 44,
                                 child: ElevatedButton(
-                                  onPressed: provider.isLoading
+                                  onPressed: isSubmitting
                                       ? null
                                       : () async {
                                           if (amountController.text.isEmpty ||
@@ -779,43 +780,61 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                             return;
                                           }
 
-                                          final response = await provider
-                                              .addExpense(
-                                                distributorId: "1",
-                                                expenseDate:
-                                                    dateController.text,
-                                                expenseAmount:
-                                                    amountController.text,
-                                                description:
-                                                    descriptionController.text,
-                                                expenseType:
-                                                    expenseTypeController.text,
-                                                paymentMode:
-                                                    paymentModeController.text,
-                                                expenseBill: selectedImage,
+                                          setPopupState(() {
+                                            isSubmitting = true;
+                                          });
+
+                                          try {
+                                            final response = await provider
+                                                .addExpense(
+                                                  distributorId: "1",
+                                                  expenseDate:
+                                                      dateController.text,
+                                                  expenseAmount:
+                                                      amountController.text,
+                                                  description:
+                                                      descriptionController.text,
+                                                  expenseType:
+                                                      expenseTypeController.text,
+                                                  paymentMode:
+                                                      paymentModeController.text,
+                                                  expenseBill: selectedImage,
+                                                );
+
+                                            debugPrint(
+                                              "ℹ️ INFO: Add Expense Response: $response",
+                                            );
+
+                                            if (response != null &&
+                                                response['status'] == true) {
+                                              Navigator.pop(context);
+                                              SuccessDialog.show(context, message: "Expense Added Successfully!", onDismiss: () {
+                                                provider.fetchExpenses();
+                                              });
+                                            } else {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    response?['message'] ??
+                                                        "Failed to add expense",
+                                                  ),
+                                                ),
                                               );
-
-                                          debugPrint(
-                                            "ℹ️ INFO: Add Expense Response: $response",
-                                          );
-
-                                          if (response != null &&
-                                              response['status'] == true) {
-                                            Navigator.pop(context);
-                                            SuccessDialog.show(context, message: "Expense Added Successfully!", onDismiss: () {
-                                              provider.fetchExpenses();
-                                            });
-                                          } else {
+                                            }
+                                          } catch (e) {
                                             ScaffoldMessenger.of(
                                               context,
                                             ).showSnackBar(
                                               SnackBar(
-                                                content: Text(
-                                                  response?['message'] ??
-                                                      "Failed to add expense",
-                                                ),
+                                                content: Text("Error: $e"),
                                               ),
                                             );
+                                          } finally {
+                                            setPopupState(() {
+                                              isSubmitting = false;
+                                            });
                                           }
                                         },
                                   style: ElevatedButton.styleFrom(
@@ -824,7 +843,7 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
-                                  child: provider.isLoading
+                                  child: isSubmitting
                                       ? const SizedBox(
                                           width: 20,
                                           height: 20,
