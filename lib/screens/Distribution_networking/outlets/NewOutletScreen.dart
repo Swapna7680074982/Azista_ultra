@@ -209,10 +209,9 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
     final status = res?["status"] == true;
 
     if (status) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-      Navigator.pop(context, true);
+      SuccessDialog.show(context, message: message, onDismiss: () {
+        Navigator.pop(context, true);
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
@@ -279,7 +278,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(widget.routeName),
+                      Text(widget.routeName.toUpperCase()),
                       const Icon(Icons.arrow_drop_down),
                     ],
                   ),

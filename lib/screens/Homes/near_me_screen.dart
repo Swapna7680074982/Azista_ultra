@@ -264,7 +264,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
-              "Outlets around current location (5 km radius)",
+              "Outlets with in 5 km radius",
               style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
             ),
           ),

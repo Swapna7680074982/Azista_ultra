@@ -63,6 +63,15 @@ class _StockBodyState extends State<StockBody> {
 
                         if (!context.mounted) return;
                         LoadingDialog.hide(context);
+
+                        if (result != null && result['status'] == true) {
+                          SuccessDialog.show(context, message: "Stock Submitted Successfully!");
+                          provider.fetchProductsWithSkus();
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(result?['message'] ?? "Failed to submit Stock")),
+                          );
+                        }
                       },
                       child: const Text(
                         "SUBMIT STOCK",

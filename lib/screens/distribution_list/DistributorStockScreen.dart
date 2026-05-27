@@ -121,15 +121,23 @@ class _DistributorStockScreenState extends State<DistributorStockScreen> {
                             );
                             return;
                           }
+
+                          LoadingDialog.show(context, message: "Submitting Stock...");
+
                           final success = await provider.submitDistributorStock(
                               appState.selectedDistributorId!);
 
-                          if (mounted) {
+                          if (!mounted) return;
+                          LoadingDialog.hide(context);
+
+                          if (success) {
+                            SuccessDialog.show(context, message: "Stock Submitted Successfully!", onDismiss: () {
+                              Navigator.pop(context);
+                            });
+                          } else {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(success
-                                    ? "Stock submitted successfully"
-                                    : "Failed to submit stock or no stock entered"),
+                              const SnackBar(
+                                content: Text("Failed to submit stock or no stock entered"),
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );

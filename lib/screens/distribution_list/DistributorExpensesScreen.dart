@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'distributor_expense_provider.dart';
 import '../../utilities/date_formatter.dart';
+import '../../utilities/common_widgets.dart';
 
 class DistributorExpensesScreen extends StatefulWidget {
   const DistributorExpensesScreen({super.key});
@@ -221,9 +222,24 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      expense.employeeName,
+                      expense.employeeId.isNotEmpty
+                          ? "${expense.employeeName} (${expense.employeeId})"
+                          : expense.employeeName,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
+                    if (provider.userRole.toLowerCase().contains("am") ||
+                        provider.userRole.toLowerCase().contains("rm") ||
+                        provider.userRole.toLowerCase().contains("asm")) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        "Role: ${expense.role} | Mgr: ${expense.reportingManager}",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 Text(
@@ -786,6 +802,9 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                           if (response != null &&
                                               response['status'] == true) {
                                             Navigator.pop(context);
+                                            SuccessDialog.show(context, message: "Expense Added Successfully!", onDismiss: () {
+                                              provider.fetchExpenses();
+                                            });
                                           } else {
                                             ScaffoldMessenger.of(
                                               context,

@@ -7,6 +7,7 @@ import '../Homes/HomeProvider.dart';
 import '../Distribution_networking/distribution_network_screen.dart';
 import '../../utilities/date_formatter.dart';
 import '../attendance/TeamAttendanceScreen.dart';
+import '../distribution_list/TeamPosHistoryScreen.dart';
 
 class RmDashboardScreen extends StatefulWidget {
   const RmDashboardScreen({super.key});
@@ -145,7 +146,7 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                   items: homeProvider.distributors.map<DropdownMenuItem<String>>((d) {
                     return DropdownMenuItem<String>(
                       value: d["distributor_name"],
-                      child: Text(d["distributor_name"], style: const TextStyle(fontSize: 13)),
+                      child: Text(d["distributor_name"].toString().toUpperCase(), style: const TextStyle(fontSize: 13)),
                     );
                   }).toList(),
 
@@ -222,6 +223,17 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const TeamAttendanceScreen()),
+                    );
+                  },
+                ),
+                _buildMenuItem(
+                  iconPath: Icons.history,
+                  label: "Team POS History",
+                  enabled: appState.isOnline,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const TeamPosHistoryScreen()),
                     );
                   },
                 ),

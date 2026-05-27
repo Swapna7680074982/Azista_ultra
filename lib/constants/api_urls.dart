@@ -31,4 +31,7 @@ class AppUrls {
   static const String getExpenses = "$baseUrl/distribution/get_expenses";
   static const String teamAttendanceReport = "$baseUrl/user/attendance_report";
   static const String outletCategories = "$baseUrl/user/outlet_categories";
+  static const String getAttendanceStatus = "$baseUrl/user/get_attendance_status";
+  static const String teamPosHistory = "$baseUrl/distribution/team_pos_history";
+  static const String teamPobHistory = "$baseUrl/distribution/team_pob_history";
 }

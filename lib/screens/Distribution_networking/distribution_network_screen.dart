@@ -85,7 +85,7 @@ class _DistributionNetworkScreenState
                   items: provider.states.map((state) {
                     return DropdownMenuItem(
                       value: state,
-                      child: Text(state),
+                      child: Text(state.toUpperCase()),
                     );
                   }).toList(),
                   onChanged: (value) {
@@ -108,7 +108,7 @@ class _DistributionNetworkScreenState
                   items: provider.cities.map((city) {
                     return DropdownMenuItem(
                       value: city,
-                      child: Text(city),
+                      child: Text(city.toUpperCase()),
                     );
                   }).toList(),
                   onChanged: (value) {
@@ -131,7 +131,7 @@ class _DistributionNetworkScreenState
                   items: provider.routes.map((route) {
                     return DropdownMenuItem(
                       value: route,
-                      child: Text(route),
+                      child: Text(route.toUpperCase()),
                     );
                   }).toList(),
                   onChanged: (value) {

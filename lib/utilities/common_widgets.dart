@@ -205,3 +205,88 @@ class LoadingDialog {
     }
   }
 }
+
+class SuccessDialog {
+  static void show(BuildContext context, {required String message, VoidCallback? onDismiss}) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // App Logo in the middle
+                Image.asset(
+                  ImageConstants.appLogo,
+                  width: 70,
+                  height: 70,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                    size: 70,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Checked success icon
+                const Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.green,
+                  size: 40,
+                ),
+                const SizedBox(height: 12),
+
+                // Success message
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // OK Button
+                SizedBox(
+                  width: 120,
+                  height: 40,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      if (onDismiss != null) {
+                        onDismiss();
+                      }
+                    },
+                    child: const Text(
+                      "OK",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

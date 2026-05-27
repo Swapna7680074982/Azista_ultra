@@ -194,9 +194,8 @@ class _PobBodyState extends State<PobBody> {
                               LoadingDialog.hide(context);
 
                               if (success) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("POB Submitted Successfully!")),
-                                );
+                                SuccessDialog.show(context, message: "POB Submitted Successfully!");
+                                provider.fetchProductsWithSkus();
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text("Failed to submit POB or no items selected.")),

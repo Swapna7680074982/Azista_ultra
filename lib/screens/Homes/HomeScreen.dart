@@ -220,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               items: homeProvider.distributors.map<DropdownMenuItem<String>>((d) {
                                 return DropdownMenuItem<String>(
                                   value: d["distributor_name"],
-                                  child: Text(d["distributor_name"]),
+                                  child: Text(d["distributor_name"].toString().toUpperCase()),
                                 );
                               }).toList(),
 

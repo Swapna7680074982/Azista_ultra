@@ -1075,4 +1075,176 @@ class ApiServices {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>?> getAttendanceStatus() async {
+    try {
+      final token = await SessionManager.getToken();
+
+      if (token == null) {
+        AppLogger.warning("No token found for getAttendanceStatus");
+        return null;
+      }
+
+      AppLogger.info("Get Attendance Status API called: ${AppUrls.getAttendanceStatus}");
+
+      final response = await _dio.get(
+        AppUrls.getAttendanceStatus,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status! < 500,
+        ),
+      );
+
+      AppLogger.info("Get Attendance Status response: ${response.statusCode} - ${response.data}");
+
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Attendance Status error", e);
+      return null;
+    }
+  }
+
+  static List<Map<String, dynamic>> parsePhpPrintR(String text) {
+    final List<Map<String, dynamic>> list = [];
+    final blocks = text.split('stdClass Object');
+    for (int i = 1; i < blocks.length; i++) {
+      final block = blocks[i];
+      final Map<String, dynamic> item = {};
+      final lines = block.split('\n');
+      for (var line in lines) {
+        final match = RegExp(r'\[([a-zA-Z0-9_]+)\]\s*=>\s*(.*)').firstMatch(line);
+        if (match != null) {
+          final key = match.group(1)!;
+          final value = match.group(2)!.trim();
+          item[key] = value;
+        }
+      }
+      if (item.isNotEmpty) {
+        list.add(item);
+      }
+    }
+    return list;
+  }
+
+  static Future<List<dynamic>?> getTeamPosHistory({
+    required String posType,
+    int? distributorId,
+    int? outletId,
+    int? productId,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+
+      if (token == null) {
+        AppLogger.warning("No token found for getTeamPosHistory");
+        return null;
+      }
+
+      final Map<String, dynamic> payload = {
+        "pos_type": posType,
+      };
+      if (distributorId != null) payload["distributor_id"] = distributorId;
+      if (outletId != null) payload["outlet_id"] = outletId;
+      if (productId != null) payload["product_id"] = productId;
+
+      AppLogger.info("Get Team POS History API called: ${AppUrls.teamPosHistory}");
+      AppLogger.info("Payload: $payload");
+
+      final response = await _dio.post(
+        AppUrls.teamPosHistory,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status! < 500,
+        ),
+      );
+
+      AppLogger.info("Get Team POS History response: ${response.statusCode} - ${response.data}");
+
+      if (response.statusCode == 200) {
+        final rawData = response.data?.toString() ?? "";
+        if (rawData.isEmpty) return null;
+
+        // Try standard JSON first
+        try {
+          final decoded = jsonDecode(rawData.trim());
+          if (decoded is List) {
+            return decoded;
+          } else if (decoded is Map && decoded["data"] is List) {
+            return decoded["data"];
+          }
+        } catch (_) {
+          AppLogger.warning("Get Team POS History: not valid JSON, trying raw PHP print_r parser");
+          final parsed = parsePhpPrintR(rawData);
+          if (parsed.isNotEmpty) {
+            return parsed;
+          }
+        }
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Team POS History error", e);
+      return null;
+    }
+  }
+
+  static Future<List<dynamic>?> getTeamPobHistory({
+    int? outletId,
+    int? distributorId,
+    String? status,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+
+      if (token == null) {
+        AppLogger.warning("No token found for getTeamPobHistory");
+        return null;
+      }
+
+      final Map<String, dynamic> payload = {};
+      if (outletId != null) payload["outlet_id"] = outletId;
+      if (distributorId != null) payload["distributor_id"] = distributorId;
+      if (status != null) payload["status"] = status;
+      if (fromDate != null) payload["from_date"] = fromDate;
+      if (toDate != null) payload["to_date"] = toDate;
+
+      AppLogger.info("Get Team POB History API called: ${AppUrls.teamPobHistory}");
+      AppLogger.info("Payload: $payload");
+
+      final response = await _dio.post(
+        AppUrls.teamPobHistory,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status! < 500,
+        ),
+      );
+
+      AppLogger.info("Get Team POB History response: ${response.statusCode} - ${response.data}");
+
+      if (response.statusCode == 200) {
+        if (response.data is Map && response.data["status"] == "success") {
+          return response.data["data"];
+        }
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Team POB History error", e);
+      return null;
+    }
+  }
 }

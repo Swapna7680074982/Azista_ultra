@@ -37,13 +37,35 @@ class HomeProvider extends ChangeNotifier {
   }
 
   Future<void> initializeAttendance(AppStateProvider appState) async {
-    final status = await SessionManager.getAttendanceStatus();
-
-    if (status == "CHECKED_IN") {
-      appState.setOnline(true);
-      await checkAutoCheckout(appState);
-    } else {
-      appState.setOnline(false);
+    try {
+      final res = await ApiServices.getAttendanceStatus();
+      if (res != null && res["status"] == true && res["data"] != null) {
+        final todayStatus = res["data"]["attendance_status"]?["today_status"]?.toString();
+        if (todayStatus == "CHECKED_IN") {
+          appState.setOnline(true);
+          await SessionManager.saveAttendanceStatus("CHECKED_IN");
+          await checkAutoCheckout(appState);
+        } else {
+          appState.setOnline(false);
+          await SessionManager.saveAttendanceStatus("CHECKED_OUT");
+        }
+      } else {
+        // Fallback to local session
+        final status = await SessionManager.getAttendanceStatus();
+        if (status == "CHECKED_IN") {
+          appState.setOnline(true);
+          await checkAutoCheckout(appState);
+        } else {
+          appState.setOnline(false);
+        }
+      }
+    } catch (e) {
+      final status = await SessionManager.getAttendanceStatus();
+      if (status == "CHECKED_IN") {
+        appState.setOnline(true);
+      } else {
+        appState.setOnline(false);
+      }
     }
 
     // Start a timer to check for auto-checkout every 15 minutes

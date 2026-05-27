@@ -249,7 +249,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(widget.routeName),
+                      Text(widget.routeName.toUpperCase()),
                       const Icon(Icons.arrow_drop_down),
                     ],
                   ),
