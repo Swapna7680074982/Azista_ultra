@@ -9,8 +9,24 @@ import 'custom_bottom_nav.dart';
 import 'main_tab_provider.dart';
 import 'near_me_screen.dart';
 
-class MainShellScreen extends StatelessWidget {
+class MainShellScreen extends StatefulWidget {
   const MainShellScreen({super.key});
+
+  @override
+  State<MainShellScreen> createState() => _MainShellScreenState();
+}
+
+class _MainShellScreenState extends State<MainShellScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Reset to the first tab every time the shell is opened/re-entered
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<MainTabProvider>(context, listen: false).setTab(0);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
