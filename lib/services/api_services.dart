@@ -16,17 +16,25 @@ class ApiServices {
   static final Dio _dio = Dio()..interceptors.add(
     InterceptorsWrapper(
       onResponse: (response, handler) async {
-        if (response.statusCode == 401 ||
-            (response.data is Map &&
-                response.data["message"]?.toString().contains("Token expired") == true)) {
+        final path = response.requestOptions.path;
+        final isLogin = path.contains('/user/login');
+
+        if (!isLogin &&
+            (response.statusCode == 401 ||
+                (response.data is Map &&
+                    response.data["message"]?.toString().contains("Token expired") == true))) {
           await _handleTokenExpired();
         }
         return handler.next(response);
       },
       onError: (DioException e, handler) async {
-        if (e.response?.statusCode == 401 ||
-            (e.response?.data is Map &&
-                e.response?.data["message"]?.toString().contains("Token expired") == true)) {
+        final path = e.requestOptions.path;
+        final isLogin = path.contains('/user/login');
+
+        if (!isLogin &&
+            (e.response?.statusCode == 401 ||
+                (e.response?.data is Map &&
+                    e.response?.data["message"]?.toString().contains("Token expired") == true))) {
           await _handleTokenExpired();
         }
         return handler.next(e);
