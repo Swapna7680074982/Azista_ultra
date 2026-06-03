@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../constants/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'outlet_activity_provider.dart';
 import '../../../permissions/AppStateProvider.dart';
@@ -48,7 +49,7 @@ class _SaleBodyState extends State<SaleBody> {
                     height: 45,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: AppColors.button,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(4),
                         ),

@@ -336,13 +336,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             value: targetCalls,
                             total: 30.0,
                             label: "Total Calls",
-                            color: Colors.green,
+                            color: AppColors.button,
                           ),
                           DonutChart(
                             value: productiveCalls,
                             total: 30.0,
                             label: "Target Productive",
-                            color: Colors.green,
+                            color: AppColors.button,
                           ),
                         ],
                       );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../constants/app_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'outlet_activity_provider.dart';
@@ -169,7 +170,7 @@ class _PobBodyState extends State<PobBody> {
                           height: 45,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: AppColors.button,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(4),
                               ),
@@ -219,7 +220,7 @@ class _PobBodyState extends State<PobBody> {
                           height: 45,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: AppColors.button,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(4),
                               ),

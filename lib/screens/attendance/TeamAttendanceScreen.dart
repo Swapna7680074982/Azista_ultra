@@ -118,7 +118,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               const Text("WORKED", style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
-              Text("${log['working_minutes']}m", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green)),
+              Text("${log['working_minutes']}m", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.button)),
             ],
           ),
         ],

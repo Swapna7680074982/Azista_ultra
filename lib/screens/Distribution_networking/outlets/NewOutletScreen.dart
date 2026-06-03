@@ -383,7 +383,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                         RadioListTile<String>(
                           value: "Male",
                           groupValue: gender,
-                          activeColor: Colors.green,
+                          activeColor: AppColors.button,
                           title: const Text("Male"),
                           onChanged: (v) => setState(() => gender = v!),
                         ),
@@ -391,7 +391,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                         RadioListTile<String>(
                           value: "Female",
                           groupValue: gender,
-                          activeColor: Colors.green,
+                          activeColor: AppColors.button,
                           title: const Text("Female"),
                           onChanged: (v) => setState(() => gender = v!),
                         ),
@@ -399,7 +399,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                         RadioListTile<String>(
                           value: "other",
                           groupValue: gender,
-                          activeColor: Colors.green,
+                          activeColor: AppColors.button,
                           title: const Text("other"),
                           onChanged: (v) => setState(() => gender = v!),
                         ),
@@ -483,7 +483,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
               onTap: submitOutlet,
               child: Container(
                 height: 50,
-                color: Colors.green,
+                color: AppColors.button,
                 child: const Center(
                   child: Text("CONFIRM",
                       style: TextStyle(color: Colors.white)),
@@ -671,10 +671,10 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                                     },
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: isSelected ? Colors.green.shade50 : Colors.white,
+                                        color: isSelected ? AppColors.button.withValues(alpha:0.1) : Colors.white,
                                         borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
-                                          color: isSelected ? Colors.green : Colors.grey.shade300,
+                                          color: isSelected ? AppColors.button : Colors.grey.shade300,
                                           width: isSelected ? 1.5 : 1,
                                         ),
                                         boxShadow: [
@@ -725,7 +725,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                                               right: 4,
                                               child: CircleAvatar(
                                                 radius: 8,
-                                                backgroundColor: Colors.green,
+                                                backgroundColor: AppColors.button,
                                                 child: Icon(
                                                   Icons.check,
                                                   size: 10,

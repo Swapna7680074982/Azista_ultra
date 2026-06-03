@@ -170,7 +170,7 @@ class _DonutChartState extends State<DonutChart>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(width: 10, height: 10, color: Colors.green),
+                Container(width: 10, height: 10, color: AppColors.button),
                 const SizedBox(width: 6),
                 Text("TOTAL ${widget.label.split(" ").last.toUpperCase()}"),
               ],
@@ -281,7 +281,7 @@ class CustomToggle extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          color: Colors.green.withOpacity(0.4),
+          color: AppColors.button.withOpacity(0.4),
         ),
         child: Align(
           alignment:
@@ -290,7 +290,7 @@ class CustomToggle extends StatelessWidget {
             width: 18,
             height: 18,
             decoration: const BoxDecoration(
-              color: Colors.green,
+              color: AppColors.button,
               shape: BoxShape.circle,
             ),
           ),

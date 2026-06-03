@@ -106,7 +106,7 @@ class _DistributorStockScreenState extends State<DistributorStockScreen> {
                       height: 45,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
+                          backgroundColor: AppColors.button,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(4),
                           ),

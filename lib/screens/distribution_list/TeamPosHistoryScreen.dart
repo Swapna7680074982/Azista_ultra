@@ -308,14 +308,14 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: (status.toLowerCase().trim() == "supplied")
-                          ? Colors.green.withValues(alpha: 0.15)
+                          ? AppColors.button.withValues(alpha: 0.15)
                           : Colors.orange.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       status.toUpperCase(),
                       style: TextStyle(
-                        color: (status.toLowerCase().trim() == "supplied") ? Colors.green : Colors.orange,
+                        color: (status.toLowerCase().trim() == "supplied") ? AppColors.button : Colors.orange,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),

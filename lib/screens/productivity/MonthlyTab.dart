@@ -62,7 +62,7 @@ class _MonthlyTabState extends State<MonthlyTab> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.flag, color: Colors.green),
+                      const Icon(Icons.flag, color: AppColors.button),
                       const SizedBox(width: 4),
                       const Text("ATTENDANCE",
                           style: TextStyle(color: Colors.black87)),
@@ -132,8 +132,8 @@ class _MonthlyTabState extends State<MonthlyTab> {
                                         const SizedBox(width: 4),
                                         Icon(
                                           Icons.flag,
-                                          color: data["attendance"] ? Colors
-                                              .green : AppColors.primary,
+                                          color: data["attendance"] ? AppColors
+                                              .button : AppColors.primary,
                                           size: 20,
                                         ),
                                       ],

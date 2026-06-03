@@ -228,19 +228,19 @@ class SuccessDialog {
                   width: 70,
                   height: 70,
                   errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                    size: 70,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Checked success icon
-                const Icon(
-                  Icons.check_circle_outline,
-                  color: Colors.green,
-                  size: 40,
-                ),
+                     Icons.check_circle,
+                     color: Colors.green,
+                     size: 70,
+                   ),
+                 ),
+                 const SizedBox(height: 16),
+                 
+                 // Checked success icon
+                 const Icon(
+                   Icons.check_circle_outline,
+                   color: Colors.green,
+                   size: 40,
+                 ),
                 const SizedBox(height: 12),
 
                 // Success message

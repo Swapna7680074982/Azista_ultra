@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../constants/app_colors.dart';
 
 class BrandingBody extends StatefulWidget {
   const BrandingBody({super.key});
@@ -45,7 +46,7 @@ class _BrandingBodyState extends State<BrandingBody> {
           height: 45,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.button,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(4),
               ),
@@ -116,8 +117,8 @@ class _BrandingBodyState extends State<BrandingBody> {
           child: Checkbox(
             value: value,
             onChanged: onChanged,
-            side: const BorderSide(color: Colors.green, width: 2),
-            activeColor: Colors.green,
+            side: const BorderSide(color: AppColors.button, width: 2),
+            activeColor: AppColors.button,
           ),
         ),
         const SizedBox(width: 6),

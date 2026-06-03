@@ -174,7 +174,6 @@ class _Logo extends StatelessWidget {
     return Image.asset(
       ImageConstants.appLogo,
       width: 150,
-      color: AppColors.white,
     );
   }
 }

@@ -50,7 +50,7 @@ class DailyActivitiesScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildLegend(Icons.flag, Colors.green, "Attendance"),
+                    _buildLegend(Icons.flag, AppColors.button, "Attendance"),
                     _buildLegend(Icons.flag, Colors.red, "No Attendance"),
                   ],
                 ),
@@ -95,7 +95,7 @@ class DailyActivitiesScreen extends StatelessWidget {
                                 const SizedBox(width: 5),
                                 Icon(
                                   Icons.flag,
-                                  color: activity["hasAttendance"] ? Colors.green : Colors.red,
+                                  color: activity["hasAttendance"] ? AppColors.button : Colors.red,
                                   size: 18,
                                 ),
                                 const Spacer(),

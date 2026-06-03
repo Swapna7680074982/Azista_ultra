@@ -167,7 +167,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
       height: 40,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.button,
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.zero,
           ),

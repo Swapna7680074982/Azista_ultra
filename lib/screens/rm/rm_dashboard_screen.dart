@@ -89,8 +89,10 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                               scale: 0.8,
                               child: Switch(
                                 value: appState.isOnline,
-                                activeColor: Colors.white,
-                                activeTrackColor: Colors.greenAccent,
+                                activeThumbColor: AppColors.button,
+                                activeTrackColor: AppColors.button.withOpacity(0.35),
+                                inactiveThumbColor: AppColors.white,
+                                inactiveTrackColor: AppColors.white.withOpacity(0.4),
                                 onChanged: (val) async {
                                   bool success = false;
                                   if (val) {

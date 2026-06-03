@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
-        title: 'Azista App',
+        title: 'Ultra Edge',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
           fontFamily: 'Heebo',

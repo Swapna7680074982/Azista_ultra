@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'leave_provider.dart';
 
@@ -79,7 +80,7 @@ class LeaveHistoryScreen extends StatelessWidget {
         backgroundColor = const Color(0xFFC62828);
         break;
       case 'Approved':
-        backgroundColor = Colors.green;
+        backgroundColor = AppColors.button;
         break;
       case 'Pending':
       default:
