@@ -121,9 +121,9 @@ class _OutletsScreenState extends State<OutletsScreen> {
                 child: Container(
                   height: 35,
                   decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.buttonBlue),
+                    border: Border.all(color: AppColors.green),
                     borderRadius: BorderRadius.circular(6),
-                    color: AppColors.buttonBlue.withValues(alpha:0.05),
+                    color: AppColors.green.withValues(alpha:0.05),
                   ),
                   child: TextButton(
                     onPressed: () {
@@ -132,7 +132,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
                     child: const Text(
                       "CALL",
                       style: TextStyle(
-                        color: AppColors.buttonBlue,
+                        color: AppColors.green,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -145,9 +145,9 @@ class _OutletsScreenState extends State<OutletsScreen> {
                 child: Container(
                   height: 35,
                   decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.button),
+                    border: Border.all(color: AppColors.green),
                     borderRadius: BorderRadius.circular(6),
-                    color: AppColors.button.withValues(alpha:0.05),
+                    color: AppColors.green.withValues(alpha:0.05),
                   ),
                   child: TextButton(
                     onPressed: () {
@@ -165,7 +165,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
                     child: const Text(
                       "DIRECTIONS",
                       style: TextStyle(
-                        color: AppColors.button,
+                        color: AppColors.green,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -185,7 +185,6 @@ class _OutletsScreenState extends State<OutletsScreen> {
     final provider = context.watch<OutletProvider>();
 
     return Scaffold(
-      backgroundColor: AppColors.white,
       appBar: AppBar(
         title: const Text(
           "OUTLETS",
@@ -195,7 +194,20 @@ class _OutletsScreenState extends State<OutletsScreen> {
             fontWeight: FontWeight.w500,
           ),
         ),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.button,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         iconTheme: const IconThemeData(
           color: AppColors.white,
         ),

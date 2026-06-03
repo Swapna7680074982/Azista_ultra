@@ -8,6 +8,8 @@ import 'rm/rm_dashboard_screen.dart';
 import 'Homes/main_shell_screen.dart';
 import 'login/login_screen.dart';
 
+import '../constants/app_colors.dart';
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -59,11 +61,22 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Image.asset(
-          ImageConstants.appLogo,
-          width: 180,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primary,
+              AppColors.button,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
+          child: Image.asset(
+            ImageConstants.appLogo,
+            width: 220,
+          ),
         ),
       ),
     );

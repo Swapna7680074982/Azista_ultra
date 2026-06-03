@@ -80,7 +80,6 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
     final filteredExpenses = _filterExpenses(provider.expenses);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text(
           "Distribution Expenses",
@@ -90,7 +89,20 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
             fontWeight: FontWeight.w500,
           ),
         ),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.button,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         iconTheme: const IconThemeData(color: AppColors.white),
         actions: [
           IconButton(
@@ -146,16 +158,16 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                       label: Text(
                         opt['label']!,
                         style: TextStyle(
-                          color: isSelected ? Colors.white : AppColors.primary,
+                          color: isSelected ? Colors.white : AppColors.button,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       selected: isSelected,
-                      selectedColor: AppColors.primary,
+                      selectedColor: AppColors.button,
                       backgroundColor: Colors.white,
                       checkmarkColor: Colors.white,
-                      side: BorderSide(color: AppColors.primary),
+                      side: BorderSide(color: AppColors.button),
                       onSelected: (_) {
                         setState(() {
                           _selectedStatusFilter = opt['value'];
@@ -189,7 +201,7 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
           (userRole.contains("so") || userRole.contains("sale"))
           ? FloatingActionButton(
               onPressed: () => _openAddExpensePopup(context),
-              backgroundColor: AppColors.primary,
+              backgroundColor: AppColors.button,
               child: const Icon(Icons.add, color: AppColors.white),
             )
           : null,
@@ -392,11 +404,17 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
       context: context,
       builder: (context) {
         bool isSubmitting = false;
-        return StatefulBuilder(
-          builder: (context, setPopupState) {
-            return Consumer<DistributorExpenseProvider>(
-              builder: (context, provider, child) {
-                return Dialog(
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: AppColors.button,
+            ),
+          ),
+          child: StatefulBuilder(
+            builder: (context, setPopupState) {
+              return Consumer<DistributorExpenseProvider>(
+                builder: (context, provider, child) {
+                  return Dialog(
                   insetPadding: const EdgeInsets.symmetric(horizontal: 20),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -412,8 +430,8 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                             horizontal: 16,
                             vertical: 12,
                           ),
-                          decoration:  BoxDecoration(
-                            color: AppColors.primary,
+                          decoration: const BoxDecoration(
+                            color: AppColors.button,
                             borderRadius: BorderRadius.vertical(
                               top: Radius.circular(12),
                             ),
@@ -838,7 +856,7 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
                                           }
                                         },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
+                                    backgroundColor: AppColors.button,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -871,7 +889,8 @@ class _DistributorExpensesScreenState extends State<DistributorExpensesScreen> {
               },
             );
           },
-        );
+        ),
+       );
       },
     );
   }

@@ -2,6 +2,7 @@ import 'package:azista_ultra/screens/attendance/widgets/AttendanceCard.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
+import '../../utilities/wavy_app_bar.dart';
 import 'attendance_provider.dart';
 
 
@@ -27,20 +28,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final provider = context.watch<AttendanceProvider>();
 
     return Scaffold(
-      backgroundColor: AppColors.white,
-      appBar: AppBar(
-        title: const Text(
-          "ATTENDANCE",
-          style: TextStyle(
-            color: AppColors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(
-          color: AppColors.white,
-        ),
+      appBar: const WavyAppBar(
+        title: "ATTENDANCE",
       ),
       body: Column(
         children: [

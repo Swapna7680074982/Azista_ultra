@@ -37,16 +37,22 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
         homeProvider.distributors.any((d) => d["distributor_name"] == appState.selectedDistributor);
 
     return Scaffold(
-      backgroundColor: Colors.white,
       body: Column(
         children: [
           // Header
           Container(
             height: MediaQuery.of(context).size.height * 0.4,
             width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: const BorderRadius.only(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary,
+                  AppColors.button,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(80),
                 bottomRight: Radius.circular(80),
               ),
@@ -89,11 +95,11 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                               scale: 0.8,
                               child: Switch(
                                 value: appState.isOnline,
-                                activeThumbColor: AppColors.button,
-                                activeTrackColor: AppColors.button.withOpacity(0.35),
-                                inactiveThumbColor: AppColors.white,
-                                inactiveTrackColor: AppColors.white.withOpacity(0.4),
-                                onChanged: (val) async {
+                                  activeThumbColor: Colors.green,
+                                  activeTrackColor: Colors.green.withValues(alpha: 0.35),
+                                  inactiveThumbColor: AppColors.white,
+                                  inactiveTrackColor: AppColors.white.withValues(alpha: 0.4),
+                                  onChanged: (val) async {
                                   bool success = false;
                                   if (val) {
                                     success = await homeProvider.checkIn();
@@ -181,15 +187,15 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade200, width: 1),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2), width: 1),
                 ),
                 child: Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.error_outline,
-                      color: Colors.red.shade700,
+                      color: AppColors.primary,
                       size: 20,
                     ),
                     const SizedBox(width: 10),
@@ -198,8 +204,8 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                         !appState.isOnline
                             ? "Please turn on attendance to access dashboard features."
                             : "Please select a distributor to continue.",
-                        style: TextStyle(
-                          color: Colors.red.shade900,
+                        style: const TextStyle(
+                          color: AppColors.primary,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -325,9 +331,9 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.red, width: 1.5),
+                  border: Border.all(color: AppColors.primary, width: 1.5),
                 ),
-                child: Icon(iconPath, color: Colors.red, size: 28),
+                child: Icon(iconPath, color: AppColors.primary, size: 28),
               ),
               const SizedBox(width: 25),
               Text(

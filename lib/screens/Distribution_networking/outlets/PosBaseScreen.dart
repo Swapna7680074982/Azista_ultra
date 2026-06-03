@@ -82,7 +82,6 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
       appBar: AppBar(
         title: const Text(
           "POINT OF SALE",
@@ -92,7 +91,20 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
             fontWeight: FontWeight.w500,
           ),
         ),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.button,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         iconTheme: const IconThemeData(
           color: AppColors.white,
         ),
@@ -272,9 +284,9 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                     child: Container(
                       height: 35,
                       decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.buttonBlue),
+                        border: Border.all(color: AppColors.green),
                         borderRadius: BorderRadius.circular(6),
-                        color: AppColors.white,
+                        color: AppColors.green.withValues(alpha:0.05),
                       ),
                       child: TextButton(
                         onPressed: () {
@@ -283,7 +295,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                         child: const Text(
                           "CALL",
                           style: TextStyle(
-                            color: AppColors.buttonBlue,
+                            color: AppColors.green,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -296,9 +308,9 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                     child: Container(
                       height: 35,
                       decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.button),
+                        border: Border.all(color: AppColors.green),
                         borderRadius: BorderRadius.circular(6),
-                        color: AppColors.white,
+                        color: AppColors.green.withValues(alpha:0.05),
                       ),
                       child: TextButton(
                         onPressed: () {
@@ -316,7 +328,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                         child: const Text(
                           "DIRECTIONS",
                           style: TextStyle(
-                            color: AppColors.button,
+                            color: AppColors.green,
                             fontWeight: FontWeight.w600,
                           ),
                         ),

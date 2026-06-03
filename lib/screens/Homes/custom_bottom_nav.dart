@@ -94,7 +94,7 @@ class CustomBottomNav extends StatelessWidget {
                           : FontWeight.normal,
                       color: provider.currentIndex == 2
                           ? AppColors.primary
-                          : Colors.black54,
+                          : const Color(0xFF8C7B87),
                     ),
                   ),
                 ],
@@ -156,7 +156,7 @@ class CustomBottomNav extends StatelessWidget {
           Icon(
             icon,
             size: 22,
-            color: selected ? AppColors.primary : Colors.black54,
+            color: selected ? AppColors.primary : const Color(0xFF8C7B87),
           ),
           const SizedBox(height: 6),
           Text(
@@ -165,7 +165,7 @@ class CustomBottomNav extends StatelessWidget {
               fontSize: 13,
               fontWeight:
               selected ? FontWeight.w600 : FontWeight.normal,
-              color: selected ? AppColors.primary : Colors.black54,
+              color: selected ? AppColors.primary : const Color(0xFF8C7B87),
             ),
           ),
         ],

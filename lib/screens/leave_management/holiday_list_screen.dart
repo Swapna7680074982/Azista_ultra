@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
+import '../../utilities/wavy_app_bar.dart';
 import 'leave_provider.dart';
 
 class HolidayListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('HOLIDAY LIST'),
-        backgroundColor: const Color(0xFFC62828),
-        foregroundColor: Colors.white,
+      appBar: const WavyAppBar(
+        title: 'HOLIDAY LIST',
       ),
       body: Column(
         children: [

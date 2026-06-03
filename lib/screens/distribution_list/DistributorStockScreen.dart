@@ -32,7 +32,6 @@ class _DistributorStockScreenState extends State<DistributorStockScreen> {
     return Consumer<DistributionListProvider>(
       builder: (context, provider, child) {
         return Scaffold(
-          backgroundColor: Colors.grey.shade200,
           appBar: AppBar(
             title: const Text(
               "DISTRIBUTOR STOCK",
@@ -42,7 +41,20 @@ class _DistributorStockScreenState extends State<DistributorStockScreen> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            backgroundColor: AppColors.primary,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary,
+                    AppColors.button,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
             iconTheme: const IconThemeData(
               color: AppColors.white,
             ),

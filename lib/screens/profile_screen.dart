@@ -35,18 +35,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        elevation: 0,
         title: const Text(
           "PROFILE",
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -66,11 +69,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildHeader() {
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 30),
-      decoration:  BoxDecoration(
-        color: AppColors.primary,
+      padding: EdgeInsets.only(
+        top: statusBarHeight + kToolbarHeight + 15,
+        bottom: 30,
+      ),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.button,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
@@ -78,10 +92,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Column(
         children: [
-           CircleAvatar(
+           const CircleAvatar(
             radius: 50,
             backgroundColor: Colors.white,
-            child: Icon(Icons.person, size: 60, color: AppColors.primary),
+            child: Icon(Icons.person, size: 60, color: AppColors.button),
           ),
           const SizedBox(height: 15),
           Text(
@@ -90,7 +104,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           Text(
             "Emp ID: ${userInfo?['employee_id'] ?? "N/A"}",
-            style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 14),
           ),
         ],
       ),
@@ -135,7 +149,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               color: Colors.grey.shade100,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: AppColors.primary, size: 20),
+            child: Icon(icon, color: AppColors.button, size: 20),
           ),
           const SizedBox(width: 15),
           Column(
@@ -162,12 +176,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: ElevatedButton(
           onPressed: () => _handleLogout(),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red.shade50,
-            foregroundColor: Colors.red,
+            backgroundColor: AppColors.button.withValues(alpha: 0.1),
+            foregroundColor: AppColors.button,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(15),
-              side: BorderSide(color: Colors.red.shade100),
+              side: BorderSide(color: AppColors.button.withValues(alpha: 0.2)),
             ),
           ),
           child: const Row(
@@ -193,7 +207,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text("Logout", style: TextStyle(color: Colors.red)),
+            child: const Text("Logout", style: TextStyle(color: AppColors.button)),
           ),
         ],
       ),

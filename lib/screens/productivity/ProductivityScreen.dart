@@ -16,9 +16,29 @@ class _ProductivityScreenState extends State<ProductivityScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: Colors.white,
         appBar: AppBar(
-          backgroundColor: AppColors.primary,
+          title: const Text(
+            "PRODUCTIVITY",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+          centerTitle: true,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary,
+                  AppColors.button,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
           elevation: 0,
           toolbarHeight: 60,
           iconTheme: const IconThemeData(color: Colors.white),
@@ -28,10 +48,10 @@ class _ProductivityScreenState extends State<ProductivityScreen> {
               color: Colors.white,
               child:  TabBar(
                 labelColor: AppColors.primary,
-                unselectedLabelColor: Colors.black,
+                unselectedLabelColor: const Color(0xFF8C7B87),
                 indicatorColor: AppColors.primary,
                 indicatorWeight: 3.0,
-                tabs: [
+                tabs: const [
                   Tab(text: "Daily"),
                   Tab(text: "Monthly"),
                 ],

@@ -1,3 +1,5 @@
+import 'package:azista_ultra/constants/app_colors.dart';
+import 'package:azista_ultra/utilities/wavy_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'leave_provider.dart';
@@ -9,11 +11,8 @@ class LeaveManagementScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('LEAVE MANAGEMENT'),
-        backgroundColor: const Color(0xFFC62828),
-        foregroundColor: Colors.white,
+      appBar: const WavyAppBar(
+        title: 'LEAVE MANAGEMENT',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -124,7 +123,7 @@ class LeaveManagementScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: const Color(0xFFC62828), size: 32),
+            Icon(icon, color: AppColors.primary, size: 32),
             const SizedBox(height: 8),
             Text(
               label,

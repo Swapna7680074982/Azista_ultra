@@ -23,13 +23,26 @@ class SupportScreen extends StatelessWidget {
           length: 2,
           child: Scaffold(
             appBar: AppBar(
-              backgroundColor: AppColors.primary,
+              flexibleSpace: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary,
+                      AppColors.button,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+              centerTitle: true,
               title: const Text(
                 "SUPPORT",
                 style: TextStyle(
                   color: AppColors.white,
                   fontSize: 18,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
                 ),
               ),
               iconTheme: const IconThemeData(
@@ -40,8 +53,8 @@ class SupportScreen extends StatelessWidget {
                 child: Container(
                   color: Colors.white,
                   child: TabBar(
-                    labelColor: Colors.black,
-                    unselectedLabelColor: Colors.grey,
+                    labelColor: AppColors.primary,
+                    unselectedLabelColor: const Color(0xFF8C7B87),
                     indicatorColor: AppColors.primary,
                     tabs: const [
                       Tab(text: "TECH"),

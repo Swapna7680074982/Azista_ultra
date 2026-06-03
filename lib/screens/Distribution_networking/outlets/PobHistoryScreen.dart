@@ -36,7 +36,6 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
       appBar: AppBar(
         title: const Text(
           "POB History",
@@ -46,7 +45,20 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
             fontWeight: FontWeight.w500,
           ),
         ),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.button,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         iconTheme: const IconThemeData(
           color: AppColors.white,
         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_colors.dart';
+import '../utilities/wavy_app_bar.dart';
 import 'SaleItem.dart';
 import '../services/api_services.dart';
 import '../permissions/AppStateProvider.dart';
@@ -27,21 +28,8 @@ class _TransactionDetailsScreenState
     final provider = Provider.of<TransactionProvider>(context);
 
     return Scaffold(
-      backgroundColor: Colors.white,
-
-      appBar: AppBar(
-        title: const Text(
-          "Transaction Details",
-          style: TextStyle(
-            color: AppColors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(
-          color: AppColors.white,
-        ),
+      appBar: const WavyAppBar(
+        title: "Transaction Details",
       ),
       body: Column(
         children: [

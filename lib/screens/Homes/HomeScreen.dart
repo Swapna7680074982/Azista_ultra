@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../User_transactions/UserTransactionScreen.dart';
 import '../../constants/app_colors.dart';
+import '../../utilities/wavy_app_bar.dart';
 import '../../permissions/AccessValidator.dart';
 import '../../permissions/AppStateProvider.dart';
 import '../../profile.dart';
@@ -73,14 +74,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppStateProvider>(context);
     return Scaffold(
-      backgroundColor: AppColors.white,
       drawer: const ProfileDrawer(selectedMenu: "Attendance"),
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        elevation: 0,
-        toolbarHeight: 60,
-        titleSpacing: 0,
-
+      appBar: WavyAppBar(
+        title: "DASHBOARD",
         leading: Builder(
           builder: (context) => Padding(
             padding: const EdgeInsets.only(left: 12),
@@ -92,15 +88,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-        title: const Text(
-          "DASHBOARD",
-          style: TextStyle(
-            color: AppColors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-
         actions: [
           Consumer<HomeProvider>(
             builder: (context, homeProvider, _) {
@@ -148,13 +135,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       SnackBar(content: Text(homeProvider.message ?? "")),
                     );
                   },
-                  activeThumbColor: AppColors.button,
-                  activeTrackColor: AppColors.button.withOpacity(
-                    0.35,
+                  activeThumbColor: Colors.green,
+                  activeTrackColor: Colors.green.withValues(
+                    alpha: 0.35,
                   ),
                   inactiveThumbColor: AppColors.white,
-                  inactiveTrackColor: AppColors.white.withOpacity(
-                    0.4,
+                  inactiveTrackColor: AppColors.white.withValues(
+                    alpha: 0.4,
                   ),
 
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -283,7 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       decoration: BoxDecoration(
                         color: (appState.selectedDistributor == null || !appState.isOnline)
                             ? Colors.grey.shade400
-                            : AppColors.primary,
+                            : AppColors.button,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Center(
@@ -336,13 +323,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             value: targetCalls,
                             total: 30.0,
                             label: "Total Calls",
-                            color: AppColors.button,
+                            color: Colors.green,
                           ),
                           DonutChart(
                             value: productiveCalls,
                             total: 30.0,
                             label: "Target Productive",
-                            color: AppColors.button,
+                            color: Colors.green,
                           ),
                         ],
                       );

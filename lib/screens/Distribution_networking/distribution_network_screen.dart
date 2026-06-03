@@ -35,8 +35,20 @@ class _DistributionNetworkScreenState
       backgroundColor: AppColors.white,
       drawer: widget.isFromDashboard ? null : const ProfileDrawer(selectedMenu: "Distribution Network"),
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.button,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         toolbarHeight: 60,
         titleSpacing: 0,
         leading: widget.isFromDashboard

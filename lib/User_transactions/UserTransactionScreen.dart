@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../constants/app_colors.dart';
+import '../utilities/wavy_app_bar.dart';
 import '../screens/Homes/main_tab_provider.dart';
 import 'SaleItem.dart';
 import 'TransactionDetailsScreen.dart';
@@ -76,21 +77,8 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-
-      appBar: AppBar(
-        title: const Text(
-          "USER TRANSACTIONS",
-          style: TextStyle(
-            color: AppColors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(
-          color: AppColors.white,
-        ),
+      appBar: const WavyAppBar(
+        title: "USER TRANSACTIONS",
       ),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -10,9 +10,21 @@ class DailyActivitiesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.button,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -50,7 +62,7 @@ class DailyActivitiesScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildLegend(Icons.flag, AppColors.button, "Attendance"),
+                    _buildLegend(Icons.flag, Colors.green, "Attendance"),
                     _buildLegend(Icons.flag, Colors.red, "No Attendance"),
                   ],
                 ),
@@ -95,7 +107,7 @@ class DailyActivitiesScreen extends StatelessWidget {
                                 const SizedBox(width: 5),
                                 Icon(
                                   Icons.flag,
-                                  color: activity["hasAttendance"] ? AppColors.button : Colors.red,
+                                  color: activity["hasAttendance"] ? Colors.green : Colors.red,
                                   size: 18,
                                 ),
                                 const Spacer(),

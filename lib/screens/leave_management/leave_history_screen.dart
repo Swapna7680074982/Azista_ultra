@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
+import '../../utilities/wavy_app_bar.dart';
 import 'package:provider/provider.dart';
 import 'leave_provider.dart';
 
@@ -7,11 +8,8 @@ class LeaveHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('LEAVE HISTORY'),
-        backgroundColor: const Color(0xFFC62828),
-        foregroundColor: Colors.white,
+      appBar: const WavyAppBar(
+        title: 'LEAVE HISTORY',
       ),
       body: Column(
         children: [
@@ -77,7 +75,7 @@ class LeaveHistoryScreen extends StatelessWidget {
 
     switch (status) {
       case 'Rejected':
-        backgroundColor = const Color(0xFFC62828);
+        backgroundColor = AppColors.primary;
         break;
       case 'Approved':
         backgroundColor = AppColors.button;

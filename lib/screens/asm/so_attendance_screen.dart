@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
+import '../../utilities/wavy_app_bar.dart';
 import 'asm_provider.dart';
 
 class SoAttendanceScreen extends StatelessWidget {
@@ -12,17 +13,8 @@ class SoAttendanceScreen extends StatelessWidget {
     return Consumer<AmProvider>(
       builder: (context, amProvider, child) {
         return Scaffold(
-          backgroundColor: Colors.white,
-          appBar: AppBar(
-            backgroundColor: AppColors.primary,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-            title: const Text(
-              "SO Attendance",
-              style: TextStyle(color: Colors.white, fontSize: 18),
-            ),
+          appBar: WavyAppBar(
+            title: "SO Attendance",
             actions: [
               IconButton(
                 icon: const Icon(Icons.file_download, color: Colors.white),
@@ -86,7 +78,7 @@ class SoAttendanceScreen extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: "Search by Employee Id or Name",
                     hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                    suffixIcon: const Icon(Icons.search, color: Colors.red),
+                    suffixIcon: const Icon(Icons.search, color: AppColors.primary),
                     border: const UnderlineInputBorder(
                       borderSide: BorderSide(color: Colors.grey),
                     ),
@@ -185,7 +177,7 @@ class SoAttendanceScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label, style: const TextStyle(fontSize: 14)),
-            const Icon(Icons.calendar_month, color: Colors.red, size: 20),
+            const Icon(Icons.calendar_month, color: AppColors.primary, size: 20),
           ],
         ),
       ),
@@ -210,7 +202,7 @@ class SoAttendanceScreen extends StatelessWidget {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 13,
-            color: value == "PRESENT" ? Colors.black : (value == "ABSENT" ? Colors.red : Colors.black),
+            color: value == "PRESENT" ? AppColors.black : (value == "ABSENT" ? AppColors.primary : AppColors.black),
           ),
         ),
       ],

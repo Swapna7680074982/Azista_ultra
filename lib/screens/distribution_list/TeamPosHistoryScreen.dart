@@ -121,7 +121,6 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text(
           "TEAM POS HISTORY",
@@ -132,7 +131,20 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
             letterSpacing: 1,
           ),
         ),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.button,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         iconTheme: const IconThemeData(color: AppColors.white),
         bottom: TabBar(
           controller: _tabController,

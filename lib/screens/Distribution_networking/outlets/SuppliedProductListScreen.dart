@@ -12,7 +12,6 @@ class SuppliedProductListScreen extends StatelessWidget {
     final items = pobData?['items'] as List<dynamic>? ?? [];
 
     return Scaffold(
-      backgroundColor: Colors.grey[200],
       appBar: AppBar(
         title: Text(
           pobData?['pob_number'] ?? "Supplied product list",
@@ -22,7 +21,20 @@ class SuppliedProductListScreen extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
         ),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.button,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         iconTheme: const IconThemeData(
           color: AppColors.white,
         ),

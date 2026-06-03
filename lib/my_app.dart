@@ -1,3 +1,4 @@
+import 'package:azista_ultra/constants/app_colors.dart';
 import 'package:azista_ultra/provider_create_list.dart';
 import 'package:azista_ultra/screens/splash_screen.dart';
 import 'package:azista_ultra/services/navigation_service.dart';
@@ -17,11 +18,17 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'Ultra Edge',
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: AppColors.button,
+            primary: AppColors.primary,
+            secondary: AppColors.button,
+            background: AppColors.background,
+          ),
+          scaffoldBackgroundColor: AppColors.background,
           fontFamily: 'Heebo',
           cupertinoOverrideTheme: const CupertinoThemeData(
             textTheme: CupertinoTextThemeData(
-              primaryColor: Colors.red,
+              primaryColor: AppColors.primary,
               textStyle: TextStyle(fontFamily: 'Heebo'),
             ),
           ),

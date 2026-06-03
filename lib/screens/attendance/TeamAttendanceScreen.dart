@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'TeamAttendanceDetailScreen.dart';
 import '../../constants/app_colors.dart';
+import '../../utilities/wavy_app_bar.dart';
 import '../../permissions/AppStateProvider.dart';
 import '../../utilities/date_formatter.dart';
 import 'team_attendance_provider.dart';
@@ -32,13 +33,8 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
     final userRole = appState.userRole?.toUpperCase() ?? '';
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        title: const Text("TEAM ATTENDANCE", style: TextStyle(color: Colors.white, fontSize: 18)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: const WavyAppBar(
+        title: "TEAM ATTENDANCE",
       ),
       body: Consumer<TeamAttendanceProvider>(
         builder: (context, provider, _) {

@@ -170,7 +170,7 @@ class _DonutChartState extends State<DonutChart>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(width: 10, height: 10, color: AppColors.button),
+                Container(width: 10, height: 10, color: widget.color),
                 const SizedBox(width: 6),
                 Text("TOTAL ${widget.label.split(" ").last.toUpperCase()}"),
               ],
@@ -179,7 +179,17 @@ class _DonutChartState extends State<DonutChart>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(width: 10, height: 10, color: Colors.red),
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.primary, AppColors.button],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 6),
                 Text("TARGET ${widget.label.split(" ").last.toUpperCase()}"),
               ],
@@ -210,8 +220,16 @@ class DonutPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
     const stroke = 40.0;
+    final gradient = const LinearGradient(
+      colors: [
+        AppColors.primary,
+        AppColors.button,
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
     final redPaint = Paint()
-      ..color = AppColors.primary
+      ..shader = gradient.createShader(rect)
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.butt;

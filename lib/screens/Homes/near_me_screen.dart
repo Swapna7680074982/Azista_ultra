@@ -5,9 +5,10 @@ import '../../profile.dart';
 import '../../services/call_service.dart';
 import '../../services/location_service.dart';
 import '../Distribution_networking/distribution_provider.dart';
-import '../Distribution_networking/outlets/PosBaseScreen.dart';
 import '../Distribution_networking/outlets/outlet_provider.dart';
+import '../Distribution_networking/outlets/PosBaseScreen.dart';
 import '../../services/directions_map_screen.dart';
+import '../../utilities/wavy_app_bar.dart';
 
 class NearMeScreen extends StatefulWidget {
   const NearMeScreen({super.key});
@@ -71,9 +72,9 @@ class _NearMeScreenState extends State<NearMeScreen> {
 
               Row(
                 children: [
-                  Icon(Icons.person, size: 20, color: Colors.grey.shade500),
+                  Icon(Icons.person, size: 20, color: Colors.grey.shade700),
                   const SizedBox(width: 12),
-                  Text(outlet.owner.toUpperCase(), style: TextStyle(color: Colors.grey.shade800,fontSize: 18)),
+                  Text(outlet.owner.toUpperCase(), style: TextStyle(color: Colors.grey.shade900,fontSize: 18)),
                 ],
               ),
 
@@ -81,9 +82,9 @@ class _NearMeScreenState extends State<NearMeScreen> {
 
               Row(
                 children: [
-                  Icon(Icons.phone, size: 20, color: Colors.grey.shade500),
+                  Icon(Icons.phone, size: 20, color: Colors.grey.shade700),
                   const SizedBox(width: 12),
-                  Text(outlet.phone, style: TextStyle(color: Colors.grey.shade800,fontSize: 18)),
+                  Text(outlet.phone, style: TextStyle(color: Colors.grey.shade900,fontSize: 18)),
                 ],
               ),
               
@@ -129,9 +130,9 @@ class _NearMeScreenState extends State<NearMeScreen> {
                     child: Container(
                       height: 35,
                       decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.buttonBlue),
+                        border: Border.all(color: AppColors.green),
                         borderRadius: BorderRadius.circular(6),
-                        color: AppColors.buttonBlue.withValues(alpha:0.05),
+                        color: AppColors.green.withValues(alpha:0.05),
                       ),
                       child: TextButton(
                         onPressed: () {
@@ -140,7 +141,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
                         child: const Text(
                           "CALL",
                           style: TextStyle(
-                            color: AppColors.buttonBlue,
+                            color: AppColors.green,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -153,9 +154,9 @@ class _NearMeScreenState extends State<NearMeScreen> {
                     child: Container(
                       height: 35,
                       decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.button),
+                        border: Border.all(color: AppColors.green),
                         borderRadius: BorderRadius.circular(6),
-                        color: AppColors.button.withValues(alpha:0.05),
+                        color: AppColors.green.withValues(alpha:0.05),
                       ),
                       child: TextButton(
                         onPressed: () {
@@ -173,7 +174,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
                         child: const Text(
                           "DIRECTIONS",
                           style: TextStyle(
-                            color: AppColors.button,
+                            color: AppColors.green,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -191,7 +192,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
               right: 40,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                color: const Color(0xFFC62828),
+                color: AppColors.primary,
                 alignment: Alignment.center,
                 child: const Text(
                   "UNFREEZE OUTLET",
@@ -210,21 +211,9 @@ class _NearMeScreenState extends State<NearMeScreen> {
     final provider = context.watch<OutletProvider>();
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
       drawer: const ProfileDrawer(selectedMenu: "Near Me"),
-      appBar: AppBar(
-        title: const Text(
-          "NEAR ME",
-          style: TextStyle(
-            color: AppColors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        backgroundColor: const Color(0xFFC62828),
-        iconTheme: const IconThemeData(
-          color: AppColors.white,
-        ),
+      appBar: WavyAppBar(
+        title: "NEAR ME",
         leading: Builder(
           builder: (context) => Padding(
             padding: const EdgeInsets.only(left: 12),
@@ -253,7 +242,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
               decoration: const InputDecoration(
                 hintText: "Search by Outlet,Owner or Phone",
                 hintStyle: TextStyle(color: Colors.black54),
-                suffixIcon: Icon(Icons.search, color: Color(0xFFC62828)),
+                suffixIcon: Icon(Icons.search, color: AppColors.primary),
                 border: InputBorder.none,
                 isDense: true,
               ),

@@ -10,9 +10,21 @@ class SelectSoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.button,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -26,7 +38,7 @@ class SelectSoScreen extends StatelessWidget {
             value: true,
             onChanged: (val) {},
             activeColor: Colors.white,
-            activeTrackColor: Colors.red.shade900,
+            activeTrackColor: AppColors.button.withOpacity(0.5),
           ),
         ],
       ),
@@ -88,7 +100,7 @@ class SelectSoScreen extends StatelessWidget {
                         ),
                         const Icon(
                           Icons.keyboard_double_arrow_right,
-                          color: Colors.red,
+                          color: AppColors.primary,
                         ),
                       ],
                     ),

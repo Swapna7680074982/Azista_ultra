@@ -44,7 +44,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: Colors.grey[200],
       appBar: AppBar(
         title: Text(
           widget.pobData?['pob_number'] ?? "Product List",
@@ -54,7 +53,20 @@ class _ProductListScreenState extends State<ProductListScreen> {
             fontWeight: FontWeight.w500,
           ),
         ),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.button,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         iconTheme: const IconThemeData(
           color: AppColors.white,
         ),

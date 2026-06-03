@@ -73,7 +73,20 @@ class _DistributorStatusScreenState extends State<DistributorStatusScreen> {
       appBar: AppBar(
         title: const Text(
             "Expense Tracking", style: TextStyle(color: AppColors.white)),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.button,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         iconTheme: const IconThemeData(color: AppColors.white),
       ),
       body: Consumer<DistributorExpenseProvider>(
@@ -192,7 +205,15 @@ class _DistributorStatusScreenState extends State<DistributorStatusScreen> {
             : imageBytes != null
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(imageBytes!, fit: BoxFit.cover),
+                    child: Image.memory(
+                      imageBytes!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(
+                          child: Icon(Icons.broken_image, color: Colors.grey),
+                        );
+                      },
+                    ),
                   )
                 : const Center(
                     child: Icon(Icons.image_not_supported, color: Colors.grey),
@@ -218,6 +239,11 @@ class _DistributorStatusScreenState extends State<DistributorStatusScreen> {
                 fit: BoxFit.contain,
                 width: double.infinity,
                 height: double.infinity,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Center(
+                    child: Icon(Icons.broken_image, color: Colors.white, size: 48),
+                  );
+                },
               ),
             ),
           ),

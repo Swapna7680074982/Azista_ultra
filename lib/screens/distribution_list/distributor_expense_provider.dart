@@ -98,6 +98,29 @@ class DistributorExpenseProvider extends ChangeNotifier {
     }
   }
 
+  bool _isValidImageBytes(List<int> bytes) {
+    if (bytes.length < 4) return false;
+    // PNG: 89 50 4E 47
+    if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) {
+      return true;
+    }
+    // JPEG: FF D8 FF
+    if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) {
+      return true;
+    }
+    // GIF: 47 49 46
+    if (bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46) {
+      return true;
+    }
+    // WEBP: RIFF ... WEBP
+    if (bytes.length >= 12 &&
+        bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46 &&
+        bytes[8] == 0x57 && bytes[9] == 0x45 && bytes[10] == 0x42 && bytes[11] == 0x50) {
+      return true;
+    }
+    return false;
+  }
+
   // Image loading helper
   Future<Uint8List?> loadImage(String imageUrl) async {
     String url = imageUrl.trim();
@@ -120,8 +143,13 @@ class DistributorExpenseProvider extends ChangeNotifier {
           headers: {"Authorization": "Bearer $token"},
         ),
       );
-      if (response.statusCode == 200) {
-        return Uint8List.fromList(response.data);
+      if (response.statusCode == 200 && response.data != null) {
+        final bytes = response.data as List<int>;
+        if (_isValidImageBytes(bytes)) {
+          return Uint8List.fromList(bytes);
+        } else {
+          debugPrint("Downloaded bytes do not match expected image headers");
+        }
       }
     } catch (e) {
       // Fallback
@@ -130,8 +158,13 @@ class DistributorExpenseProvider extends ChangeNotifier {
           url,
           options: dio_pkg.Options(responseType: dio_pkg.ResponseType.bytes),
         );
-        if (response.statusCode == 200) {
-          return Uint8List.fromList(response.data);
+        if (response.statusCode == 200 && response.data != null) {
+          final bytes = response.data as List<int>;
+          if (_isValidImageBytes(bytes)) {
+            return Uint8List.fromList(bytes);
+          } else {
+            debugPrint("Downloaded bytes do not match expected image headers (fallback)");
+          }
         }
       } catch (err) {
         debugPrint("Error fallback loading image: $err");

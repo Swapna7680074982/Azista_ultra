@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
+import '../../utilities/wavy_app_bar.dart';
 import 'leave_provider.dart';
 
 class ApplyLeaveScreen extends StatefulWidget {
@@ -43,11 +44,8 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('APPLY LEAVE'),
-        backgroundColor: const Color(0xFFC62828),
-        foregroundColor: Colors.white,
+      appBar: const WavyAppBar(
+        title: 'APPLY LEAVE',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -86,10 +84,10 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'LEAVE',
                   style: TextStyle(
-                    color: Color(0xFFC62828),
+                    color: AppColors.primary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -258,10 +256,10 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                     Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.buttonBlue,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.zero,
+                    backgroundColor: AppColors.button,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: const Text(
