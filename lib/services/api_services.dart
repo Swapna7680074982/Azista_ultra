@@ -820,14 +820,19 @@ class ApiServices {
     String? month,
     int? distributorId,
   }) async {
+    final payload = <String, dynamic>{};
+    if (date != null) payload["date"] = date;
+    if (month != null) payload["month"] = month;
+    if (distributorId != null) payload["distributor_id"] = distributorId;
+
+    AppLogger.info("Get Calls Info API call: ${AppUrls.callsInfo} with payload: $payload");
+
     try {
       final token = await SessionManager.getToken();
-      if (token == null) return null;
-
-      final payload = <String, dynamic>{};
-      if (date != null) payload["date"] = date;
-      if (month != null) payload["month"] = month;
-      if (distributorId != null) payload["distributor_id"] = distributorId;
+      if (token == null) {
+        AppLogger.warning("Get Calls Info: Session token is null");
+        return null;
+      }
 
       final response = await _dio.post(
         AppUrls.callsInfo,
@@ -840,12 +845,20 @@ class ApiServices {
         ),
       );
 
+      AppLogger.info("Get Calls Info response status: ${response.statusCode}");
       if (response.statusCode == 200 && response.data["status"] == "success") {
         return response.data;
       }
+      AppLogger.warning("Get Calls Info unexpected response: ${response.data}");
       return null;
     } catch (e) {
-      AppLogger.error("Get Calls Info error", e);
+      if (e is DioException) {
+        AppLogger.error("Get Calls Info DioException: ${e.message}");
+        AppLogger.error("Get Calls Info Response Status Code: ${e.response?.statusCode}");
+        AppLogger.error("Get Calls Info Response Data: ${e.response?.data}");
+      } else {
+        AppLogger.error("Get Calls Info error: $e");
+      }
       return null;
     }
   }

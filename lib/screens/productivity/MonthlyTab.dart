@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'productivity_provider.dart';
 import '../../constants/app_colors.dart';
 import '../../permissions/AppStateProvider.dart';
+import '../../utilities/date_formatter.dart';
 
 class MonthlyTab extends StatefulWidget {
   const MonthlyTab({super.key});
@@ -125,7 +126,7 @@ class _MonthlyTabState extends State<MonthlyTab> {
                                     Row(
                                       children: [
                                         Text(
-                                          data["date"]!,
+                                          DateFormatter.formatDateOnly(data["date"]),
                                           style: const TextStyle(fontSize: 16,
                                               color: Colors.black87),
                                         ),
