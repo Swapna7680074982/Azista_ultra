@@ -62,7 +62,7 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
-                    "AZISTA RM",
+                    "ULTRA RM",
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 40,

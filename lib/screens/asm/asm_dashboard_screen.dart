@@ -63,7 +63,7 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
-                    "AZISTA AM",
+                    "ULTRA AM",
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 40,
