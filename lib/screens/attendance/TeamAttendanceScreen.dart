@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'TeamAttendanceDetailScreen.dart';
+import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
 import '../../utilities/wavy_app_bar.dart';
 import '../../permissions/AppStateProvider.dart';
@@ -29,9 +29,6 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final appState = context.read<AppStateProvider>();
-    final userRole = appState.userRole?.toUpperCase() ?? '';
-
     return Scaffold(
       appBar: const WavyAppBar(
         title: "TEAM ATTENDANCE",
@@ -40,7 +37,8 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
         builder: (context, provider, _) {
           return Column(
             children: [
-              _buildFilterSection(provider, userRole),
+              _buildCalendarFilter(context, provider),
+              _buildFilterSection(provider),
               Expanded(
                 child: provider.isLoading
                     ? const Center(child: CircularProgressIndicator())
@@ -138,15 +136,108 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
     );
   }
 
-  Widget _buildFilterSection(TeamAttendanceProvider provider, String userRole) {
-    List<String> roles = [];
-    if (userRole == 'RM') {
-      roles = ['RM', 'AM', 'SO'];
-    } else if (userRole == 'AM') {
-      roles = ['AM', 'SO'];
-    } else {
-      roles = ['SO'];
+  Widget _buildCalendarFilter(BuildContext context, TeamAttendanceProvider provider) {
+    final dateText = DateFormat('EEEE, d MMMM yyyy').format(provider.selectedDate);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: GestureDetector(
+        onTap: () => _selectDate(context, provider),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.calendar_month,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "SELECTED DATE",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade500,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      dateText,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_drop_down,
+                color: Colors.grey.shade600,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectDate(BuildContext context, TeamAttendanceProvider provider) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: provider.selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              onSurface: Colors.black87,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      provider.updateDate(picked);
     }
+  }
+
+  Widget _buildFilterSection(TeamAttendanceProvider provider) {
+    const roles = ['RM', 'AM', 'SO'];
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),

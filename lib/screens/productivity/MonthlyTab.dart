@@ -13,12 +13,14 @@ class MonthlyTab extends StatefulWidget {
 }
 
 class _MonthlyTabState extends State<MonthlyTab> {
+  int selectedMonth = DateTime.now().month;
+  int selectedYear = DateTime.now().year;
+
   @override
   void initState() {
     super.initState();
     Future.microtask(() {
-      final now = DateTime.now();
-      final monthStr = "${now.month.toString().padLeft(2, '0')}-${now.year}";
+      final monthStr = "${selectedMonth.toString().padLeft(2, '0')}-$selectedYear";
       final appState = Provider.of<AppStateProvider>(context, listen: false);
       Provider.of<ProductivityProvider>(context, listen: false).fetchCallsInfo(
         month: monthStr,
@@ -38,23 +40,26 @@ class _MonthlyTabState extends State<MonthlyTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey.shade400),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _getCurrentMonthName(),
-                      style: const TextStyle(
-                          fontSize: 16, color: Colors.black87),
-                    ),
-                    Icon(Icons.calendar_month, color: AppColors.primary),
-                  ],
+              GestureDetector(
+                onTap: () => _selectMonth(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey.shade400),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _getMonthName(selectedMonth, selectedYear),
+                        style: const TextStyle(
+                            fontSize: 16, color: Colors.black87),
+                      ),
+                      Icon(Icons.calendar_month, color: AppColors.primary),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -216,22 +221,32 @@ class _MonthlyTabState extends State<MonthlyTab> {
     );
   }
 
-  String _getCurrentMonthName() {
+  String _getMonthName(int month, int year) {
     final months = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December"
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
     ];
-    final now = DateTime.now();
-    return "${months[now.month - 1]} ${now.year}";
+    return "${months[month - 1]} $year";
+  }
+
+  Future<void> _selectMonth(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(selectedYear, selectedMonth, 1),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() {
+        selectedMonth = picked.month;
+        selectedYear = picked.year;
+      });
+      final monthStr = "${selectedMonth.toString().padLeft(2, '0')}-$selectedYear";
+      final appState = Provider.of<AppStateProvider>(context, listen: false);
+      Provider.of<ProductivityProvider>(context, listen: false).fetchCallsInfo(
+        month: monthStr,
+        distributorId: appState.selectedDistributorId,
+      );
+    }
   }
 }

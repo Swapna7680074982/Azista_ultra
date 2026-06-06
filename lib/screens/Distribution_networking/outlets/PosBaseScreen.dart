@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import '../../../services/location_service.dart';
 import '../../../constants/app_colors.dart';
 import '../../../services/call_service.dart';
 import '../../../services/directions_map_screen.dart';
@@ -26,11 +28,51 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   int selectedTab = 0;
   List<Map<String, dynamic>> dynamicTabs = [];
   bool isLoadingTabs = true;
+  bool? isLocationValid;
+  String locationError = "";
 
   @override
   void initState() {
     super.initState();
     _fetchModules();
+    _checkLocation();
+  }
+
+  Future<void> _checkLocation() async {
+    try {
+      final coords = await LocationService.getCoordinates();
+      final currentLat = double.parse(coords[0]);
+      final currentLng = double.parse(coords[1]);
+
+      final distance = Geolocator.distanceBetween(
+        currentLat,
+        currentLng,
+        widget.outlet.latitude,
+        widget.outlet.longitude,
+      );
+
+      if (distance > 50) {
+        if (mounted) {
+          setState(() {
+            isLocationValid = false;
+            locationError = "You are ${distance.toStringAsFixed(0)} meters away from the outlet. You must be within 50 meters to access POS.";
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            isLocationValid = true;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLocationValid = false;
+          locationError = "Failed to get your location. Please check GPS and permissions.";
+        });
+      }
+    }
   }
 
   Future<void> _fetchModules() async {
@@ -114,13 +156,37 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
           : Column(
         children: [
           outletCard(widget.outlet),
-          _tabs(),
-          Expanded(
-            child: IndexedStack(
-              index: selectedTab,
-              children: dynamicTabs.map((tab) => _getModuleBody(tab['module_code'])).toList(),
+          if (isLocationValid == null)
+            const Expanded(child: Center(child: LogoProgressIndicator()))
+          else if (isLocationValid == false)
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.location_off, color: Colors.red, size: 60),
+                      const SizedBox(height: 16),
+                      Text(
+                        locationError,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 16, color: Colors.red, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else ...[
+            _tabs(),
+            Expanded(
+              child: IndexedStack(
+                index: selectedTab,
+                children: dynamicTabs.map((tab) => _getModuleBody(tab['module_code'])).toList(),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

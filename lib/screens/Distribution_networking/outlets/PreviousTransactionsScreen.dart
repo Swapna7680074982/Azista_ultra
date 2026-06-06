@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../../constants/app_colors.dart';
 import '../../../services/api_services.dart';
 import '../../../permissions/AppStateProvider.dart';
@@ -17,6 +18,8 @@ class StockSalePosScreen extends StatefulWidget {
 
 class _StockSalePosScreenState extends State<StockSalePosScreen> {
   int selectedTab = 0;
+  int selectedMonth = DateTime.now().month;
+  int selectedYear = DateTime.now().year;
 
   final tabs = ["STOCK", "SALE", "POB"];
 
@@ -47,6 +50,7 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
       body: Column(
         children: [
           _tabs(),
+          _monthYearFilter(),
           Expanded(child: _tabContent()),
         ],
       ),
@@ -110,11 +114,16 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
     final appState = Provider.of<AppStateProvider>(context, listen: false);
     final distributorId = appState.selectedDistributorId ?? 6;
     
+    final lastDay = DateTime(selectedYear, selectedMonth + 1, 0).day;
+    final Map<String, dynamic> payload = {
+      "outlet_id": widget.outletId,
+      "distributor_id": distributorId,
+      "from_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-01",
+      "to_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}",
+    };
+    
     return FutureBuilder<Map<String, dynamic>?>(
-      future: ApiServices.getPobHistory(payload: {
-        "outlet_id": widget.outletId,
-        "distributor_id": distributorId,
-      }),
+      future: ApiServices.getPobHistory(payload: payload),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -123,14 +132,26 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
           return const Center(child: Text("No POB History"));
         }
         final data = snapshot.data!['data'] as List<dynamic>? ?? [];
-        if (data.isEmpty) {
+        
+        final filteredData = data.where((item) {
+          final rawDate = item['created_at'] ?? item['created_on'];
+          if (rawDate == null) return false;
+          try {
+            final date = DateTime.parse(rawDate.toString().trim());
+            return date.year == selectedYear && date.month == selectedMonth;
+          } catch (e) {
+            return true;
+          }
+        }).toList();
+        
+        if (filteredData.isEmpty) {
           return const Center(child: Text("No POB History"));
         }
         return ListView.builder(
           padding: const EdgeInsets.all(10),
-          itemCount: data.length,
+          itemCount: filteredData.length,
           itemBuilder: (context, index) {
-            final pob = data[index];
+            final pob = filteredData[index];
             final items = pob['items'] as List<dynamic>? ?? [];
             final date = pob['created_at'] ?? pob['created_on'];
             
@@ -160,12 +181,17 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
     final appState = Provider.of<AppStateProvider>(context, listen: false);
     final distributorId = appState.selectedDistributorId ?? 6;
     
+    final lastDay = DateTime(selectedYear, selectedMonth + 1, 0).day;
+    final Map<String, dynamic> payload = {
+      "outlet_id": widget.outletId,
+      "distributor_id": distributorId,
+      "pos_type": posType,
+      "from_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-01",
+      "to_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}",
+    };
+    
     return FutureBuilder<Map<String, dynamic>?>(
-      future: ApiServices.getPosHistory(payload: {
-        "outlet_id": widget.outletId,
-        "distributor_id": distributorId,
-        "pos_type": posType,
-      }),
+      future: ApiServices.getPosHistory(payload: payload),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -174,13 +200,25 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
           return Center(child: Text("No ${posType.toUpperCase()} History"));
         }
         final data = snapshot.data!['data'] as List<dynamic>? ?? [];
-        if (data.isEmpty) {
+        
+        final filteredData = data.where((item) {
+          final rawDate = item['created_on'] ?? item['created_at'];
+          if (rawDate == null) return false;
+          try {
+            final date = DateTime.parse(rawDate.toString().trim());
+            return date.year == selectedYear && date.month == selectedMonth;
+          } catch (e) {
+            return true;
+          }
+        }).toList();
+        
+        if (filteredData.isEmpty) {
           return Center(child: Text("No ${posType.toUpperCase()} History"));
         }
 
         // Group by date
         final Map<String, List<dynamic>> grouped = {};
-        for (var item in data) {
+        for (var item in filteredData) {
           final rawDate = item['created_on'] ?? item['created_at'];
           if (rawDate != null) {
              final formattedDate = DateFormatter.formatDateTime(rawDate);
@@ -301,6 +339,51 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
         );
       },
     );
+  }
+
+  Widget _monthYearFilter() {
+    final dateText = DateFormat('MMMM yyyy').format(DateTime(selectedYear, selectedMonth));
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      child: GestureDetector(
+        onTap: () => _selectMonth(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.calendar_today, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text(
+                dateText.toUpperCase(),
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectMonth(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(selectedYear, selectedMonth, 1),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() {
+        selectedMonth = picked.month;
+        selectedYear = picked.year;
+      });
+    }
   }
 
   Widget _skuRow(String sku, String qty) {

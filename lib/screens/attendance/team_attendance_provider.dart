@@ -27,6 +27,9 @@ class TeamAttendanceProvider extends ChangeNotifier {
     if (defaultRole != null && _selectedRole == 'ALL') {
       _selectedRole = defaultRole;
     }
+    if (isToday) {
+      _selectedDate = DateTime.now();
+    }
     notifyListeners();
 
     try {
@@ -72,6 +75,15 @@ class TeamAttendanceProvider extends ChangeNotifier {
           .toList();
     }
 
+    // Filter by the selected date (year, month, day)
+    roleFiltered = roleFiltered.where((item) {
+      final parsed = DateTime.tryParse(item.attendanceDate);
+      if (parsed == null) return false;
+      return parsed.year == _selectedDate.year &&
+             parsed.month == _selectedDate.month &&
+             parsed.day == _selectedDate.day;
+    }).toList();
+
     // Now, group by User ID to show unique users with their nested logs
     Map<String, List<TeamAttendance>> grouped = {};
     for (var item in roleFiltered) {
@@ -90,7 +102,13 @@ class TeamAttendanceProvider extends ChangeNotifier {
 
   void updateDate(DateTime date) {
     _selectedDate = date;
-    final monthStr = "${date.year}-${date.month.toString().padLeft(2, '0')}";
-    fetchTeamAttendance(month: monthStr, isToday: false);
+    final now = DateTime.now();
+    final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
+    if (isToday) {
+      fetchTeamAttendance(isToday: true);
+    } else {
+      final monthStr = "${date.year}-${date.month.toString().padLeft(2, '0')}";
+      fetchTeamAttendance(month: monthStr, isToday: false);
+    }
   }
 }
