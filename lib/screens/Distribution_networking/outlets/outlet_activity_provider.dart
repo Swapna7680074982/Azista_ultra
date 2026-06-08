@@ -139,7 +139,7 @@ class OutletActivityProvider extends ChangeNotifier {
     return {"status": false, "message": "Transaction failed"};
   }
 
-  Future<bool> submitPob(int outletId, int distributorId) async {
+  Future<bool> submitPob(int outletId, int distributorId, {String? imageBase64}) async {
     List<Map<String, dynamic>> items = [];
 
     _stockQuantities.forEach((key, quantity) {
@@ -165,6 +165,7 @@ class OutletActivityProvider extends ChangeNotifier {
       "distributor_id": distributorId,
       "remarks": "",
       "items": items,
+      if (imageBase64 != null) "image": imageBase64,
     };
 
     final response = await ApiServices.generatePob(payload: payload);

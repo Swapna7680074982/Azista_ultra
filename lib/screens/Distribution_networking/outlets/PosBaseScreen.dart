@@ -6,6 +6,8 @@ import '../../../services/call_service.dart';
 import '../../../services/directions_map_screen.dart';
 import 'BrandingScreen.dart';
 import 'PobScreen.dart';
+import 'MarketingScreen.dart';
+import 'package:intl/intl.dart';
 import 'PreviousTransactionsScreen.dart';
 import 'PromotionsScreen.dart';
 import 'SamplingScreen.dart';
@@ -75,27 +77,35 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
     }
   }
 
+  bool _isCheckedIn = false;
+  DateTime? _checkInTime;
+
   Future<void> _fetchModules() async {
     final response = await ApiServices.getModules();
+    List<Map<String, dynamic>> tabs = [];
     if (response != null && response['status'] == 'success') {
       final List<dynamic> data = response['data'] ?? [];
-      setState(() {
-        dynamicTabs = data.map((e) => e as Map<String, dynamic>).toList();
-        isLoadingTabs = false;
-      });
+      tabs = data.map((e) => e as Map<String, dynamic>).toList();
     } else {
       // Fallback
-      setState(() {
-        dynamicTabs = [
-          {"module_name": "SAMPLING", "module_code": "SAMP"},
-          {"module_name": "STOCK", "module_code": "STOCK"},
-          {"module_name": "POB", "module_code": "POB"},
-          {"module_name": "BRANDING", "module_code": "BRD"},
-          {"module_name": "PROMOTIONS", "module_code": "PRM"},
-        ];
-        isLoadingTabs = false;
-      });
+      tabs = [
+        {"module_name": "SAMPLING", "module_code": "SAMP"},
+        {"module_name": "STOCK", "module_code": "STOCK"},
+        {"module_name": "POB", "module_code": "POB"},
+        {"module_name": "BRANDING", "module_code": "BRD"},
+        {"module_name": "PROMOTIONS", "module_code": "PRM"},
+      ];
     }
+    
+    // Add MARKETING module manually if not present
+    if (!tabs.any((t) => t['module_code'] == 'MKT' || t['module_code'] == 'MARKETING')) {
+      tabs.add({"module_name": "MARKETING", "module_code": "MKT"});
+    }
+
+    setState(() {
+      dynamicTabs = tabs;
+      isLoadingTabs = false;
+    });
   }
 
   Widget _getModuleBody(String moduleCode) {
@@ -116,6 +126,8 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         return const PromotionsBody();
       case "SALE":
         return SaleBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
+      case "MKT":
+        return MarketingBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
       default:
         return Center(child: Text("$moduleCode Screen"));
     }
@@ -178,7 +190,127 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                 ),
               ),
             )
+          else if (!_isCheckedIn)
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.storefront, size: 64, color: AppColors.primary),
+                          const SizedBox(height: 16),
+                          Text(
+                            "Welcome to ${widget.outlet.name.toUpperCase()}",
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            "You must check in to this outlet to access POS and submit sales, stock, POB, or marketing activities.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 45,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isCheckedIn = true;
+                                  _checkInTime = DateTime.now();
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("Checked In Successfully!")),
+                                );
+                              },
+                              child: const Text(
+                                "CHECK-IN",
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            )
           else ...[
+            Container(
+              color: Colors.green.shade50,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Checked-in at: ${DateFormat('hh:mm a').format(_checkInTime!)}",
+                        style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text("Confirm Check-Out"),
+                          content: Text("Are you sure you want to check out of ${widget.outlet.name}? This will lock the point of sale features."),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text("CANCEL"),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                setState(() {
+                                  _isCheckedIn = false;
+                                  _checkInTime = null;
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("Checked Out Successfully!")),
+                                );
+                                Navigator.pop(context); // Go back to outlet list upon checkout
+                              },
+                              child: const Text("CHECK-OUT", style: TextStyle(color: Colors.red)),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        "CHECK-OUT",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             _tabs(),
             Expanded(
               child: IndexedStack(

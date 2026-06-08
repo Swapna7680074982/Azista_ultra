@@ -87,22 +87,22 @@ class _DistributionNetworkScreenState
             child: Column(
               children: [
                 DropdownButtonFormField<String>(
-                  value: provider.selectedState,
-                  hint: const Text("Select State"),
+                  value: provider.selectedRegion,
+                  hint: const Text("Select Region"),
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: AppColors.inputFill,
                     border: InputBorder.none,
                   ),
-                  items: provider.states.map((state) {
+                  items: provider.regions.map((region) {
                     return DropdownMenuItem(
-                      value: state,
-                      child: Text(state.toUpperCase()),
+                      value: region,
+                      child: Text(region.toUpperCase()),
                     );
                   }).toList(),
                   onChanged: (value) {
                     if (value != null) {
-                      provider.setStateName(value);
+                      provider.setRegion(value);
                     }
                   },
                 ),
@@ -110,22 +110,22 @@ class _DistributionNetworkScreenState
                 const SizedBox(height: 12),
 
                 DropdownButtonFormField<String>(
-                  value: provider.selectedCity,
-                  hint: const Text("Select City"),
+                  value: provider.selectedArea,
+                  hint: const Text("Select Area"),
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: AppColors.inputFill,
                     border: InputBorder.none,
                   ),
-                  items: provider.cities.map((city) {
+                  items: provider.areas.map((area) {
                     return DropdownMenuItem(
-                      value: city,
-                      child: Text(city.toUpperCase()),
+                      value: area,
+                      child: Text(area.toUpperCase()),
                     );
                   }).toList(),
                   onChanged: (value) {
                     if (value != null) {
-                      provider.setCity(value);
+                      provider.setArea(value);
                     }
                   },
                 ),
@@ -133,22 +133,45 @@ class _DistributionNetworkScreenState
                 const SizedBox(height: 12),
 
                 DropdownButtonFormField<String>(
-                  value: provider.selectedRoute,
-                  hint: const Text("Select Route"),
+                  value: provider.selectedHq,
+                  hint: const Text("Select HQ"),
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: AppColors.inputFill,
                     border: InputBorder.none,
                   ),
-                  items: provider.routes.map((route) {
+                  items: provider.hqs.map((hq) {
                     return DropdownMenuItem(
-                      value: route,
-                      child: Text(route.toUpperCase()),
+                      value: hq,
+                      child: Text(hq.toUpperCase()),
                     );
                   }).toList(),
                   onChanged: (value) {
                     if (value != null) {
-                      provider.setRoute(value);
+                      provider.setHq(value);
+                    }
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                DropdownButtonFormField<String>(
+                  value: provider.selectedBeat,
+                  hint: const Text("Select Beat"),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: AppColors.inputFill,
+                    border: InputBorder.none,
+                  ),
+                  items: provider.beats.map((beat) {
+                    return DropdownMenuItem(
+                      value: beat,
+                      child: Text(beat.toUpperCase()),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      provider.setBeat(value);
                     }
                   },
                 ),
@@ -168,7 +191,7 @@ class _DistributionNetworkScreenState
                   borderRadius: BorderRadius.zero,
                 ),
               ),
-              onPressed: provider.selectedRoute == null || provider.selectedRouteId == null
+              onPressed: provider.selectedBeat == null || provider.selectedRouteId == null
                   ? null
                   : () {
                 Navigator.push(
@@ -176,13 +199,13 @@ class _DistributionNetworkScreenState
                   MaterialPageRoute(
                     builder: (_) => OutletsScreen(
                       routeId: int.tryParse(provider.selectedRouteId!) ?? 0,
-                      routeName: provider.selectedRoute!,
+                      routeName: provider.selectedBeat!,
                     ),
                   ),
                 );
               },
               child: const Text(
-                "SHOW OUTLETS IN THIS ROUTE",
+                "SHOW OUTLETS IN THIS BEAT",
                 style: TextStyle(color: AppColors.white),
               ),
             ),

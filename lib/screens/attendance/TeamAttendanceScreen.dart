@@ -112,7 +112,12 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               const Text("WORKED", style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
-              Text("${log['working_minutes']}m", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.button)),
+              Builder(builder: (context) {
+                final rawMin = log['working_minutes'];
+                final int min = rawMin is int ? rawMin : int.tryParse(rawMin?.toString() ?? "0") ?? 0;
+                final double hours = min / 60.0;
+                return Text("${hours.toStringAsFixed(1)}h", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.button));
+              }),
             ],
           ),
         ],

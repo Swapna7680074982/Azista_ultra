@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
-import 'DistributorExpensesScreen.dart';
-import 'DistributorVisitScreen.dart';
 import 'StockOnHandScreen.dart';
 import 'package:provider/provider.dart';
 import 'distribution_list_provider.dart';
 import '../../../permissions/AppStateProvider.dart';
 import '../../../utilities/common_widgets.dart';
 
-class DistributorStockScreen extends StatefulWidget {
-  const DistributorStockScreen({super.key});
+class SecondaryStockUpdateScreen extends StatefulWidget {
+  const SecondaryStockUpdateScreen({super.key});
 
   @override
-  State<DistributorStockScreen> createState() => _DistributorStockScreenState();
+  State<SecondaryStockUpdateScreen> createState() => _SecondaryStockUpdateScreenState();
 }
 
-class _DistributorStockScreenState extends State<DistributorStockScreen> {
+class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen> {
   @override
   void initState() {
     super.initState();
@@ -34,7 +32,7 @@ class _DistributorStockScreenState extends State<DistributorStockScreen> {
         return Scaffold(
           appBar: AppBar(
             title: const Text(
-              "DISTRIBUTOR STOCK",
+              "SECONDARY STOCK UPDATE",
               style: TextStyle(
                 color: AppColors.white,
                 fontSize: 16,
@@ -70,28 +68,6 @@ class _DistributorStockScreenState extends State<DistributorStockScreen> {
                 },
                 icon: const Icon(Icons.menu_book),
               ),
-              IconButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const DistributorExpensesScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.currency_rupee),
-              ),
-              // IconButton(
-              //   onPressed: () {
-              //     Navigator.push(
-              //       context,
-              //       MaterialPageRoute(
-              //         builder: (context) => const DistributorVisitScreen(),
-              //       ),
-              //     );
-              //   },
-              //   icon: const Icon(Icons.account_tree_outlined, color: Colors.white),
-              // ),
               const SizedBox(width: 10),
             ],
           ),
@@ -124,20 +100,10 @@ class _DistributorStockScreenState extends State<DistributorStockScreen> {
                           ),
                         ),
                         onPressed: () async {
-                          if (appState.selectedDistributorId == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("No distributor selected"),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                            return;
-                          }
-
                           LoadingDialog.show(context, message: "Submitting Stock...");
 
                           final success = await provider.submitDistributorStock(
-                              appState.selectedDistributorId!);
+                              appState.selectedDistributorId);
 
                           if (!mounted) return;
                           LoadingDialog.hide(context);
@@ -156,7 +122,7 @@ class _DistributorStockScreenState extends State<DistributorStockScreen> {
                           }
                         },
                         child: const Text(
-                          "SUBMIT DISTRIBUTOR STOCK",
+                          "SUBMIT STOCK UPDATE",
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,

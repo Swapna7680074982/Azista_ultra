@@ -15,6 +15,8 @@ class HomeProvider extends ChangeNotifier {
   String? message;
   Map<String, dynamic>? dailyCallSummary;
   bool isSummaryLoading = false;
+  Map<String, dynamic>? monthlyCallSummary;
+  bool isMonthlySummaryLoading = false;
   StreamSubscription? _autoCheckoutSubscription;
 
   Future<void> loadDistributors([AppStateProvider? appState]) async {
@@ -200,6 +202,38 @@ class HomeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> fetchMonthlyCallSummary(int? distributorId) async {
+    isMonthlySummaryLoading = true;
+    notifyListeners();
+
+    final now = DateTime.now();
+    final monthStr = "${now.month.toString().padLeft(2, '0')}-${now.year}";
+
+    final res = await ApiServices.getCallsInfo(
+      month: monthStr,
+      distributorId: distributorId,
+    );
+
+    if (res != null && res["data"] != null) {
+      final dataList = res["data"] as List<dynamic>? ?? [];
+      double targetCalls = 0;
+      double productiveCalls = 0;
+      for (var item in dataList) {
+        targetCalls += double.tryParse(item["target_call"]?.toString() ?? "0") ?? 0;
+        productiveCalls += double.tryParse(item["productive_call"]?.toString() ?? "0") ?? 0;
+      }
+      monthlyCallSummary = {
+        "target_calls": targetCalls,
+        "productive_calls": productiveCalls,
+      };
+    } else {
+      monthlyCallSummary = null;
+    }
+
+    isMonthlySummaryLoading = false;
+    notifyListeners();
+  }
+
   void reset() {
     distributors = [];
     selectedDistributor = null;
@@ -208,6 +242,8 @@ class HomeProvider extends ChangeNotifier {
     message = null;
     dailyCallSummary = null;
     isSummaryLoading = false;
+    monthlyCallSummary = null;
+    isMonthlySummaryLoading = false;
     _autoCheckoutSubscription?.cancel();
     notifyListeners();
   }

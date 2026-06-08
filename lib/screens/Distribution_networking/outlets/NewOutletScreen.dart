@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:dio/dio.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../services/api_services.dart';
@@ -71,6 +72,36 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
     });
   }
 
+  bool _isFetchingAddress = false;
+
+  Future<void> _autoFetchAddress(double lat, double lng) async {
+    if (_isFetchingAddress) return;
+    setState(() => _isFetchingAddress = true);
+    try {
+      final dio = Dio();
+      final url = "https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng";
+      final response = await dio.get(
+        url,
+        options: Options(
+          headers: {
+            "User-Agent": "AzistaUltraApp/1.0",
+          },
+        ),
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        final displayName = response.data["display_name"]?.toString();
+        if (displayName != null) {
+          setState(() {
+            addressController.text = displayName;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Address fetch error: $e");
+    } finally {
+      setState(() => _isFetchingAddress = false);
+    }
+  }
 
   Future<void> _loadCurrentLocation() async {
     try {
@@ -92,17 +123,16 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
         _mapController?.animateCamera(
           CameraUpdate.newLatLngZoom(pos, 16),
         );
+        _autoFetchAddress(lat, lng);
       }
     } catch (e) {
       print("Location error: $e");
     }
   }
   Future<void> submitOutlet() async {
-    if (nameController.text.isEmpty ||
-        phoneController.text.isEmpty ||
-        addressController.text.isEmpty) {
+    if (nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill required fields")),
+        const SnackBar(content: Text("Outlet Name is mandatory")),
       );
       return;
     }
@@ -110,6 +140,20 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
     if (selectedCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please select an Outlet Category")),
+      );
+      return;
+    }
+
+    if (phoneController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Phone Number is mandatory")),
+      );
+      return;
+    }
+
+    if (contactController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Contact Person Name is mandatory")),
       );
       return;
     }
@@ -317,6 +361,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                     position: latLng,
                   );
                 });
+                _autoFetchAddress(latLng.latitude, latLng.longitude);
               },
               onMapCreated: (controller) {
                 _mapController = controller;

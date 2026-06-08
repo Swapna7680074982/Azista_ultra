@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../permissions/AppStateProvider.dart';
-import '../Homes/HomeProvider.dart';
-import '../distribution_list/DistributorExpensesScreen.dart';
 import '../profile_screen.dart';
 import '../Distribution_networking/distribution_network_screen.dart';
 import '../../utilities/date_formatter.dart';
+import '../Homes/HomeProvider.dart';
 import '../attendance/TeamAttendanceScreen.dart';
 import '../distribution_list/TeamPosHistoryScreen.dart';
 
@@ -135,55 +134,8 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
 
           const SizedBox(height: 10),
 
-          // Distributor Selector
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
-            child: Container(
-              height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade400),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  hint: const Text("SELECT DISTRIBUTOR", style: TextStyle(fontSize: 13)),
-                  value: homeProvider.distributors.any((d) => d["distributor_name"] == appState.selectedDistributor)
-                      ? appState.selectedDistributor
-                      : null,
-                  items: homeProvider.distributors.map<DropdownMenuItem<String>>((d) {
-                    return DropdownMenuItem<String>(
-                      value: d["distributor_name"],
-                      child: Text(d["distributor_name"].toString().toUpperCase(), style: const TextStyle(fontSize: 13)),
-                    );
-                  }).toList(),
-
-                  onChanged: appState.isOnline ? (value) {
-                    final selected = homeProvider.distributors.firstWhere(
-                          (d) => d["distributor_name"] == value,
-                      orElse: () => null,
-                    );
-                    int? id;
-                    if (selected != null) {
-                      if (selected["distributor_id"] is int) {
-                        id = selected["distributor_id"];
-                      } else if (selected["distributor_id"] != null) {
-                        id = int.tryParse(selected["distributor_id"].toString());
-                      }
-                    }
-                    appState.setDistributor(value, id: id);
-                  } : null,
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
           // Error Message Box
-          if (!appState.isOnline || !hasValidDistributor)
+          if (!appState.isOnline)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
               child: Container(
@@ -203,9 +155,7 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        !appState.isOnline
-                            ? "Please turn on attendance to access dashboard features."
-                            : "Please select a distributor to continue.",
+                        "Please turn on attendance to access dashboard features.",
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontSize: 12,
@@ -261,24 +211,13 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                 _buildMenuItem(
                   iconPath: Icons.track_changes,
                   label: "Distribution Network",
-                  enabled: appState.isOnline && hasValidDistributor,
+                  enabled: appState.isOnline,
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => const DistributionNetworkScreen(isFromDashboard: true),
                       ),
-                    );
-                  },
-                ),
-                _buildMenuItem(
-                  iconPath: Icons.currency_rupee,
-                  label: "Distributor Expenses",
-                  enabled: appState.isOnline,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const DistributorExpensesScreen()),
                     );
                   },
                 ),
@@ -304,14 +243,35 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
 
   Widget _buildSessionInfo(Map<String, dynamic> data) {
     final sessions = data["sessions"] ?? [];
+    double totalHours = 0.0;
     String checkIn = "-";
-    String workingHours = "0";
 
-    if (sessions.isNotEmpty) {
-      final lastSession = sessions.last;
-      checkIn = lastSession["check_in"] ?? "-";
-      workingHours = lastSession["working_hours"]?.toString() ?? "0";
+    for (var session in sessions) {
+      final sCheckIn = session["check_in"];
+      final sCheckOut = session["check_out"];
+      final sHours = double.tryParse(session["working_hours"]?.toString() ?? "0") ?? 0.0;
+
+      if (sCheckOut != null) {
+        totalHours += sHours;
+      } else {
+        if (sCheckIn != null) {
+          checkIn = sCheckIn;
+          try {
+            final checkInTime = DateTime.parse(sCheckIn);
+            final diff = DateTime.now().difference(checkInTime);
+            totalHours += diff.inMinutes / 60.0;
+          } catch (e) {
+            totalHours += sHours;
+          }
+        }
+      }
     }
+
+    if (sessions.isNotEmpty && checkIn == "-") {
+      checkIn = sessions.last["check_in"] ?? "-";
+    }
+
+    String workingHours = totalHours.toStringAsFixed(1);
 
     return Column(
       children: [

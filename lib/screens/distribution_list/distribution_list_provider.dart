@@ -103,7 +103,7 @@ class DistributionListProvider extends ChangeNotifier {
     _stockQuantities["${productId}_$skuId"] = qty;
   }
 
-  Future<bool> submitDistributorStock(int distributorId) async {
+  Future<bool> submitDistributorStock(int? distributorId) async {
     List<Map<String, dynamic>> stocks = [];
 
     _stockQuantities.forEach((key, quantity) {
@@ -125,7 +125,7 @@ class DistributionListProvider extends ChangeNotifier {
     }
 
     final payload = {
-      "distributor_id": distributorId,
+      if (distributorId != null) "distributor_id": distributorId,
       "stocks": stocks,
     };
 

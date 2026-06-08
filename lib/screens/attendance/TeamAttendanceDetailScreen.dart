@@ -122,10 +122,15 @@ class TeamAttendanceDetailScreen extends StatelessWidget {
                       "Date: ${DateFormatter.formatDateOnly(log['attendance_date'])}",
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
-                    Text(
-                      "Work: ${log['working_minutes']} mins",
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
+                    Builder(builder: (context) {
+                      final rawMin = log['working_minutes'];
+                      final int min = rawMin is int ? rawMin : int.tryParse(rawMin?.toString() ?? "0") ?? 0;
+                      final double hours = min / 60.0;
+                      return Text(
+                        "Work: ${hours.toStringAsFixed(1)} hours",
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      );
+                    }),
                   ],
                 ),
               ],

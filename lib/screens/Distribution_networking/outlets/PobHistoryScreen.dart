@@ -19,7 +19,8 @@ class PobHistoryScreen extends StatefulWidget {
 }
 
 class _PobHistoryScreenState extends State<PobHistoryScreen> {
-  int selectedTab = 0;
+  int selectedMonth = DateTime.now().month;
+  int selectedYear = DateTime.now().year;
 
   @override
   void initState() {
@@ -31,6 +32,63 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
             .fetchPobHistory(widget.outletId, appState.selectedDistributorId!);
       }
     });
+  }
+
+  String _getMonthName(int month, int year) {
+    final months = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    return "${months[month - 1]} $year";
+  }
+
+  Future<void> _selectMonth(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(selectedYear, selectedMonth, 1),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() {
+        selectedMonth = picked.month;
+        selectedYear = picked.year;
+      });
+    }
+  }
+
+  bool _isInSelectedMonth(dynamic pob) {
+    final dateStr = pob['created_at'] ?? pob['created_on'];
+    if (dateStr == null) return false;
+    try {
+      final dt = DateTime.parse(dateStr);
+      return dt.month == selectedMonth && dt.year == selectedYear;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Widget _summaryItem(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -63,19 +121,102 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
           color: AppColors.white,
         ),
       ),
-      body: Column(
-        children: [
-          _tabs(),
-          const SizedBox(height: 6),
-          Expanded(
-            child: selectedTab == 0
-                ? _pendingScreen()
-                : _suppliedScreen(),
-          ),
-        ],
+      body: Consumer<OutletActivityProvider>(
+        builder: (context, provider, child) {
+          final filteredPending = provider.pendingPobs.where(_isInSelectedMonth).toList();
+          final filteredSupplied = provider.suppliedPobs.where(_isInSelectedMonth).toList();
+          final allFiltered = [...filteredPending, ...filteredSupplied];
+
+          final pobCount = allFiltered.length;
+          final visits = allFiltered.map((pob) {
+            final dtStr = pob['created_at'] ?? pob['created_on'];
+            if (dtStr == null) return '';
+            try {
+              final dt = DateTime.parse(dtStr);
+              return "${dt.year}-${dt.month}-${dt.day}";
+            } catch (e) {
+              return '';
+            }
+          }).where((element) => element.isNotEmpty).toSet().length;
+
+          final productiveCalls = pobCount;
+          final orderValue = allFiltered.fold<double>(0.0, (sum, pob) {
+            final amt = pob['total_amount'] ?? pob['order_value'] ?? pob['total_value'] ?? 0.0;
+            return sum + (double.tryParse(amt.toString()) ?? 0.0);
+          });
+
+          return Column(
+            children: [
+              GestureDetector(
+                onTap: () => _selectMonth(context),
+                child: Container(
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _getMonthName(selectedMonth, selectedYear),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                      ),
+                      const Icon(Icons.calendar_month, color: AppColors.primary),
+                    ],
+                  ),
+                ),
+              ),
+              Card(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                elevation: 3,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _summaryItem("Visits", "$visits"),
+                          _summaryItem("POB Count", "$pobCount"),
+                          _summaryItem("Prod. Calls", "$productiveCalls"),
+                        ],
+                      ),
+                      const Divider(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.currency_rupee, color: Colors.green, size: 20),
+                          const SizedBox(width: 4),
+                          Text(
+                            "Total Order Value: ₹${orderValue.toStringAsFixed(2)}",
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _tabs(),
+              const SizedBox(height: 6),
+              Expanded(
+                child: selectedTab == 0
+                    ? _pendingScreen(filteredPending)
+                    : _suppliedScreen(filteredSupplied),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
+  int selectedTab = 0;
+
   Widget _tabs() {
     return Row(
       children: [
@@ -120,125 +261,132 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
       ],
     );
   }
-  Widget _pendingScreen() {
-    return Consumer<OutletActivityProvider>(
-      builder: (context, provider, child) {
-        if (provider.isLoadingPobHistory) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (provider.pendingPobs.isEmpty) {
-          return const Center(child: Text("No pending POBs"));
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.all(10),
-          itemCount: provider.pendingPobs.length,
-          itemBuilder: (context, index) {
-            final pob = provider.pendingPobs[index];
-            return GestureDetector(
-              onTap: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ProductListScreen(pobData: pob),
-                  ),
-                );
-                if (!mounted) return;
-                if (result == true) {
-                  final appState = Provider.of<AppStateProvider>(this.context, listen: false);
-                  if (appState.selectedDistributorId != null) {
-                    Provider.of<OutletActivityProvider>(this.context, listen: false)
-                        .fetchPobHistory(widget.outletId, appState.selectedDistributorId!);
-                  }
-                }
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(6),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.shade300,
-                      blurRadius: 3,
-                    )
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+
+  Widget _pendingScreen(List<dynamic> pendingList) {
+    if (pendingList.isEmpty) {
+      return const Center(child: Text("No pending POBs for this month"));
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(10),
+      itemCount: pendingList.length,
+      itemBuilder: (context, index) {
+        final pob = pendingList[index];
+        final orderVal = pob['total_amount'] ?? pob['order_value'] ?? pob['total_value'] ?? '0.00';
+
+        return GestureDetector(
+          onTap: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProductListScreen(pobData: pob),
+              ),
+            );
+            if (!mounted) return;
+            if (result == true) {
+              final appState = Provider.of<AppStateProvider>(context, listen: false);
+              if (appState.selectedDistributorId != null) {
+                Provider.of<OutletActivityProvider>(context, listen: false)
+                    .fetchPobHistory(widget.outletId, appState.selectedDistributorId!);
+              }
+            }
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.shade300,
+                  blurRadius: 3,
+                )
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       "POB NUMBER: ${pob['pob_number'] ?? 'N/A'}",
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 5),
-                    //Text("Total Amount: \$${pob['total_amount'] ?? '0.00'}"),
-                    Text("Date: ${DateFormatter.formatDateTime(pob['created_at'] ?? pob['created_on'])}"),
-                    Text("Status: ${pob['status'] ?? 'N/A'}"),
+                    Text(
+                      "₹$orderVal",
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
+                    ),
                   ],
                 ),
-              ),
-            );
-          },
+                const SizedBox(height: 5),
+                Text("Date: ${DateFormatter.formatDateTime(pob['created_at'] ?? pob['created_on'])}"),
+                Text("Status: ${pob['status'] ?? 'N/A'}"),
+              ],
+            ),
+          ),
         );
       },
     );
   }
 
-  Widget _suppliedScreen() {
-    return Consumer<OutletActivityProvider>(
-      builder: (context, provider, child) {
-        if (provider.isLoadingPobHistory) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (provider.suppliedPobs.isEmpty) {
-          return const Center(child: Text("No supplied POBs"));
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.all(10),
-          itemCount: provider.suppliedPobs.length,
-          itemBuilder: (context, index) {
-            final pob = provider.suppliedPobs[index];
-            return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SuppliedProductListScreen(pobData: pob),
-                  ),
-                );
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(6),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.shade300,
-                      blurRadius: 3,
-                    )
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _suppliedScreen(List<dynamic> suppliedList) {
+    if (suppliedList.isEmpty) {
+      return const Center(child: Text("No supplied POBs for this month"));
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(10),
+      itemCount: suppliedList.length,
+      itemBuilder: (context, index) {
+        final pob = suppliedList[index];
+        final orderVal = pob['total_amount'] ?? pob['order_value'] ?? pob['total_value'] ?? '0.00';
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SuppliedProductListScreen(pobData: pob),
+              ),
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.shade300,
+                  blurRadius: 3,
+                )
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       "POB NUMBER: ${pob['pob_number'] ?? 'N/A'}",
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 5),
-                    //Text("Total Amount: \$${pob['total_amount'] ?? '0.00'}"),
-                    Text("Date: ${DateFormatter.formatDateTime(pob['created_at'] ?? pob['created_on'])}"),
-                    Text("Status: ${pob['status'] ?? 'N/A'}"),
+                    Text(
+                      "₹$orderVal",
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
+                    ),
                   ],
                 ),
-              ),
-            );
-          },
+                const SizedBox(height: 5),
+                Text("Date: ${DateFormatter.formatDateTime(pob['created_at'] ?? pob['created_on'])}"),
+                Text("Status: ${pob['status'] ?? 'N/A'}"),
+              ],
+            ),
+          ),
         );
       },
     );

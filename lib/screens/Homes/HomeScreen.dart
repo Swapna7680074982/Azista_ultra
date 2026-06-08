@@ -39,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final appState = Provider.of<AppStateProvider>(context, listen: false);
     homeProvider.fetchTodayAttendance();
     homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
+    homeProvider.fetchMonthlyCallSummary(appState.selectedDistributorId);
   }
 
   @override
@@ -55,6 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       homeProvider.fetchTodayAttendance();
       homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
+      homeProvider.fetchMonthlyCallSummary(appState.selectedDistributorId);
 
       final role = await SessionManager.getUserRole();
       appState.setUserRole(role);
@@ -182,112 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 48,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade400),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: Consumer2<HomeProvider, AppStateProvider>(
-                          builder: (context, homeProvider, appState, _) {
-                            return DropdownButton<String>(
-                              isExpanded: true,
-                              hint: const Text("SELECT DISTRIBUTOR"),
-                              value: homeProvider.distributors.any((d) => d["distributor_name"] == appState.selectedDistributor)
-                                  ? appState.selectedDistributor
-                                  : null,
-                              items: homeProvider.distributors.map<DropdownMenuItem<String>>((d) {
-                                return DropdownMenuItem<String>(
-                                  value: d["distributor_name"],
-                                  child: Text(d["distributor_name"].toString().toUpperCase()),
-                                );
-                              }).toList(),
-
-                              onChanged: appState.isOnline ? (value) {
-                                final selected = homeProvider.distributors.firstWhere(
-                                      (d) => d["distributor_name"] == value,
-                                  orElse: () => null,
-                                );
-                                int? id;
-                                if (selected != null) {
-                                  // ID can be string or int in JSON, ensure it's parsed to int
-                                  if (selected["distributor_id"] is int) {
-                                    id = selected["distributor_id"];
-                                  } else if (selected["distributor_id"] != null) {
-                                    id = int.tryParse(selected["distributor_id"].toString());
-                                  }
-                                }
-                                appState.setDistributor(value, id: id);
-                                homeProvider.fetchDailyCallSummary(id);
-                              } : null,
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: () {
-                      if (!appState.isOnline) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Please turn on attendance first"),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (appState.selectedDistributor == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Please select a distributor first"),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                        return;
-                      }
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const DistributorStockScreen(),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      height: 45,
-                      width: 65,
-                      decoration: BoxDecoration(
-                        color: (appState.selectedDistributor == null || !appState.isOnline)
-                            ? Colors.grey.shade400
-                            : AppColors.button,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          "GO",
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: AppColors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 10),
             const SizedBox(height: 10),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 12),
@@ -308,28 +205,84 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Consumer<HomeProvider>(
                     builder: (context, provider, _) {
-                      if (provider.isSummaryLoading) {
+                      if (provider.isSummaryLoading || provider.isMonthlySummaryLoading) {
                         return const Center(child: CircularProgressIndicator());
                       }
 
-                      final summary = provider.dailyCallSummary;
-                      final targetCalls = (summary?["target_calls"] ?? 0).toDouble();
-                      final productiveCalls = (summary?["productive_calls"] ?? 0).toDouble();
+                      // Daily Call Summary
+                      final dailySummary = provider.dailyCallSummary;
+                      final dailyTarget = (dailySummary?["target_calls"] ?? 0).toDouble();
+                      final dailyProductive = (dailySummary?["productive_calls"] ?? 0).toDouble();
 
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      // Monthly Call Summary
+                      final monthlySummary = provider.monthlyCallSummary;
+                      final monthlyTarget = (monthlySummary?["target_calls"] ?? 0).toDouble();
+                      final monthlyProductive = (monthlySummary?["productive_calls"] ?? 0).toDouble();
+
+                      // Dynamic total targets
+                      final dailyTotalTarget = dailyTarget > 30.0 ? dailyTarget : 30.0;
+                      final monthlyTotalTarget = monthlyTarget > 500.0 ? monthlyTarget : 500.0;
+
+                      return Column(
                         children: [
-                          DonutChart(
-                            value: targetCalls,
-                            total: 30.0,
-                            label: "Total Calls",
-                            color: Colors.green,
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              "DAILY CALL SUMMARY",
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
                           ),
-                          DonutChart(
-                            value: productiveCalls,
-                            total: 30.0,
-                            label: "Target Productive",
-                            color: Colors.green,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              DonutChart(
+                                value: dailyTarget,
+                                total: dailyTotalTarget,
+                                label: "Total Calls",
+                                color: Colors.green,
+                              ),
+                              DonutChart(
+                                value: dailyProductive,
+                                total: dailyTotalTarget,
+                                label: "Target Productive",
+                                color: Colors.green,
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 40, thickness: 1, indent: 20, endIndent: 20),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              "MONTHLY CALL SUMMARY",
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              DonutChart(
+                                value: monthlyTarget,
+                                total: monthlyTotalTarget,
+                                label: "Total Calls",
+                                color: Colors.green,
+                              ),
+                              DonutChart(
+                                value: monthlyProductive,
+                                total: monthlyTotalTarget,
+                                label: "Target Productive",
+                                color: Colors.green,
+                              ),
+                            ],
                           ),
                         ],
                       );
@@ -389,16 +342,35 @@ class _HomeScreenState extends State<HomeScreen> {
                 final data = provider.todayAttendance!;
                 final sessions = data["sessions"] ?? [];
 
+                double totalHours = 0.0;
                 String checkIn = "-";
-                String workingHours = "0";
 
-                if (sessions.isNotEmpty) {
-                  final lastSession = sessions.last;
+                for (var session in sessions) {
+                  final sCheckIn = session["check_in"];
+                  final sCheckOut = session["check_out"];
+                  final sHours = double.tryParse(session["working_hours"]?.toString() ?? "0") ?? 0.0;
 
-                  checkIn = lastSession["check_in"] ?? "-";
-                  workingHours =
-                      lastSession["working_hours"]?.toString() ?? "0";
+                  if (sCheckOut != null) {
+                    totalHours += sHours;
+                  } else {
+                    if (sCheckIn != null) {
+                      checkIn = sCheckIn;
+                      try {
+                        final checkInTime = DateTime.parse(sCheckIn);
+                        final diff = DateTime.now().difference(checkInTime);
+                        totalHours += diff.inMinutes / 60.0;
+                      } catch (e) {
+                        totalHours += sHours;
+                      }
+                    }
+                  }
                 }
+
+                if (sessions.isNotEmpty && checkIn == "-") {
+                  checkIn = sessions.last["check_in"] ?? "-";
+                }
+
+                String workingHours = totalHours.toStringAsFixed(1);
 
                 return Column(
                   children: [
@@ -473,40 +445,63 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            if (appState.userRole == 'AM' || appState.userRole == 'RM')
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: ActionBox(
-                        Icons.group,
-                        "TEAM\nATTENDANCE",
-                        enabled: appState.isOnline,
-                        onTap: () {
-                          if (AccessValidator.validate(
-                            context: context,
-                            isOnline: appState.isOnline,
-                            hasDistributor: appState.selectedDistributor != null,
-                            checkDistributor: false,
-                            isLeave: false,
-                          )) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const TeamAttendanceScreen(),
-                              ),
-                            );
-                          }
-                        },
-                      ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: ActionBox(
+                      Icons.inventory_2_outlined,
+                      "SECONDARY\nSTOCK UPDATE",
+                      enabled: appState.isOnline,
+                      onTap: () {
+                        if (AccessValidator.validate(
+                          context: context,
+                          isOnline: appState.isOnline,
+                          hasDistributor: appState.selectedDistributor != null,
+                          checkDistributor: false,
+                          isLeave: false,
+                        )) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SecondaryStockUpdateScreen(),
+                            ),
+                          );
+                        }
+                      },
                     ),
-                    const SizedBox(width: 12),
-                    const Spacer(),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: (appState.userRole == 'AM' || appState.userRole == 'RM')
+                        ? ActionBox(
+                            Icons.group,
+                            "TEAM\nATTENDANCE",
+                            enabled: appState.isOnline,
+                            onTap: () {
+                              if (AccessValidator.validate(
+                                context: context,
+                                isOnline: appState.isOnline,
+                                hasDistributor: appState.selectedDistributor != null,
+                                checkDistributor: false,
+                                isLeave: false,
+                              )) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const TeamAttendanceScreen(),
+                                  ),
+                                );
+                              }
+                            },
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
               ),
+            ),
           ],
         ),
       ),

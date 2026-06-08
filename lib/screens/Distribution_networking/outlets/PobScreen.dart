@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 import 'package:flutter/services.dart';
@@ -23,6 +26,27 @@ class PobBody extends StatefulWidget {
 class _PobBodyState extends State<PobBody> {
   bool? isLocationValid;
   String locationError = "";
+  XFile? _capturedImage;
+  final ImagePicker _imagePicker = ImagePicker();
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 50,
+      );
+      if (image != null) {
+        setState(() {
+          _capturedImage = image;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error picking image: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error picking image: $e")),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -123,19 +147,6 @@ class _PobBodyState extends State<PobBody> {
                             width: 60,
                             alignment: Alignment.center,
                             child: Text(
-                              "DSA.QTY",
-                              style: TextStyle(
-                                color: Colors.grey.shade700,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Container(
-                            width: 60,
-                            alignment: Alignment.center,
-                            child: Text(
                               "R.QTY",
                               style: TextStyle(
                                 color: Colors.grey.shade700,
@@ -163,16 +174,89 @@ class _PobBodyState extends State<PobBody> {
                               return _buildProductSection(product, provider);
                             }).toList(),
 
+                          const SizedBox(height: 16),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Text(
+                              "CAPTURE / UPLOAD PHOTO",
+                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 13),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Row(
+                              children: [
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  onPressed: () => _pickImage(ImageSource.camera),
+                                  icon: const Icon(Icons.camera_alt),
+                                  label: const Text("Camera"),
+                                ),
+                                const SizedBox(width: 12),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.grey[600],
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  onPressed: () => _pickImage(ImageSource.gallery),
+                                  icon: const Icon(Icons.photo_library),
+                                  label: const Text("Gallery"),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          if (_capturedImage != null)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    height: 150,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      image: DecorationImage(
+                                        image: FileImage(File(_capturedImage!.path)),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _capturedImage = null;
+                                        });
+                                      },
+                                      child: const CircleAvatar(
+                                        backgroundColor: Colors.red,
+                                        radius: 16,
+                                        child: Icon(Icons.delete, color: Colors.white, size: 16),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const SizedBox(height: 16),
+
                           Container(
                             width: double.infinity,
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             height: 45,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.button,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
+                                  backgroundColor: AppColors.button,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
                               ),
                               onPressed: () async {
                                 final appState = Provider.of<AppStateProvider>(context, listen: false);
@@ -185,9 +269,20 @@ class _PobBodyState extends State<PobBody> {
 
                                 LoadingDialog.show(context, message: "Submitting POB...");
 
+                                String? base64Image;
+                                if (_capturedImage != null) {
+                                  try {
+                                    final bytes = await File(_capturedImage!.path).readAsBytes();
+                                    base64Image = base64Encode(bytes);
+                                  } catch (e) {
+                                    debugPrint("Error encoding image: $e");
+                                  }
+                                }
+
                                 bool success = await provider.submitPob(
                                   widget.outletId,
                                   appState.selectedDistributorId!,
+                                  imageBase64: base64Image,
                                 );
 
                                 if (!mounted) return;
@@ -195,6 +290,9 @@ class _PobBodyState extends State<PobBody> {
 
                                 if (success) {
                                   SuccessDialog.show(context, message: "POB Submitted Successfully!");
+                                  setState(() {
+                                    _capturedImage = null;
+                                  });
                                   provider.fetchProductsWithSkus();
                                 } else {
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -290,7 +388,6 @@ class _PobBodyState extends State<PobBody> {
     final skuName = sku['sku_displayname'] ?? 'Unknown SKU';
     final skuId = sku['sku_id'];
     final currentQty = provider.stockQuantities["${productId}_$skuId"]?.toString() ?? "";
-    final distStockStr = provider.distributorStock["${productId}_$skuId"]?.toString() ?? "0";
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -302,11 +399,6 @@ class _PobBodyState extends State<PobBody> {
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             ),
           ),
-
-          QtyBox(isEditable: false, initialValue: distStockStr),
-
-          const SizedBox(width: 12),
-          
           QtyBox(
             isRed: true,
             initialValue: currentQty,

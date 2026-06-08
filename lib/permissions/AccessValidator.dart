@@ -8,10 +8,13 @@ class AccessValidator {
     required bool isLeave,
     bool checkDistributor = true,
   }) {
+    // Distributor flow is not required, bypass checkDistributor / hasDistributor checks
+    /*
     if (checkDistributor && !hasDistributor) {
       _show(context, "Please select a distributor to continue.");
       return false;
     }
+    */
 
     if (!isOnline && !isLeave) {
       _show(context, "Please turn on attendance to access this feature.");
@@ -32,10 +35,13 @@ class AccessValidator {
     required bool hasDistributor,
     required int index,
   }) {
+    // Distributor flow is not required, bypass hasDistributor checks
+    /*
     if (!hasDistributor) {
       _show(context, "Please select a distributor to continue.");
       return false;
     }
+    */
 
     if (!isOnline && index != 0) {
       _show(context, "Please turn on attendance to access other sections.");
