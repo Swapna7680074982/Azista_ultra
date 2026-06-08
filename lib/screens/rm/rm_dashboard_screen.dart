@@ -125,8 +125,8 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                     ],
                   ),
                   // Session Details
-                  if (appState.isOnline && homeProvider.todayAttendance != null)
-                    _buildSessionInfo(homeProvider.todayAttendance!),
+                  if (appState.isOnline)
+                    _buildSessionInfo(homeProvider.todayAttendance),
                 ],
               ),
             ),
@@ -240,10 +240,12 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
     );
   }
 
-  Widget _buildSessionInfo(Map<String, dynamic> data) {
-    final sessions = data["sessions"] ?? [];
+  Widget _buildSessionInfo(Map<String, dynamic>? data) {
+    final homeProvider = context.read<HomeProvider>();
+    final sessions = data?["sessions"] ?? [];
     double totalHours = 0.0;
     String checkIn = "-";
+    bool hasActiveSession = false;
 
     for (var session in sessions) {
       final sCheckIn = session["check_in"];
@@ -255,6 +257,7 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
       } else {
         if (sCheckIn != null) {
           checkIn = sCheckIn;
+          hasActiveSession = true;
           try {
             final checkInTime = DateTime.parse(sCheckIn);
             final diff = DateTime.now().difference(checkInTime);
@@ -263,6 +266,15 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
             totalHours += sHours;
           }
         }
+      }
+    }
+
+    if (homeProvider.localCheckInTime != null && !hasActiveSession) {
+      final checkInTime = homeProvider.localCheckInTime!;
+      final diff = DateTime.now().difference(checkInTime);
+      totalHours += diff.inMinutes / 60.0;
+      if (checkIn == "-") {
+        checkIn = checkInTime.toIso8601String();
       }
     }
 

@@ -18,6 +18,7 @@ class HomeProvider extends ChangeNotifier {
   Map<String, dynamic>? monthlyCallSummary;
   bool isMonthlySummaryLoading = false;
   StreamSubscription? _autoCheckoutSubscription;
+  DateTime? localCheckInTime;
 
   Future<void> loadDistributors([AppStateProvider? appState]) async {
     distributors = await SessionManager.getDistributors();
@@ -40,33 +41,48 @@ class HomeProvider extends ChangeNotifier {
 
   Future<void> initializeAttendance(AppStateProvider appState) async {
     try {
+      localCheckInTime = await SessionManager.getCheckInTime();
+      notifyListeners();
+
       final res = await ApiServices.getAttendanceStatus();
       if (res != null && res["status"] == true && res["data"] != null) {
         final todayStatus = res["data"]["attendance_status"]?["today_status"]?.toString();
         if (todayStatus == "CHECKED_IN") {
           appState.setOnline(true);
           await SessionManager.saveAttendanceStatus("CHECKED_IN");
+          localCheckInTime = await SessionManager.getCheckInTime();
+          notifyListeners();
           await checkAutoCheckout(appState);
         } else {
           appState.setOnline(false);
           await SessionManager.saveAttendanceStatus("CHECKED_OUT");
+          localCheckInTime = null;
+          notifyListeners();
         }
       } else {
         // Fallback to local session
         final status = await SessionManager.getAttendanceStatus();
         if (status == "CHECKED_IN") {
           appState.setOnline(true);
+          localCheckInTime = await SessionManager.getCheckInTime();
+          notifyListeners();
           await checkAutoCheckout(appState);
         } else {
           appState.setOnline(false);
+          localCheckInTime = null;
+          notifyListeners();
         }
       }
     } catch (e) {
       final status = await SessionManager.getAttendanceStatus();
       if (status == "CHECKED_IN") {
         appState.setOnline(true);
+        localCheckInTime = await SessionManager.getCheckInTime();
+        notifyListeners();
       } else {
         appState.setOnline(false);
+        localCheckInTime = null;
+        notifyListeners();
       }
     }
 
@@ -122,6 +138,8 @@ class HomeProvider extends ChangeNotifier {
     if (res != null && res["status"] == true) {
       message = res["message"];
       await SessionManager.saveAttendanceStatus("CHECKED_IN");
+      localCheckInTime = await SessionManager.getCheckInTime();
+      notifyListeners();
       return true;
     }
 
@@ -144,6 +162,8 @@ class HomeProvider extends ChangeNotifier {
     if (res != null && res["status"] == true) {
       message = res["message"];
       await SessionManager.saveAttendanceStatus("CHECKED_OUT");
+      localCheckInTime = null;
+      notifyListeners();
       return true;
     }
 
@@ -238,6 +258,7 @@ class HomeProvider extends ChangeNotifier {
     distributors = [];
     selectedDistributor = null;
     todayAttendance = null;
+    localCheckInTime = null;
     isLoading = false;
     message = null;
     dailyCallSummary = null;

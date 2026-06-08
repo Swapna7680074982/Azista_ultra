@@ -336,6 +336,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
 
                 if (provider.todayAttendance == null) {
+                  if (appState.isOnline && provider.localCheckInTime != null) {
+                    final checkInTime = provider.localCheckInTime!;
+                    final diff = DateTime.now().difference(checkInTime);
+                    final totalHours = diff.inMinutes / 60.0;
+                    final workingHours = totalHours.toStringAsFixed(1);
+                    return Column(
+                      children: [
+                        Text(
+                          "CHECK-IN: ${DateFormatter.formatDateTime(checkInTime.toIso8601String())}",
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "WORKING HOURS: $workingHours hrs",
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ],
+                    );
+                  }
                   return const Text("NO ATTENDANCE DATA");
                 }
 
@@ -344,6 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 double totalHours = 0.0;
                 String checkIn = "-";
+                bool hasActiveSession = false;
 
                 for (var session in sessions) {
                   final sCheckIn = session["check_in"];
@@ -355,6 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   } else {
                     if (sCheckIn != null) {
                       checkIn = sCheckIn;
+                      hasActiveSession = true;
                       try {
                         final checkInTime = DateTime.parse(sCheckIn);
                         final diff = DateTime.now().difference(checkInTime);
@@ -363,6 +388,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         totalHours += sHours;
                       }
                     }
+                  }
+                }
+
+                if (appState.isOnline && !hasActiveSession && provider.localCheckInTime != null) {
+                  final checkInTime = provider.localCheckInTime!;
+                  final diff = DateTime.now().difference(checkInTime);
+                  totalHours += diff.inMinutes / 60.0;
+                  if (checkIn == "-") {
+                    checkIn = checkInTime.toIso8601String();
                   }
                 }
 
@@ -375,7 +409,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return Column(
                   children: [
                     Text(
-                      "CHECK-IN: ${DateFormatter.formatDateTime(checkIn)}",
+                      "CHECK-IN: ${checkIn != "-" ? DateFormatter.formatDateTime(checkIn) : "-"}",
                       style: TextStyle(
                         color: AppColors.primary,
                         fontSize: 14,
