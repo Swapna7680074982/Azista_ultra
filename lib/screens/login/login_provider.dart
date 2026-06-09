@@ -25,7 +25,6 @@ class LoginProvider extends ChangeNotifier {
           await SessionManager.saveSession(
             refreshToken: data["refresh_token"],
             token: data["access_token"],
-            distributors: data["distributors"],
           );
 
           final userInfo = data["user_info"];
@@ -49,6 +48,7 @@ class LoginProvider extends ChangeNotifier {
         error = "Invalid login";
       }
     } catch (e) {
+      debugPrint("Login error: $e");
       error = "Operation failed";
     }
 
@@ -83,6 +83,7 @@ class LoginProvider extends ChangeNotifier {
         error = response?["message"] ?? "Change password failed";
       }
     } catch (e) {
+      debugPrint("Change password error: $e");
       error = "Operation failed";
     }
 

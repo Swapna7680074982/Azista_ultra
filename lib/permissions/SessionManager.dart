@@ -10,7 +10,6 @@ class SessionManager {
   static Future<void> saveSession({
     required String token,
     required String refreshToken,
-    required List distributors,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
@@ -18,7 +17,6 @@ class SessionManager {
 
     await prefs.setString(_tokenKey, token);
     await prefs.setString(_refreshTokenKey, refreshToken);
-    await prefs.setString(_distributorsKey, jsonEncode(distributors));
     await prefs.setString(_expiryKey, midnight.toIso8601String());
   }
 

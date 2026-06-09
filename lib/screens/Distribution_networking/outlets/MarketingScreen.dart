@@ -302,7 +302,7 @@ class _MarketingBodyState extends State<MarketingBody> with SingleTickerProvider
             children: [
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.button,
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () => _pickImage(ImageSource.camera),
@@ -363,7 +363,7 @@ class _MarketingBodyState extends State<MarketingBody> with SingleTickerProvider
                   height: 45,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: AppColors.button,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),
                       ),
@@ -379,6 +379,7 @@ class _MarketingBodyState extends State<MarketingBody> with SingleTickerProvider
                     ),
                   ),
                 ),
+          const SizedBox(height: 24),
         ],
       ),
     );

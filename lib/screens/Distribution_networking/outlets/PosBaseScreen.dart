@@ -299,7 +299,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.red,
+                        color: AppColors.button,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: const Text(

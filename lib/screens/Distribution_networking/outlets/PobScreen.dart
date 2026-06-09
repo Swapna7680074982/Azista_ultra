@@ -189,7 +189,7 @@ class _PobBodyState extends State<PobBody> {
                               children: [
                                 ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
+                                    backgroundColor: AppColors.button,
                                     foregroundColor: Colors.white,
                                   ),
                                   onPressed: () => _pickImage(ImageSource.camera),
