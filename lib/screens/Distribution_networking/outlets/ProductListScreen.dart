@@ -269,9 +269,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
               final distributorId = widget.pobData?['distributor_id'] is String
                   ? int.tryParse(widget.pobData!['distributor_id'])
                   : widget.pobData?['distributor_id'];
-              if (outletId != null && distributorId != null) {
+              if (outletId != null) {
                 Provider.of<OutletActivityProvider>(context, listen: false)
-                    .fetchPobHistory(outletId, distributorId);
+                    .fetchPobHistory(outletId, distributorId: distributorId);
               }
             } else {
               ScaffoldMessenger.of(context).showSnackBar(

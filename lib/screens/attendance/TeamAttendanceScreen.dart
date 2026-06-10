@@ -23,6 +23,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
       context.read<TeamAttendanceProvider>().fetchTeamAttendance(
         isToday: true,
         defaultRole: appState.userRole == 'AM' ? 'SO' : (appState.userRole == 'RM' ? 'AM' : null),
+        currentUserRole: appState.userRole,
       );
     });
   }
@@ -242,7 +243,8 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
   }
 
   Widget _buildFilterSection(TeamAttendanceProvider provider) {
-    const roles = ['RM', 'AM', 'SO'];
+    final appState = context.read<AppStateProvider>();
+    final roles = appState.userRole == 'AM' ? ['AM', 'SO'] : ['RM', 'AM', 'SO'];
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),

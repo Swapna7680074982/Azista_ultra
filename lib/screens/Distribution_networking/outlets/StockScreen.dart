@@ -56,11 +56,15 @@ class _StockBodyState extends State<StockBody> {
                       ),
                       onPressed: () async {
                         final appState = Provider.of<AppStateProvider>(context, listen: false);
-                        final distributorId = appState.selectedDistributorId ?? 6;
+                        final distributorId = appState.selectedDistributorId;
 
                         LoadingDialog.show(context, message: "Submitting Stock...");
 
-                        final result = await provider.submitPosTransaction("stock", widget.outletId, distributorId);
+                        final result = await provider.submitPosTransaction(
+                          "stock",
+                          widget.outletId,
+                          distributorId: distributorId,
+                        );
 
                         if (!context.mounted) return;
                         LoadingDialog.hide(context);

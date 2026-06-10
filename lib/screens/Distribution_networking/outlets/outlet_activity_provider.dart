@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../../../services/api_services.dart';
@@ -92,7 +94,7 @@ class OutletActivityProvider extends ChangeNotifier {
     _samplingQuantities["${productId}_$skuId"] = qty;
   }
 
-  Future<Map<String, dynamic>?> submitPosTransaction(String posType, int outletId, int distributorId) async {
+  Future<Map<String, dynamic>?> submitPosTransaction(String posType, int outletId, {int? distributorId}) async {
     Map<String, int> targetMap;
     if (posType == "sale") {
       targetMap = _saleQuantities;
@@ -124,7 +126,7 @@ class OutletActivityProvider extends ChangeNotifier {
 
     final payload = {
       "pos_type": posType,
-      "distributor_id": distributorId,
+      if (distributorId != null) "distributor_id": distributorId,
       "outlet_id": outletId,
       "items": items,
     };
@@ -139,7 +141,7 @@ class OutletActivityProvider extends ChangeNotifier {
     return {"status": false, "message": "Transaction failed"};
   }
 
-  Future<bool> submitPob(int outletId, int distributorId, {String? imageBase64}) async {
+  Future<bool> submitPob(int outletId, {int? distributorId, File? imageFile, String remarks = ""}) async {
     List<Map<String, dynamic>> items = [];
 
     _stockQuantities.forEach((key, quantity) {
@@ -160,15 +162,13 @@ class OutletActivityProvider extends ChangeNotifier {
       return false; 
     }
 
-    final payload = {
-      "outlet_id": outletId,
-      "distributor_id": distributorId,
-      "remarks": "",
-      "items": items,
-      if (imageBase64 != null) "image": imageBase64,
-    };
-
-    final response = await ApiServices.generatePob(payload: payload);
+    final response = await ApiServices.generatePob(
+      outletId: outletId.toString(),
+      distributorId: distributorId?.toString(),
+      itemsJson: jsonEncode(items),
+      remarks: remarks,
+      orderCopy: imageFile,
+    );
     
     if (response != null && response['status'] == "success") {
       _stockQuantities.clear();
@@ -178,13 +178,13 @@ class OutletActivityProvider extends ChangeNotifier {
     return false;
   }
 
-  Future<void> fetchPobHistory(int outletId, int distributorId) async {
+  Future<void> fetchPobHistory(int outletId, {int? distributorId}) async {
     _isLoadingPobHistory = true;
     notifyListeners();
 
     final payload = {
       "outlet_id": outletId,
-      "distributor_id": distributorId,
+      if (distributorId != null) "distributor_id": distributorId,
     };
 
     final response = await ApiServices.getPobHistory(payload: payload);

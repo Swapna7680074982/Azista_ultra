@@ -56,11 +56,15 @@ class _SaleBodyState extends State<SaleBody> {
                       ),
                       onPressed: () async {
                         final appState = Provider.of<AppStateProvider>(context, listen: false);
-                        final distributorId = appState.selectedDistributorId ?? 6;
+                        final distributorId = appState.selectedDistributorId;
 
                         LoadingDialog.show(context, message: "Submitting Sale...");
 
-                        final result = await provider.submitPosTransaction("sale", widget.outletId, distributorId);
+                        final result = await provider.submitPosTransaction(
+                          "sale",
+                          widget.outletId,
+                          distributorId: distributorId,
+                        );
 
                         if (!context.mounted) return;
                         LoadingDialog.hide(context);

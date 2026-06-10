@@ -262,7 +262,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(widget.routeName.toUpperCase()),
-                      const Icon(Icons.arrow_drop_down),
+                      const SizedBox.shrink(),
                     ],
                   ),
                 ),

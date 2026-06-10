@@ -93,6 +93,44 @@ class SessionManager {
     return false;
   }
 
+  static const _outletCheckInOutletIdKey = "outlet_check_in_outlet_id";
+  static const _outletCheckInVisitIdKey = "outlet_check_in_visit_id";
+  static const _outletCheckInTimeKey = "outlet_check_in_time";
+
+  static Future<void> saveOutletCheckIn({
+    required int outletId,
+    required int visitId,
+    required DateTime checkInTime,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_outletCheckInOutletIdKey, outletId);
+    await prefs.setInt(_outletCheckInVisitIdKey, visitId);
+    await prefs.setString(_outletCheckInTimeKey, checkInTime.toIso8601String());
+  }
+
+  static Future<void> clearOutletCheckIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_outletCheckInOutletIdKey);
+    await prefs.remove(_outletCheckInVisitIdKey);
+    await prefs.remove(_outletCheckInTimeKey);
+  }
+
+  static Future<int?> getOutletCheckInOutletId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_outletCheckInOutletIdKey);
+  }
+
+  static Future<int?> getOutletCheckInVisitId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_outletCheckInVisitIdKey);
+  }
+
+  static Future<DateTime?> getOutletCheckInTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    final timeStr = prefs.getString(_outletCheckInTimeKey);
+    return timeStr != null ? DateTime.parse(timeStr) : null;
+  }
+
   static Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();

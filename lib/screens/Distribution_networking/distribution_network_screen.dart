@@ -87,6 +87,7 @@ class _DistributionNetworkScreenState
             child: Column(
               children: [
                 DropdownButtonFormField<String>(
+                  icon: provider.regions.length <= 1 ? const SizedBox.shrink() : null,
                   value: provider.selectedRegion,
                   hint: const Text("Select Region"),
                   decoration: InputDecoration(
@@ -110,6 +111,7 @@ class _DistributionNetworkScreenState
                 const SizedBox(height: 12),
 
                 DropdownButtonFormField<String>(
+                  icon: provider.areas.length <= 1 ? const SizedBox.shrink() : null,
                   value: provider.selectedArea,
                   hint: const Text("Select Area"),
                   decoration: InputDecoration(
@@ -133,6 +135,7 @@ class _DistributionNetworkScreenState
                 const SizedBox(height: 12),
 
                 DropdownButtonFormField<String>(
+                  icon: provider.hqs.length <= 1 ? const SizedBox.shrink() : null,
                   value: provider.selectedHq,
                   hint: const Text("Select HQ"),
                   decoration: InputDecoration(
@@ -156,6 +159,7 @@ class _DistributionNetworkScreenState
                 const SizedBox(height: 12),
 
                 DropdownButtonFormField<String>(
+                  icon: provider.beats.length <= 1 ? const SizedBox.shrink() : null,
                   value: provider.selectedBeat,
                   hint: const Text("Select Beat"),
                   decoration: InputDecoration(

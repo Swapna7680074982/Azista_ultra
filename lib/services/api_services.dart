@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../constants/api_urls.dart';
+import 'package:http_parser/http_parser.dart';
 import '../permissions/SessionManager.dart';
 import '../screens/login/login_screen.dart';
 import '../services/location_service.dart';
@@ -18,24 +19,72 @@ class ApiServices {
       onResponse: (response, handler) async {
         final path = response.requestOptions.path;
         final isLogin = path.contains('/user/login');
+        final isRefresh = path.contains('/user/refresh_token');
 
-        if (!isLogin &&
+        if (!isLogin && !isRefresh &&
             (response.statusCode == 401 ||
                 (response.data is Map &&
                     response.data["message"]?.toString().contains("Token expired") == true))) {
-          await _handleTokenExpired();
+          final success = await refreshToken();
+          if (success) {
+            final token = await SessionManager.getToken();
+            final opts = response.requestOptions;
+            opts.headers["Authorization"] = "Bearer $token";
+            
+            try {
+              final cloneReq = await _dio.request(
+                opts.path,
+                data: opts.data,
+                queryParameters: opts.queryParameters,
+                options: Options(
+                  method: opts.method,
+                  headers: opts.headers,
+                  contentType: opts.contentType,
+                ),
+              );
+              return handler.resolve(cloneReq);
+            } catch (err) {
+              return handler.next(response);
+            }
+          } else {
+            await _handleTokenExpired();
+          }
         }
         return handler.next(response);
       },
       onError: (DioException e, handler) async {
         final path = e.requestOptions.path;
         final isLogin = path.contains('/user/login');
+        final isRefresh = path.contains('/user/refresh_token');
 
-        if (!isLogin &&
+        if (!isLogin && !isRefresh &&
             (e.response?.statusCode == 401 ||
                 (e.response?.data is Map &&
                     e.response?.data["message"]?.toString().contains("Token expired") == true))) {
-          await _handleTokenExpired();
+          final success = await refreshToken();
+          if (success) {
+            final token = await SessionManager.getToken();
+            final opts = e.requestOptions;
+            opts.headers["Authorization"] = "Bearer $token";
+            
+            try {
+              final cloneReq = await _dio.request(
+                opts.path,
+                data: opts.data,
+                queryParameters: opts.queryParameters,
+                options: Options(
+                  method: opts.method,
+                  headers: opts.headers,
+                  contentType: opts.contentType,
+                ),
+              );
+              return handler.resolve(cloneReq);
+            } catch (err) {
+              return handler.next(e);
+            }
+          } else {
+            await _handleTokenExpired();
+          }
         }
         return handler.next(e);
       },
@@ -78,6 +127,58 @@ class ApiServices {
     } finally {
       await Future.delayed(const Duration(seconds: 2));
       _isRedirecting = false;
+    }
+  }
+
+  static Future<bool> refreshToken() async {
+    try {
+      final refresh = await SessionManager.getRefreshToken();
+      if (refresh == null || refresh.isEmpty) {
+        AppLogger.warning("Refresh token is null or empty");
+        return false;
+      }
+
+      final deviceId = NotificationService.instance.deviceId ?? "no_device";
+      final deviceType = Platform.isAndroid ? "Android" : "iOS";
+      final coords = await LocationService.getCoordinates().catchError((_) => ["0.0", "0.0"]);
+
+      final payload = {
+        "refresh_token": refresh,
+        "device_id": deviceId,
+        "device_name": Platform.isAndroid ? "Android Device" : "iOS Device",
+        "device_type": deviceType,
+        "app_version": "1.0.0",
+        "latitude": coords[0],
+        "longitude": coords[1],
+      };
+
+      AppLogger.info("Refresh Token API called");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      // Use a separate Dio instance to avoid infinite loops
+      final dio = Dio();
+      final response = await dio.post(
+        AppUrls.refreshToken,
+        data: payload,
+      );
+
+      AppLogger.info("Refresh Token response: ${response.data}");
+
+      if (response.statusCode == 200 && response.data["status"] == true) {
+        final newAccessToken = response.data["access_token"];
+        if (newAccessToken != null) {
+          await SessionManager.saveSession(
+            token: newAccessToken,
+            refreshToken: refresh,
+          );
+          AppLogger.success("Token refreshed successfully");
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      AppLogger.error("Refresh token error", e);
+      return false;
     }
   }
 
@@ -319,6 +420,106 @@ class ApiServices {
       return response.data;
     } catch (e) {
       print("REAL ERROR: $e");
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> outletCheckIn({
+    required int outletId,
+    required double latitude,
+    required double longitude,
+    String? address,
+    String? remarks,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for outletCheckIn");
+        return null;
+      }
+
+      final payload = {
+        "outlet_id": outletId,
+        "latitude": latitude,
+        "longitude": longitude,
+        "address": address ?? "",
+        "remarks": remarks ?? "",
+      };
+
+      AppLogger.info("Outlet Check-In API called: ${AppUrls.outletCheckIn}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.outletCheckIn,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      AppLogger.info("Outlet Check-In response: ${response.data}");
+      return response.data;
+    } catch (e) {
+      AppLogger.error("Outlet Check-In error", e);
+      if (e is DioException) {
+        AppLogger.error("Outlet Check-In status code: ${e.response?.statusCode}");
+        AppLogger.error("Outlet Check-In response data: ${e.response?.data}");
+        if (e.response?.data is Map) {
+          return e.response!.data as Map<String, dynamic>;
+        }
+      }
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> outletCheckOut({
+    required int visitId,
+    required double latitude,
+    required double longitude,
+    String? address,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for outletCheckOut");
+        return null;
+      }
+
+      final payload = {
+        "visit_id": visitId,
+        "latitude": latitude,
+        "longitude": longitude,
+        "address": address ?? "",
+      };
+
+      AppLogger.info("Outlet Check-Out API called: ${AppUrls.outletCheckOut}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.outletCheckOut,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      AppLogger.info("Outlet Check-Out response: ${response.data}");
+      return response.data;
+    } catch (e) {
+      AppLogger.error("Outlet Check-Out error", e);
+      if (e is DioException) {
+        AppLogger.error("Outlet Check-Out status code: ${e.response?.statusCode}");
+        AppLogger.error("Outlet Check-Out response data: ${e.response?.data}");
+        if (e.response?.data is Map) {
+          return e.response!.data as Map<String, dynamic>;
+        }
+      }
       return null;
     }
   }
@@ -611,22 +812,53 @@ class ApiServices {
   }
 
   static Future<Map<String, dynamic>?> generatePob({
-    required Map<String, dynamic> payload,
+    required String outletId,
+    String? distributorId,
+    required String itemsJson,
+    required String remarks,
+    File? orderCopy,
   }) async {
     try {
       final token = await SessionManager.getToken();
       if (token == null) return null;
 
+      final Map<String, dynamic> fields = {
+        "outlet_id": outletId,
+        if (distributorId != null) "distributor_id": distributorId,
+        "items": itemsJson,
+        "remarks": remarks,
+      };
+
+      final FormData formData = FormData.fromMap(fields);
+
+      if (orderCopy != null) {
+        final fileName = orderCopy.path.split('/').last.split('\\').last;
+        formData.files.add(MapEntry(
+          "order_copy",
+          await MultipartFile.fromFile(
+            orderCopy.path,
+            filename: fileName,
+            contentType: MediaType('image', fileName.toLowerCase().endsWith('.png') ? 'png' : 'jpeg'),
+          ),
+        ));
+      }
+
+      AppLogger.info("Generate POB API call: ${AppUrls.generatePob}");
+      AppLogger.info("Fields: $fields");
+      AppLogger.info("File payload: ${orderCopy != null ? 'order_copy -> ${orderCopy.path}' : 'None'}");
+
       final response = await _dio.post(
         AppUrls.generatePob,
-        data: payload,
+        data: formData,
         options: Options(
           headers: {
             "Authorization": "Bearer $token",
-            "Content-Type": "application/json",
           },
         ),
       );
+
+      AppLogger.info("Generate POB response status: ${response.statusCode}");
+      AppLogger.info("Generate POB response data: ${response.data}");
 
       if (response.statusCode == 200 && response.data["status"] == "success") {
         return response.data;
@@ -634,6 +866,10 @@ class ApiServices {
       return null;
     } catch (e) {
       AppLogger.error("Generate POB error", e);
+      if (e is DioException) {
+        AppLogger.error("Generate POB status code: ${e.response?.statusCode}");
+        AppLogger.error("Generate POB response data: ${e.response?.data}");
+      }
       return null;
     }
   }

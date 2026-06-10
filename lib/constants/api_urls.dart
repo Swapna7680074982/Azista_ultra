@@ -5,7 +5,8 @@ class AppUrls {
   static const String login = "$baseUrl/user/login";
   static const String logout = "$baseUrl/user/logout";
   static const String changePassword = "$baseUrl/user/change_password";
-  static const String routes = "$baseUrl/user/get_routes";
+  static const String routes = "$baseUrl/user/get_user_beats";
+  static const String refreshToken = "$baseUrl/user/refresh_token";
   static const String markAttendance = "$baseUrl/user/mark_attendance";
   static const String todaysAttendance = "$baseUrl/user/get_today_attendance";
   static const String attendanceRange = "$baseUrl/user/get_attendance_range";
@@ -16,11 +17,11 @@ class AppUrls {
   static const String insertDistributorStock = "$baseUrl/distribution_v1/insert_distributor_stock";
   static const String getDistributorStock = "$baseUrl/distribution_v1/get_distributor_stock";
   static const String getModules = "$baseUrl/distribution_v1/get_modules";
-  static const String generatePob = "$baseUrl/distribution_v1/generate_pob";
+  static const String generatePob = "$baseUrl/distribution/generate_pob";
   static const String supplyPob = "$baseUrl/distribution_v1/supply_pob";
-  static const String pobHistory = "$baseUrl/distribution_v1/pob_history";
-  static const String posTransaction = "$baseUrl/distribution_v1/pos_transaction";
-  static const String posHistory = "$baseUrl/distribution_v1/pos_history";
+  static const String pobHistory = "$baseUrl/distribution/pob_history";
+  static const String posTransaction = "$baseUrl/distribution/pos_transaction";
+  static const String posHistory = "$baseUrl/distribution/pos_history";
   static const String getSupportTeam = "$baseUrl/distribution_v1/get_support_team";
   static const String dailyCallSummary = "$baseUrl/distribution_v1/daily_call_summary";
   static const String callsInfo = "$baseUrl/distribution_v1/calls_info";
@@ -34,4 +35,6 @@ class AppUrls {
   static const String getAttendanceStatus = "$baseUrl/user/get_attendance_status";
   static const String teamPosHistory = "$baseUrl/distribution_v1/team_pos_history";
   static const String teamPobHistory = "$baseUrl/distribution_v1/team_pob_history";
+  static const String outletCheckIn = "$baseUrl/distribution/outlet_checkin";
+  static const String outletCheckOut = "$baseUrl/distribution/outlet_checkout";
 }

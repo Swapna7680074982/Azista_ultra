@@ -16,6 +16,7 @@ import 'SaleScreen.dart';
 import 'outlet_provider.dart';
 import '../../../services/api_services.dart';
 import '../../../utilities/common_widgets.dart';
+import '../../../permissions/SessionManager.dart';
 
 class PosBaseScreen extends StatefulWidget {
   final Outlet outlet;
@@ -38,9 +39,33 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
     super.initState();
     _fetchModules();
     _checkLocation();
+    _loadOutletCheckInStatus();
+  }
+
+  Future<void> _loadOutletCheckInStatus() async {
+    final savedOutletId = await SessionManager.getOutletCheckInOutletId();
+    final currentOutletId = int.tryParse(widget.outlet.id);
+    if (savedOutletId != null && currentOutletId != null && savedOutletId == currentOutletId) {
+      final visitId = await SessionManager.getOutletCheckInVisitId();
+      final checkInTime = await SessionManager.getOutletCheckInTime();
+      if (visitId != null && checkInTime != null) {
+        if (mounted) {
+          setState(() {
+            _isCheckedIn = true;
+            _visitId = visitId;
+            _checkInTime = checkInTime;
+          });
+        }
+      }
+    }
   }
 
   Future<void> _checkLocation() async {
+    if (mounted) {
+      setState(() {
+        isLocationValid = null;
+      });
+    }
     try {
       final coords = await LocationService.getCoordinates();
       final currentLat = double.parse(coords[0]);
@@ -79,6 +104,124 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
 
   bool _isCheckedIn = false;
   DateTime? _checkInTime;
+  int? _visitId;
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleCheckIn() async {
+    LoadingDialog.show(context, message: "Checking in...");
+    try {
+      final coords = await LocationService.getCoordinates();
+      final currentLat = double.parse(coords[0]);
+      final currentLng = double.parse(coords[1]);
+
+      final outletId = int.tryParse(widget.outlet.id) ?? 0;
+
+      final response = await ApiServices.outletCheckIn(
+        outletId: outletId,
+        latitude: currentLat,
+        longitude: currentLng,
+        remarks: "Visited outlet",
+      );
+
+      if (mounted) {
+        LoadingDialog.hide(context);
+      }
+
+      if (response != null && response['status'] == true) {
+        final visitId = response['visit_id'] ?? 0;
+        final checkInTime = DateTime.now();
+
+        await SessionManager.saveOutletCheckIn(
+          outletId: outletId,
+          visitId: visitId,
+          checkInTime: checkInTime,
+        );
+
+        if (mounted) {
+          setState(() {
+            _isCheckedIn = true;
+            _visitId = visitId;
+            _checkInTime = checkInTime;
+          });
+
+          SuccessDialog.show(
+            context,
+            message: response['message'] ?? "Outlet checked-in successfully",
+          );
+        }
+      } else {
+        final errMsg = response != null ? response['message'] : "Failed to check in";
+        _showErrorSnackBar(errMsg ?? "Failed to check in");
+      }
+    } catch (e) {
+      if (mounted) {
+        LoadingDialog.hide(context);
+      }
+      _showErrorSnackBar("Error getting location or checking in: $e");
+    }
+  }
+
+  Future<void> _handleCheckOut() async {
+    if (_visitId == null) {
+      _showErrorSnackBar("No active visit ID found.");
+      return;
+    }
+
+    LoadingDialog.show(context, message: "Checking out...");
+    try {
+      final coords = await LocationService.getCoordinates();
+      final currentLat = double.parse(coords[0]);
+      final currentLng = double.parse(coords[1]);
+
+      final response = await ApiServices.outletCheckOut(
+        visitId: _visitId!,
+        latitude: currentLat,
+        longitude: currentLng,
+      );
+
+      if (mounted) {
+        LoadingDialog.hide(context);
+      }
+
+      if (response != null && response['status'] == true) {
+        await SessionManager.clearOutletCheckIn();
+
+        if (mounted) {
+          setState(() {
+            _isCheckedIn = false;
+            _visitId = null;
+            _checkInTime = null;
+          });
+
+          SuccessDialog.show(
+            context,
+            message: response['message'] ?? "Outlet checked-out successfully",
+            onDismiss: () {
+              Navigator.pop(context); // Go back to outlet list upon checkout
+            },
+          );
+        }
+      } else {
+        final errMsg = response != null ? response['message'] : "Failed to check out";
+        _showErrorSnackBar(errMsg ?? "Failed to check out");
+      }
+    } catch (e) {
+      if (mounted) {
+        LoadingDialog.hide(context);
+      }
+      _showErrorSnackBar("Error getting location or checking out: $e");
+    }
+  }
 
   Future<void> _fetchModules() async {
     final response = await ApiServices.getModules();
@@ -109,6 +252,12 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   }
 
   Widget _getModuleBody(String moduleCode) {
+    if (isLocationValid == false) {
+      return RestrictedModuleView(
+        locationError: locationError,
+        onRetry: _checkLocation,
+      );
+    }
     switch (moduleCode) {
       case "SAMP":
         return SamplingBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
@@ -170,86 +319,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
           outletCard(widget.outlet),
           if (isLocationValid == null)
             const Expanded(child: Center(child: LogoProgressIndicator()))
-          else if (isLocationValid == false)
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.location_off, color: Colors.red, size: 60),
-                      const SizedBox(height: 16),
-                      Text(
-                        locationError,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 16, color: Colors.red, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          else if (!_isCheckedIn)
-            Expanded(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.storefront, size: 64, color: AppColors.primary),
-                          const SizedBox(height: 16),
-                          Text(
-                            "Welcome to ${widget.outlet.name.toUpperCase()}",
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            "You must check in to this outlet to access POS and submit sales, stock, POB, or marketing activities.",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 13, color: Colors.grey),
-                          ),
-                          const SizedBox(height: 24),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 45,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _isCheckedIn = true;
-                                  _checkInTime = DateTime.now();
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("Checked In Successfully!")),
-                                );
-                              },
-                              child: const Text(
-                                "CHECK-IN",
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            )
-          else ...[
+          else if (_isCheckedIn) ...[
             Container(
               color: Colors.green.shade50,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -261,7 +331,9 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                       const Icon(Icons.check_circle, color: Colors.green, size: 20),
                       const SizedBox(width: 8),
                       Text(
-                        "Checked-in at: ${DateFormat('hh:mm a').format(_checkInTime!)}",
+                        _checkInTime != null
+                            ? "Checked-in at: ${DateFormat('hh:mm a').format(_checkInTime!)}"
+                            : "Checked-in",
                         style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                     ],
@@ -281,14 +353,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                             TextButton(
                               onPressed: () {
                                 Navigator.pop(ctx);
-                                setState(() {
-                                  _isCheckedIn = false;
-                                  _checkInTime = null;
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("Checked Out Successfully!")),
-                                );
-                                Navigator.pop(context); // Go back to outlet list upon checkout
+                                _handleCheckOut();
                               },
                               child: const Text("CHECK-OUT", style: TextStyle(color: Colors.red)),
                             ),
@@ -318,6 +383,66 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                 children: dynamicTabs.map((tab) => _getModuleBody(tab['module_code'])).toList(),
               ),
             ),
+          ] else ...[
+            if (isLocationValid == false) ...[
+              _tabs(),
+              Expanded(
+                child: IndexedStack(
+                  index: selectedTab,
+                  children: dynamicTabs.map((tab) => _getModuleBody(tab['module_code'])).toList(),
+                ),
+              ),
+            ] else
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.storefront, size: 64, color: AppColors.primary),
+                            const SizedBox(height: 16),
+                            Text(
+                              "Welcome to ${widget.outlet.name.toUpperCase()}",
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              "You must check in to this outlet to access POS and submit sales, stock, POB, or marketing activities.",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 13, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 45,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ),
+                                onPressed: _handleCheckIn,
+                                child: const Text(
+                                  "CHECK-IN",
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ],
       ),
@@ -694,6 +819,124 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Location updated successfully"),
+      ),
+    );
+  }
+}
+
+class RestrictedModuleView extends StatelessWidget {
+  final String locationError;
+  final VoidCallback onRetry;
+  
+  const RestrictedModuleView({
+    super.key, 
+    required this.locationError,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
+              ),
+            ],
+            border: Border.all(
+              color: AppColors.button.withValues(alpha: 0.1),
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.button.withValues(alpha: 0.06),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_outline,
+                  color: AppColors.button,
+                  size: 56,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                "ACCESS RESTRICTED",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.button,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 2.0),
+                      child: Icon(Icons.info_outline, color: Colors.grey, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        locationError,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade700,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                height: 45,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.refresh, color: Colors.white, size: 18),
+                  label: const Text(
+                    "REFRESH LOCATION",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.button,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 1.5,
+                  ),
+                  onPressed: onRetry,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

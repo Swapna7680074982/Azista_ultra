@@ -62,21 +62,10 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
       appBar: const WavyAppBar(
         title: "USER TRANSACTIONS",
       ),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(15, 15, 15, 5),
-              child: Text(
-                "Distributor: ${(Provider.of<AppStateProvider>(context).selectedDistributor ?? 'Not Selected').toUpperCase()}",
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ),
-            _monthYearFilter(),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _monthYearFilter(),
 
             Expanded(
               child: FutureBuilder<Map<String, Map<String, dynamic>>>(

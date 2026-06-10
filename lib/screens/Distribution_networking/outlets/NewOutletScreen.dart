@@ -179,36 +179,47 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
       return;
     }
 
-    if (marker == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select location on map")),
-      );
-      return;
-    }
+    double lat = currentPosition.latitude;
+    double lng = currentPosition.longitude;
 
-    try {
-      final coords = await LocationService.getCoordinates();
-      final currentLat = double.parse(coords[0]);
-      final currentLng = double.parse(coords[1]);
+    if (marker != null) {
+      lat = marker!.position.latitude;
+      lng = marker!.position.longitude;
 
-      final distance = Geolocator.distanceBetween(
-        currentLat,
-        currentLng,
-        marker!.position.latitude,
-        marker!.position.longitude,
-      );
+      try {
+        final coords = await LocationService.getCoordinates();
+        final currentLat = double.parse(coords[0]);
+        final currentLng = double.parse(coords[1]);
 
-      if (distance > 50) {
+        final distance = Geolocator.distanceBetween(
+          currentLat,
+          currentLng,
+          lat,
+          lng,
+        );
+
+        if (distance > 50) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Selected location is ${distance.toStringAsFixed(0)}m away. You must be within 50 meters to register an outlet.")),
+          );
+          return;
+        }
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Selected location is ${distance.toStringAsFixed(0)}m away. You must be within 50 meters to register an outlet.")),
+          const SnackBar(content: Text("Failed to verify location. Please check GPS and try again.")),
         );
         return;
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to verify location. Please check GPS and try again.")),
-      );
-      return;
+    } else {
+      // Default to current GPS coordinates if available, otherwise fallback to currentPosition
+      try {
+        final coords = await LocationService.getCoordinates();
+        lat = double.parse(coords[0]);
+        lng = double.parse(coords[1]);
+      } catch (_) {
+        lat = currentPosition.latitude;
+        lng = currentPosition.longitude;
+      }
     }
 
     if (isSubmitting) return;
@@ -216,8 +227,8 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
     setState(() => isSubmitting = true);
 
     final payload = {
-      "route_id": widget.routeId,
-      "outlet_type": selectedCategory!.categoryName,
+      "beat_id": widget.routeId,
+      "outlet_category": int.tryParse(selectedCategory!.categoryId) ?? 0,
       "outlet_name": nameController.text.trim(),
       "owner_name": contactController.text.trim(),
       "mobile": phoneController.text.trim(),
@@ -237,8 +248,8 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
       "store_year_launched": yearLaunchedController.text,
       "daily_foot_traffic":
       int.tryParse(footTrafficController.text) ?? 0,
-      "latitude": marker!.position.latitude,
-      "longitude": marker!.position.longitude,
+      "latitude": lat,
+      "longitude": lng,
       "alt_name": altNameController.text.trim(),
       "alt_mobile": altMobileController.text.trim(),
       "alt_position": altPositionController.text.trim(),
@@ -335,7 +346,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(widget.routeName.toUpperCase()),
-                      const Icon(Icons.arrow_drop_down),
+                      const SizedBox.shrink(),
                     ],
                   ),
                 ),
@@ -388,9 +399,9 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
 
                   _categorySelectField(context.watch<OutletProvider>()),
 
-                  _textField(nameController, "Outlet Name", Icons.store),
-                  _textField(contactController, "Contact Person", Icons.person),
-                  _textField(phoneController, "Phone", Icons.phone),
+                  _textField(nameController, "Outlet Name", Icons.store, isRequired: true),
+                  _textField(contactController, "Contact Person", Icons.person, isRequired: true),
+                  _textField(phoneController, "Phone", Icons.phone, isRequired: true),
 
                   _textField(whatsappController, "WhatsApp Number", Icons.chat),
                   _buildField(
@@ -556,8 +567,9 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
   Widget _textField(
       TextEditingController controller,
       String hint,
-      IconData icon,
-      ) {
+      IconData icon, {
+      bool isRequired = false,
+      }) {
     bool isNumberField =
         hint.toLowerCase().contains("phone") ||
             hint.toLowerCase().contains("mobile") ||
@@ -578,7 +590,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
             : null,
 
         decoration: InputDecoration(
-          hintText: hint,
+          hintText: isRequired ? "$hint *" : hint,
           prefixIcon: Icon(icon),
           border: InputBorder.none,
         ),
@@ -817,13 +829,24 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
               const Icon(Icons.list, color: Colors.grey),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  selectedCategory != null
-                      ? selectedCategory!.categoryName
-                      : "Select Outlet Category",
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: selectedCategory != null ? Colors.black : Colors.grey.shade600,
+                child: RichText(
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: selectedCategory != null ? Colors.black : Colors.grey.shade600,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: selectedCategory != null
+                            ? selectedCategory!.categoryName
+                            : "Select Outlet Category",
+                      ),
+                      if (selectedCategory == null)
+                        const TextSpan(
+                          text: " *",
+                          style: TextStyle(color: Colors.red),
+                        ),
+                    ],
                   ),
                 ),
               ),

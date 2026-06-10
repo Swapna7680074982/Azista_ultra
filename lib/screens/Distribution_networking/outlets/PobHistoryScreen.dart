@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../../permissions/AppStateProvider.dart';
 import 'outlet_activity_provider.dart';
 import '../../../utilities/date_formatter.dart';
+import '../../../utilities/common_widgets.dart';
 
 class PobHistoryScreen extends StatefulWidget {
   final int outletId;
@@ -27,10 +28,8 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
     super.initState();
     Future.microtask(() {
       final appState = Provider.of<AppStateProvider>(context, listen: false);
-      if (appState.selectedDistributorId != null) {
-        Provider.of<OutletActivityProvider>(context, listen: false)
-            .fetchPobHistory(widget.outletId, appState.selectedDistributorId!);
-      }
+      Provider.of<OutletActivityProvider>(context, listen: false)
+          .fetchPobHistory(widget.outletId, distributorId: appState.selectedDistributorId);
     });
   }
 
@@ -123,6 +122,9 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
       ),
       body: Consumer<OutletActivityProvider>(
         builder: (context, provider, child) {
+          if (provider.isLoadingPobHistory) {
+            return const Center(child: LogoProgressIndicator());
+          }
           final filteredPending = provider.pendingPobs.where(_isInSelectedMonth).toList();
           final filteredSupplied = provider.suppliedPobs.where(_isInSelectedMonth).toList();
           final allFiltered = [...filteredPending, ...filteredSupplied];
@@ -169,39 +171,6 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                   ),
                 ),
               ),
-              Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                elevation: 3,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _summaryItem("Visits", "$visits"),
-                          _summaryItem("POB Count", "$pobCount"),
-                          _summaryItem("Prod. Calls", "$productiveCalls"),
-                        ],
-                      ),
-                      const Divider(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.currency_rupee, color: Colors.green, size: 20),
-                          const SizedBox(width: 4),
-                          Text(
-                            "Total Order Value: ₹${orderValue.toStringAsFixed(2)}",
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
               _tabs(),
               const SizedBox(height: 6),
               Expanded(
@@ -271,7 +240,20 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
       itemCount: pendingList.length,
       itemBuilder: (context, index) {
         final pob = pendingList[index];
-        final orderVal = pob['total_amount'] ?? pob['order_value'] ?? pob['total_value'] ?? '0.00';
+        final items = pob['items'] as List<dynamic>? ?? [];
+        double totalAmount = 0.0;
+        double suppliedAmount = 0.0;
+        double remainingAmount = 0.0;
+        for (var item in items) {
+          final price = double.tryParse(item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
+          final qty = int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
+          final suppliedQty = int.tryParse(item['supplied_qty']?.toString() ?? '0') ?? 0;
+          final remainingQty = int.tryParse(item['remaining_qty']?.toString() ?? '0') ?? 0;
+          
+          totalAmount += qty * price;
+          suppliedAmount += suppliedQty * price;
+          remainingAmount += remainingQty * price;
+        }
 
         return GestureDetector(
           onTap: () async {
@@ -284,10 +266,8 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
             if (!mounted) return;
             if (result == true) {
               final appState = Provider.of<AppStateProvider>(context, listen: false);
-              if (appState.selectedDistributorId != null) {
-                Provider.of<OutletActivityProvider>(context, listen: false)
-                    .fetchPobHistory(widget.outletId, appState.selectedDistributorId!);
-              }
+              Provider.of<OutletActivityProvider>(context, listen: false)
+                  .fetchPobHistory(widget.outletId, distributorId: appState.selectedDistributorId);
             }
           },
           child: Container(
@@ -315,7 +295,7 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     Text(
-                      "₹$orderVal",
+                      "₹${totalAmount.toStringAsFixed(2)}",
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
                     ),
                   ],
@@ -323,6 +303,22 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                 const SizedBox(height: 5),
                 Text("Date: ${DateFormatter.formatDateTime(pob['created_at'] ?? pob['created_on'])}"),
                 Text("Status: ${pob['status'] ?? 'N/A'}"),
+                const SizedBox(height: 6),
+                const Divider(height: 1, thickness: 0.5),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Supplied: ₹${suppliedAmount.toStringAsFixed(2)}",
+                      style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.w500),
+                    ),
+                    Text(
+                      "Remaining: ₹${remainingAmount.toStringAsFixed(2)}",
+                      style: const TextStyle(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -340,7 +336,13 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
       itemCount: suppliedList.length,
       itemBuilder: (context, index) {
         final pob = suppliedList[index];
-        final orderVal = pob['total_amount'] ?? pob['order_value'] ?? pob['total_value'] ?? '0.00';
+        final items = pob['items'] as List<dynamic>? ?? [];
+        double totalAmount = 0.0;
+        for (var item in items) {
+          final price = double.tryParse(item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
+          final qty = int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
+          totalAmount += qty * price;
+        }
 
         return GestureDetector(
           onTap: () {
@@ -376,7 +378,7 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     Text(
-                      "₹$orderVal",
+                      "₹${totalAmount.toStringAsFixed(2)}",
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
                     ),
                   ],

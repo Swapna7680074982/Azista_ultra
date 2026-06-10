@@ -22,10 +22,16 @@ class TeamAttendanceProvider extends ChangeNotifier {
   DateTime _selectedDate = DateTime.now();
   DateTime get selectedDate => _selectedDate;
 
-  Future<void> fetchTeamAttendance({String? month, bool isToday = true, String? defaultRole}) async {
+  String? _currentUserRole;
+  String? get currentUserRole => _currentUserRole;
+
+  Future<void> fetchTeamAttendance({String? month, bool isToday = true, String? defaultRole, String? currentUserRole}) async {
     _isLoading = true;
     if (defaultRole != null && _selectedRole == 'ALL') {
       _selectedRole = defaultRole;
+    }
+    if (currentUserRole != null) {
+      _currentUserRole = currentUserRole;
     }
     if (isToday) {
       _selectedDate = DateTime.now();
@@ -73,6 +79,11 @@ class TeamAttendanceProvider extends ChangeNotifier {
       roleFiltered = _allAttendance
           .where((item) => item.roleCode.toUpperCase() == _selectedRole.toUpperCase())
           .toList();
+    }
+
+    // If currentUserRole is 'AM', exclude 'RM' records completely
+    if (_currentUserRole == 'AM') {
+      roleFiltered = roleFiltered.where((item) => item.roleCode.toUpperCase() != 'RM').toList();
     }
 
     // Filter by the selected date (year, month, day)

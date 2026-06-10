@@ -28,6 +28,13 @@ class _PobBodyState extends State<PobBody> {
   String locationError = "";
   XFile? _capturedImage;
   final ImagePicker _imagePicker = ImagePicker();
+  final TextEditingController remarksController = TextEditingController();
+
+  @override
+  void dispose() {
+    remarksController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImage(ImageSource source) async {
     try {
@@ -246,6 +253,30 @@ class _PobBodyState extends State<PobBody> {
                               ),
                             ),
                           const SizedBox(height: 16),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Text(
+                              "REMARKS",
+                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 13),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: TextField(
+                              controller: remarksController,
+                              maxLines: 2,
+                              decoration: InputDecoration(
+                                hintText: "Enter POB remarks...",
+                                hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
 
                           Container(
                             width: double.infinity,
@@ -253,36 +284,21 @@ class _PobBodyState extends State<PobBody> {
                             height: 45,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.button,
+                                  backgroundColor: _capturedImage == null ? Colors.grey.shade400 : AppColors.button,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                               ),
-                              onPressed: () async {
+                              onPressed: _capturedImage == null ? null : () async {
                                 final appState = Provider.of<AppStateProvider>(context, listen: false);
-                                if (appState.selectedDistributorId == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text("No distributor selected")),
-                                  );
-                                  return;
-                                }
 
                                 LoadingDialog.show(context, message: "Submitting POB...");
 
-                                String? base64Image;
-                                if (_capturedImage != null) {
-                                  try {
-                                    final bytes = await File(_capturedImage!.path).readAsBytes();
-                                    base64Image = base64Encode(bytes);
-                                  } catch (e) {
-                                    debugPrint("Error encoding image: $e");
-                                  }
-                                }
-
                                 bool success = await provider.submitPob(
                                   widget.outletId,
-                                  appState.selectedDistributorId!,
-                                  imageBase64: base64Image,
+                                  distributorId: appState.selectedDistributorId,
+                                  imageFile: _capturedImage != null ? File(_capturedImage!.path) : null,
+                                  remarks: remarksController.text.trim(),
                                 );
 
                                 if (!mounted) return;
@@ -292,6 +308,7 @@ class _PobBodyState extends State<PobBody> {
                                   SuccessDialog.show(context, message: "POB Submitted Successfully!");
                                   setState(() {
                                     _capturedImage = null;
+                                    remarksController.clear();
                                   });
                                   provider.fetchProductsWithSkus();
                                 } else {
