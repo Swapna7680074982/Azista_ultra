@@ -643,6 +643,10 @@ class ApiServices {
       );
 
       if (response.statusCode == 200 && response.data["status"] == true) {
+        final data = response.data["data"];
+        if (data is List && data.isNotEmpty) {
+          AppLogger.info("getUserOutlets first outlet sample: ${data.first}");
+        }
         return response.data;
       }
       return null;

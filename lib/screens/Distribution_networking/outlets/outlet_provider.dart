@@ -31,12 +31,20 @@ class Outlet {
   });
 
   factory Outlet.fromJson(Map<String, dynamic> json) {
+    // Resolve the category/type name from multiple possible API field names
+    final type = (json['outlet_category_name']
+            ?? json['category_name']
+            ?? json['outlet_type']
+            ?? json['outlet_category'])
+        ?.toString()
+        ?? '';
+
     return Outlet(
       id: json['outlet_id'].toString(),
       name: json['outlet_name']?.toString() ?? 'Unknown',
       owner: json['owner_name']?.toString() ?? 'Unknown',
       phone: json['mobile']?.toString() ?? '',
-      type: json['outlet_type']?.toString() ?? 'Unknown',
+      type: type,
       latitude: double.tryParse(json['location']?['latitude']?.toString() ?? '0') ?? 0.0,
       longitude: double.tryParse(json['location']?['longitude']?.toString() ?? '0') ?? 0.0,
       status: json['status']?.toString() ?? 'ACTIVE',

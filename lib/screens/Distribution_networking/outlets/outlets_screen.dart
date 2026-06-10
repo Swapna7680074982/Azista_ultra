@@ -87,15 +87,16 @@ class _OutletsScreenState extends State<OutletsScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  outlet.type.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.teal.shade700,
-                    fontWeight: FontWeight.w500,
+                if (outlet.type.isNotEmpty)
+                  Text(
+                    outlet.type.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.teal.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 5),
+                if (outlet.type.isNotEmpty) const SizedBox(width: 5),
 
                 ShaderMask(
                   shaderCallback: (bounds) => const LinearGradient(
