@@ -41,7 +41,7 @@ class _MarketingBodyState extends State<MarketingBody>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadHistory();
+    Future.microtask(() => _loadHistory());
   }
 
   @override
@@ -50,10 +50,13 @@ class _MarketingBodyState extends State<MarketingBody>
     // Fetch products once on first dependency resolution (safe, no async gap)
     if (!_productsFetched) {
       _productsFetched = true;
-      Provider.of<OutletActivityProvider>(context, listen: false)
-          .fetchProductsWithSkus();
-      Provider.of<OutletActivityProvider>(context, listen: false)
-          .fetchActivityTypes();
+      Future.microtask(() {
+        if (mounted) {
+          final provider = Provider.of<OutletActivityProvider>(context, listen: false);
+          provider.fetchProductsWithSkus();
+          provider.fetchActivityTypes();
+        }
+      });
     }
   }
 
@@ -135,6 +138,8 @@ class _MarketingBodyState extends State<MarketingBody>
       activityTypeId: selectedActivityTypeId!,
       remarks: remarksController.text.trim(),
       files: _selectedFiles,
+      productId: selectedProductId,
+      skuId: selectedSkuId,
     );
 
     setState(() => _isSubmitting = false);
@@ -486,14 +491,14 @@ class _MarketingBodyState extends State<MarketingBody>
     if (urlString.isEmpty) return;
     try {
       final Uri url = Uri.parse(urlString);
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Could not launch attachment")),
-          );
-        }
+      final success = await launchUrl(
+        url,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Could not launch attachment")),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -502,6 +507,15 @@ class _MarketingBodyState extends State<MarketingBody>
         );
       }
     }
+  }
+
+  void _showFullImageDialog(BuildContext context, String imageUrl) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FullScreenImageViewer(imageUrl: imageUrl),
+      ),
+    );
   }
 
   Widget _buildHistoryTab() {
@@ -540,6 +554,8 @@ class _MarketingBodyState extends State<MarketingBody>
             final remarks = item["remarks"]?.toString() ?? "";
             final dateStr = item["activity_date"]?.toString() ?? item["visit_date"]?.toString() ?? "";
             final files = item["files"] as List<dynamic>? ?? [];
+            final productName = item["product_name"]?.toString() ?? "";
+            final skuName = item["sku_name"]?.toString() ?? "";
 
             String formattedDate = "-";
             if (dateStr.isNotEmpty) {
@@ -551,17 +567,23 @@ class _MarketingBodyState extends State<MarketingBody>
               }
             }
 
-            // Filter image files to display in a horizontal row preview
-            final imageFiles = files.where((file) {
-              final name = file["file_name"]?.toString() ?? "";
-              final url = file["file_url"]?.toString() ?? "";
-              final lowercase = (url.isNotEmpty ? url : name).toLowerCase();
-              return lowercase.endsWith('.jpg') ||
-                  lowercase.endsWith('.jpeg') ||
-                  lowercase.endsWith('.png') ||
-                  lowercase.endsWith('.webp') ||
-                  lowercase.endsWith('.gif');
-            }).toList();
+            bool isImageFile(dynamic file) {
+              final name = (file["file_name"] ?? "").toString().toLowerCase();
+              final url = (file["file_url"] ?? "").toString().toLowerCase();
+              
+              bool hasImageExtension(String path) {
+                final cleanPath = Uri.tryParse(path)?.path ?? path;
+                return cleanPath.endsWith('.jpg') ||
+                    cleanPath.endsWith('.jpeg') ||
+                    cleanPath.endsWith('.png') ||
+                    cleanPath.endsWith('.webp') ||
+                    cleanPath.endsWith('.gif');
+              }
+              return hasImageExtension(name) || hasImageExtension(url);
+            }
+
+            final imageFiles = files.where(isImageFile).toList();
+            final nonImageFiles = files.where((file) => !isImageFile(file)).toList();
 
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
@@ -569,56 +591,133 @@ class _MarketingBodyState extends State<MarketingBody>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          type.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        Text(
-                          formattedDate,
-                          style: const TextStyle(fontSize: 11, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                    if (remarks.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        remarks,
-                        style: TextStyle(fontSize: 13, color: Colors.grey[800]),
-                      ),
-                    ],
-                    // Render image thumbnail preview row if there are images
-                    if (imageFiles.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: 70,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: imageFiles.length,
-                          itemBuilder: (context, idx) {
-                            final file = imageFiles[idx];
-                            final url = file["file_url"]?.toString() ?? "";
-                            return GestureDetector(
-                              onTap: () => _openAttachmentUrl(url),
-                              child: Container(
-                                width: 70,
-                                height: 70,
-                                margin: const EdgeInsets.only(right: 10),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: Colors.grey.shade300),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                type.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
                                 ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
+                              ),
+                              Text(
+                                formattedDate,
+                                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                          if (productName.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              productName,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.black,
+                              ),
+                            ),
+                          ],
+                          if (skuName.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              skuName,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                          if (remarks.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              remarks,
+                              style: TextStyle(fontSize: 13, color: Colors.grey[800]),
+                            ),
+                          ],
+                          // Render attachment chips only for non-image files
+                          if (nonImageFiles.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: nonImageFiles.map<Widget>((file) {
+                                final name = file["file_name"]?.toString() ?? "Attachment";
+                                final url = file["file_url"]?.toString() ?? "";
+                                final lowercaseName = name.toLowerCase();
+                                IconData icon = Icons.insert_drive_file;
+                                if (lowercaseName.endsWith('.pdf')) {
+                                  icon = Icons.picture_as_pdf;
+                                } else if (lowercaseName.endsWith('.png') ||
+                                    lowercaseName.endsWith('.jpg') ||
+                                    lowercaseName.endsWith('.jpeg')) {
+                                  icon = Icons.image;
+                                }
+
+                                return GestureDetector(
+                                  onTap: () => _openAttachmentUrl(url),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[100],
+                                      border: Border.all(color: Colors.grey.shade300),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(icon, size: 14, color: AppColors.primary),
+                                        const SizedBox(width: 6),
+                                        Flexible(
+                                          child: Text(
+                                            name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey[800],
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (imageFiles.isNotEmpty) ...[
+                      const SizedBox(width: 12),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: imageFiles.map<Widget>((file) {
+                          final url = file["file_url"]?.toString() ?? "";
+                          return GestureDetector(
+                            onTap: () => _showFullImageDialog(context, url),
+                            child: Container(
+                              width: 70,
+                              height: 70,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: Hero(
+                                  tag: url,
                                   child: Image.network(
                                     url,
                                     fit: BoxFit.cover,
@@ -641,58 +740,6 @@ class _MarketingBodyState extends State<MarketingBody>
                                   ),
                                 ),
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                    // Render attachment chips for all files
-                    if (files.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: files.map<Widget>((file) {
-                          final name = file["file_name"]?.toString() ?? "Attachment";
-                          final url = file["file_url"]?.toString() ?? "";
-                          final lowercaseName = name.toLowerCase();
-                          IconData icon = Icons.insert_drive_file;
-                          if (lowercaseName.endsWith('.pdf')) {
-                            icon = Icons.picture_as_pdf;
-                          } else if (lowercaseName.endsWith('.png') ||
-                              lowercaseName.endsWith('.jpg') ||
-                              lowercaseName.endsWith('.jpeg')) {
-                            icon = Icons.image;
-                          }
-
-                          return GestureDetector(
-                            onTap: () => _openAttachmentUrl(url),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(icon, size: 14, color: AppColors.primary),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: Text(
-                                      name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey[800],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
                             ),
                           );
                         }).toList(),
@@ -705,6 +752,77 @@ class _MarketingBodyState extends State<MarketingBody>
           },
         );
       },
+    );
+  }
+}
+
+class FullScreenImageViewer extends StatelessWidget {
+  final String imageUrl;
+  const FullScreenImageViewer({super.key, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: InteractiveViewer(
+              minScale: 1.0,
+              maxScale: 4.0,
+              child: Center(
+                child: Hero(
+                  tag: imageUrl,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    width: double.infinity,
+                    height: double.infinity,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.broken_image, color: Colors.white, size: 48),
+                            SizedBox(height: 12),
+                            Text(
+                              "Failed to load image",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16, top: 16),
+                child: CircleAvatar(
+                  backgroundColor: Colors.black54,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -248,12 +248,16 @@ class OutletActivityProvider extends ChangeNotifier {
     required String activityTypeId,
     required String remarks,
     required List<File> files,
+    int? productId,
+    int? skuId,
   }) async {
     try {
       final response = await ApiServices.createOutletActivity(
         visitId: visitId.toString(),
         activityTypeId: activityTypeId,
         remarks: remarks,
+        productId: productId?.toString(),
+        skuId: skuId?.toString(),
         attachments: files,
       );
 

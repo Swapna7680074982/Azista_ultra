@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../User_transactions/UserTransactionScreen.dart';
 import '../../constants/app_colors.dart';
 import '../../utilities/wavy_app_bar.dart';
@@ -8,7 +9,6 @@ import '../../permissions/AppStateProvider.dart';
 import '../../profile.dart';
 import '../attendance/Attendancescreen.dart';
 import '../distribution_list/DistributorStockScreen.dart';
-import '../leave_management/leave_management_screen.dart';
 import '../productivity/ProductivityScreen.dart';
 import 'HomeProvider.dart';
 import 'main_tab_provider.dart';
@@ -26,6 +26,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late MainTabProvider _tabProvider;
+  String _selectedSummaryType = "Monthly";
 
   void _onTabChanged() {
     if (_tabProvider.currentIndex == 0) {
@@ -40,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
     homeProvider.fetchTodayAttendance();
     homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
     homeProvider.fetchMonthlyCallSummary(appState.selectedDistributorId);
+    homeProvider.fetchDashboardCounts(distributorId: appState.selectedDistributorId);
   }
 
   @override
@@ -57,6 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
       homeProvider.fetchTodayAttendance();
       homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
       homeProvider.fetchMonthlyCallSummary(appState.selectedDistributorId);
+      homeProvider.fetchDashboardCounts(distributorId: appState.selectedDistributorId);
 
       final role = await SessionManager.getUserRole();
       appState.setUserRole(role);
@@ -188,142 +191,379 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 12),
-              padding: const EdgeInsets.fromLTRB(0, 20, 0, 20),
               decoration: BoxDecoration(
                 color: AppColors.white,
                 borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.grey.shade200,
+                  width: 1.0,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.border,
-                    blurRadius: 7,
-                    offset: const Offset(0, 2),
+                    color: AppColors.black.withOpacity(0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-
-              child: Column(
-                children: [
-                  Consumer<HomeProvider>(
-                    builder: (context, provider, _) {
-                      if (provider.isSummaryLoading || provider.isMonthlySummaryLoading) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      // Daily Call Summary
-                      final dailySummary = provider.dailyCallSummary;
-                      final dailyTarget = (dailySummary?["target_calls"] ?? 0).toDouble();
-                      final dailyProductive = (dailySummary?["productive_calls"] ?? 0).toDouble();
-
-                      // Monthly Call Summary
-                      final monthlySummary = provider.monthlyCallSummary;
-                      final monthlyTarget = (monthlySummary?["target_calls"] ?? 0).toDouble();
-                      final monthlyProductive = (monthlySummary?["productive_calls"] ?? 0).toDouble();
-
-                      // Dynamic total targets
-                      final dailyTotalTarget = dailyTarget > 30.0 ? dailyTarget : 30.0;
-                      final monthlyTotalTarget = monthlyTarget > 500.0 ? monthlyTarget : 500.0;
-
-                      return Column(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Column(
+                  children: [
+                    // Header container with neat styling
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      color: Colors.grey.shade50,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text(
-                              "DAILY CALL SUMMARY",
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                          ),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              DonutChart(
-                                value: dailyTarget,
-                                total: dailyTotalTarget,
-                                label: "Total Calls",
-                                color: Colors.green,
+                              Container(
+                                width: 4,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
                               ),
-                              DonutChart(
-                                value: dailyProductive,
-                                total: dailyTotalTarget,
-                                label: "Target Productive",
-                                color: Colors.green,
+                              const SizedBox(width: 8),
+                              const Text(
+                                "CALL SUMMARY",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.black,
+                                  letterSpacing: 1.0,
+                                ),
                               ),
                             ],
                           ),
-                          const Divider(height: 40, thickness: 1, indent: 20, endIndent: 20),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text(
-                              "MONTHLY CALL SUMMARY",
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey,
-                                letterSpacing: 1.2,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.grey.shade300),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedSummaryType,
+                                icon: const Icon(Icons.arrow_drop_down, color: AppColors.primary),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.black,
+                                ),
+                                onChanged: (String? newValue) {
+                                  if (newValue != null) {
+                                    setState(() {
+                                      _selectedSummaryType = newValue;
+                                    });
+                                  }
+                                },
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: "Daily",
+                                    child: Text("DAILY"),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: "Monthly",
+                                    child: Text("MONTHLY"),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              DonutChart(
-                                value: monthlyTarget,
-                                total: monthlyTotalTarget,
-                                label: "Total Calls",
-                                color: Colors.green,
-                              ),
-                              DonutChart(
-                                value: monthlyProductive,
-                                total: monthlyTotalTarget,
-                                label: "Target Productive",
-                                color: Colors.green,
-                              ),
-                            ],
                           ),
                         ],
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: GestureDetector(
-                        onTap: () {
-                          if (!appState.isOnline) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Please turn on attendance first"),
-                                behavior: SnackBarBehavior.floating,
+                      ),
+                    ),
+                    const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
+                      child: Consumer<HomeProvider>(
+                        builder: (context, provider, _) {
+                          if (provider.isSummaryLoading || provider.isMonthlySummaryLoading) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 20),
+                                child: CircularProgressIndicator(),
                               ),
                             );
-                            return;
                           }
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ProductivityScreen(),
-                            ),
-                          );
+
+                          // Daily Call Summary
+                          final dailySummary = provider.dailyCallSummary;
+                          final dailyTarget = (dailySummary?["target_calls"] ?? 0).toDouble();
+                          final dailyProductive = (dailySummary?["productive_calls"] ?? 0).toDouble();
+
+                          // Monthly Call Summary
+                          final monthlySummary = provider.monthlyCallSummary;
+                          final monthlyTarget = (monthlySummary?["target_calls"] ?? 0).toDouble();
+                          final monthlyProductive = (monthlySummary?["productive_calls"] ?? 0).toDouble();
+
+                          // Dynamic total targets
+                          final dailyTotalTarget = dailyTarget > 30.0 ? dailyTarget : 30.0;
+                          final monthlyTotalTarget = monthlyTarget > 500.0 ? monthlyTarget : 500.0;
+
+                          if (_selectedSummaryType == "Daily") {
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Expanded(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: DonutChart(
+                                      value: dailyTarget,
+                                      total: dailyTotalTarget,
+                                      label: "Total Calls",
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: DonutChart(
+                                      value: dailyProductive,
+                                      total: dailyTotalTarget,
+                                      label: "Target Productive",
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          } else {
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Expanded(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: DonutChart(
+                                      value: monthlyTarget,
+                                      total: monthlyTotalTarget,
+                                      label: "Total Calls",
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: DonutChart(
+                                      value: monthlyProductive,
+                                      total: monthlyTotalTarget,
+                                      label: "Target Productive",
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
                         },
-                        child: Text(
-                          "VIEW DETAILS >>",
-                          style: TextStyle(
-                            color: appState.isOnline ? Colors.red.shade700 : Colors.grey,
-                            fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Divider(height: 1, thickness: 0.5, color: Color(0xFFE0E0E0), indent: 16, endIndent: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: GestureDetector(
+                          onTap: () {
+                            if (!appState.isOnline) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Please turn on attendance first"),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              return;
+                            }
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ProductivityScreen(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            "VIEW DETAILS >>",
+                            style: TextStyle(
+                              color: appState.isOnline ? AppColors.primary : Colors.grey,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.grey.shade200,
+                  width: 1.0,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
                 ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Consumer<HomeProvider>(
+                  builder: (context, provider, _) {
+                    return Column(
+                      children: [
+                        // Header container with neat styling
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          color: Colors.grey.shade50,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 4,
+                                    height: 16,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    "PERFORMANCE OVERVIEW",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.black,
+                                      letterSpacing: 1.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (provider.selectedCountsFilter == "custom" && provider.customCountsRange != null)
+                                Text(
+                                  "${DateFormat('dd/MM').format(provider.customCountsRange!.start)} - ${DateFormat('dd/MM').format(provider.customCountsRange!.end)}",
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  _buildFilterChip(context, provider, appState, "today", "TODAY"),
+                                  const SizedBox(width: 8),
+                                  _buildFilterChip(context, provider, appState, "month", "THIS MONTH"),
+                                  const SizedBox(width: 8),
+                                  _buildFilterChip(context, provider, appState, "custom", "CUSTOM"),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              if (provider.isCountsLoading)
+                                const SizedBox(
+                                  height: 120,
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                )
+                              else if (provider.dashboardCounts == null)
+                                const SizedBox(
+                                  height: 120,
+                                  child: Center(
+                                    child: Text(
+                                      "NO DATA AVAILABLE",
+                                      style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                )
+                              else ...[
+                                (() {
+                                  final counts = provider.dashboardCounts ?? {};
+                                  final newOutlets = counts["new_outlets"] ?? 0;
+                                  final outletVisits = counts["outlet_visits"] ?? 0;
+                                  final pobsDone = counts["pobs_done"] ?? 0;
+                                  final pobSaleValue = counts["pob_sale_value"] ?? 0.0;
+
+                                  return GridView.count(
+                                    crossAxisCount: 2,
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    crossAxisSpacing: 12,
+                                    mainAxisSpacing: 12,
+                                    childAspectRatio: 1.60,
+                                    children: [
+                                      _buildMetricTile(
+                                        "NEW OUTLETS",
+                                        newOutlets.toString(),
+                                        Icons.storefront,
+                                        AppColors.primary,
+                                      ),
+                                      _buildMetricTile(
+                                        "OUTLET VISITS",
+                                        outletVisits.toString(),
+                                        Icons.pin_drop_outlined,
+                                        Colors.blue.shade700,
+                                      ),
+                                      _buildMetricTile(
+                                        "POBS DONE",
+                                        pobsDone.toString(),
+                                        Icons.description_outlined,
+                                        Colors.orange.shade800,
+                                      ),
+                                      _buildMetricTile(
+                                        "SALE VALUE",
+                                        "₹ ${double.tryParse(pobSaleValue.toString())?.toStringAsFixed(2) ?? "0.00"}",
+                                        Icons.currency_rupee,
+                                        AppColors.green,
+                                      ),
+                                    ],
+                                  );
+                                })(),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
 
@@ -538,6 +778,132 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(
+    BuildContext context,
+    HomeProvider provider,
+    AppStateProvider appState,
+    String filterCode,
+    String label,
+  ) {
+    final isSelected = provider.selectedCountsFilter == filterCode;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () async {
+          if (filterCode == "custom") {
+            final picked = await showDateRangePicker(
+              context: context,
+              firstDate: DateTime(2020),
+              lastDate: DateTime.now().add(const Duration(days: 365)),
+              initialDateRange: provider.customCountsRange ??
+                  DateTimeRange(
+                    start: DateTime.now().subtract(const Duration(days: 7)),
+                    end: DateTime.now(),
+                  ),
+              builder: (context, child) {
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: const ColorScheme.light(
+                      primary: AppColors.button,
+                      onPrimary: Colors.white,
+                      onSurface: AppColors.black,
+                    ),
+                  ),
+                  child: child!,
+                );
+              },
+            );
+            if (picked != null) {
+              provider.setCountsFilter("custom", range: picked, distributorId: appState.selectedDistributorId);
+            }
+          } else {
+            provider.setCountsFilter(filterCode, distributorId: appState.selectedDistributorId);
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.button : Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? AppColors.button : Colors.grey.shade400,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey.shade800,
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricTile(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    final isPrice = value.contains('₹');
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.45),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.22),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 18,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: isPrice ? 18 : 22,
+              fontWeight: FontWeight.bold,
+              color: AppColors.black,
+            ),
+          ),
+        ],
       ),
     );
   }

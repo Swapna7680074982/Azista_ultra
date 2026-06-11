@@ -1019,41 +1019,7 @@ class ApiServices {
     }
   }
 
-  static Future<Map<String, dynamic>?> getDailyCallSummary({
-    required String date,
-    int? distributorId,
-  }) async {
-    try {
-      final token = await SessionManager.getToken();
-      if (token == null) return null;
 
-      final payload = {
-        "date": date,
-      };
-      if (distributorId != null) {
-        payload["distributor_id"] = distributorId.toString();
-      }
-
-      final response = await _dio.post(
-        AppUrls.dailyCallSummary,
-        data: payload,
-        options: Options(
-          headers: {
-            "Authorization": "Bearer $token",
-            "Content-Type": "application/json",
-          },
-        ),
-      );
-
-      if (response.statusCode == 200 && response.data["status"] == "success") {
-        return response.data;
-      }
-      return null;
-    } catch (e) {
-      AppLogger.error("Get Daily Call Summary error", e);
-      return null;
-    }
-  }
 
   static Future<Map<String, dynamic>?> getCallsInfo({
     String? date,
@@ -1541,6 +1507,8 @@ class ApiServices {
     required String visitId,
     required String activityTypeId,
     required String remarks,
+    String? productId,
+    String? skuId,
     List<File>? attachments,
   }) async {
     try {
@@ -1552,6 +1520,13 @@ class ApiServices {
         "activity_type_id": activityTypeId,
         "remarks": remarks,
       };
+
+      if (productId != null) {
+        fields["product_id"] = productId;
+      }
+      if (skuId != null) {
+        fields["sku_id"] = skuId;
+      }
 
       final FormData formData = FormData.fromMap(fields);
 
@@ -1652,6 +1627,44 @@ class ApiServices {
       if (e is DioException) {
         AppLogger.error("Get Outlet History status code: ${e.response?.statusCode}");
         AppLogger.error("Get Outlet History response data: ${e.response?.data}");
+      }
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getDashboardCounts({
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      AppLogger.info("Get Dashboard Counts API called: ${AppUrls.dashboardCounts}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.dashboardCounts,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      AppLogger.info("Get Dashboard Counts response status: ${response.statusCode}");
+      AppLogger.info("Get Dashboard Counts response data: ${response.data}");
+
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Dashboard Counts error", e);
+      if (e is DioException) {
+        AppLogger.error("Get Dashboard Counts status code: ${e.response?.statusCode}");
+        AppLogger.error("Get Dashboard Counts response data: ${e.response?.data}");
       }
       return null;
     }

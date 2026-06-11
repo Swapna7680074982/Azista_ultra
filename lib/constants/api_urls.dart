@@ -23,7 +23,6 @@ class AppUrls {
   static const String posTransaction = "$baseUrl/distribution/pos_transaction";
   static const String posHistory = "$baseUrl/distribution/pos_history";
   static const String getSupportTeam = "$baseUrl/distribution_v1/get_support_team";
-  static const String dailyCallSummary = "$baseUrl/distribution_v1/daily_call_summary";
   static const String callsInfo = "$baseUrl/distribution_v1/calls_info";
   static const String addExpense = "$baseUrl/distribution_v1/add_expense";
   static const String submitToAm = "$baseUrl/distribution_v1/submit_to_am";
@@ -40,4 +39,5 @@ class AppUrls {
   static const String getActivityTypes = "$baseUrl/distribution/get_activity_types";
   static const String createOutletActivity = "$baseUrl/distribution/create_outlet_activity";
   static const String outletHistory = "$baseUrl/distribution/outlet_history";
+  static const String dashboardCounts = "$baseUrl/distribution/dashboard_counts";
 }

@@ -1,6 +1,5 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import '../../permissions/AppStateProvider.dart';
 import '../../permissions/SessionManager.dart';
@@ -19,6 +18,11 @@ class HomeProvider extends ChangeNotifier {
   bool isMonthlySummaryLoading = false;
   StreamSubscription? _autoCheckoutSubscription;
   DateTime? localCheckInTime;
+
+  Map<String, dynamic>? dashboardCounts;
+  bool isCountsLoading = false;
+  String selectedCountsFilter = "month"; // 'today', 'month', 'custom'
+  DateTimeRange? customCountsRange;
 
   Future<void> loadDistributors([AppStateProvider? appState]) async {
     distributors = await SessionManager.getDistributors();
@@ -207,13 +211,29 @@ class HomeProvider extends ChangeNotifier {
     final now = DateTime.now();
     final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
-    final res = await ApiServices.getDailyCallSummary(
+    final res = await ApiServices.getCallsInfo(
       date: dateStr,
       distributorId: distributorId,
     );
 
-    if (res != null && res["data"] != null) {
-      dailyCallSummary = res["data"];
+    if (res != null) {
+      if (res["summary"] != null) {
+        dailyCallSummary = res["summary"];
+      } else if (res["data"] != null) {
+        final dataList = res["data"] as List<dynamic>? ?? [];
+        double targetCalls = 0;
+        double productiveCalls = 0;
+        for (var item in dataList) {
+          targetCalls += double.tryParse(item["target_call"]?.toString() ?? "0") ?? 0;
+          productiveCalls += double.tryParse(item["productive_call"]?.toString() ?? "0") ?? 0;
+        }
+        dailyCallSummary = {
+          "target_calls": targetCalls,
+          "productive_calls": productiveCalls,
+        };
+      } else {
+        dailyCallSummary = null;
+      }
     } else {
       dailyCallSummary = null;
     }
@@ -234,24 +254,75 @@ class HomeProvider extends ChangeNotifier {
       distributorId: distributorId,
     );
 
-    if (res != null && res["data"] != null) {
-      final dataList = res["data"] as List<dynamic>? ?? [];
-      double targetCalls = 0;
-      double productiveCalls = 0;
-      for (var item in dataList) {
-        targetCalls += double.tryParse(item["target_call"]?.toString() ?? "0") ?? 0;
-        productiveCalls += double.tryParse(item["productive_call"]?.toString() ?? "0") ?? 0;
+    if (res != null) {
+      if (res["summary"] != null) {
+        monthlyCallSummary = res["summary"];
+      } else if (res["data"] != null) {
+        final dataList = res["data"] as List<dynamic>? ?? [];
+        double targetCalls = 0;
+        double productiveCalls = 0;
+        for (var item in dataList) {
+          targetCalls += double.tryParse(item["target_call"]?.toString() ?? "0") ?? 0;
+          productiveCalls += double.tryParse(item["productive_call"]?.toString() ?? "0") ?? 0;
+        }
+        monthlyCallSummary = {
+          "target_calls": targetCalls,
+          "productive_calls": productiveCalls,
+        };
+      } else {
+        monthlyCallSummary = null;
       }
-      monthlyCallSummary = {
-        "target_calls": targetCalls,
-        "productive_calls": productiveCalls,
-      };
     } else {
       monthlyCallSummary = null;
     }
 
     isMonthlySummaryLoading = false;
     notifyListeners();
+  }
+
+  Future<void> fetchDashboardCounts({int? distributorId}) async {
+    isCountsLoading = true;
+    notifyListeners();
+
+    final Map<String, dynamic> payload = {};
+
+    if (selectedCountsFilter == "today") {
+      payload["today"] = 1;
+    } else if (selectedCountsFilter == "month") {
+      final now = DateTime.now();
+      payload["month"] = now.month;
+      payload["year"] = now.year;
+    } else if (selectedCountsFilter == "custom" && customCountsRange != null) {
+      final from = customCountsRange!.start;
+      final to = customCountsRange!.end;
+      payload["from_date"] = "${from.year}-${from.month.toString().padLeft(2, '0')}-${from.day.toString().padLeft(2, '0')}";
+      payload["to_date"] = "${to.year}-${to.month.toString().padLeft(2, '0')}-${to.day.toString().padLeft(2, '0')}";
+    } else {
+      payload["today"] = 1;
+    }
+
+    try {
+      final res = await ApiServices.getDashboardCounts(payload: payload);
+      if (res != null && res["status"] == true) {
+        dashboardCounts = res["data"];
+      } else {
+        dashboardCounts = null;
+      }
+    } catch (e) {
+      dashboardCounts = null;
+    }
+
+    isCountsLoading = false;
+    notifyListeners();
+  }
+
+  void setCountsFilter(String filter, {DateTimeRange? range, int? distributorId}) {
+    selectedCountsFilter = filter;
+    if (range != null) {
+      customCountsRange = range;
+    }
+    notifyListeners();
+    fetchDashboardCounts(distributorId: distributorId);
   }
 
   void reset() {
@@ -265,6 +336,10 @@ class HomeProvider extends ChangeNotifier {
     isSummaryLoading = false;
     monthlyCallSummary = null;
     isMonthlySummaryLoading = false;
+    dashboardCounts = null;
+    isCountsLoading = false;
+    selectedCountsFilter = "month";
+    customCountsRange = null;
     _autoCheckoutSubscription?.cancel();
     notifyListeners();
   }
