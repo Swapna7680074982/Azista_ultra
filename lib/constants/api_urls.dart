@@ -37,4 +37,7 @@ class AppUrls {
   static const String teamPobHistory = "$baseUrl/distribution_v1/team_pob_history";
   static const String outletCheckIn = "$baseUrl/distribution/outlet_checkin";
   static const String outletCheckOut = "$baseUrl/distribution/outlet_checkout";
+  static const String getActivityTypes = "$baseUrl/distribution/get_activity_types";
+  static const String createOutletActivity = "$baseUrl/distribution/create_outlet_activity";
+  static const String outletHistory = "$baseUrl/distribution/outlet_history";
 }

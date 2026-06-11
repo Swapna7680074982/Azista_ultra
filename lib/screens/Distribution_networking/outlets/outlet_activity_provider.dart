@@ -200,4 +200,119 @@ class OutletActivityProvider extends ChangeNotifier {
     _isLoadingPobHistory = false;
     notifyListeners();
   }
+
+  List<dynamic> _activityTypes = [];
+  List<dynamic> get activityTypes => _activityTypes;
+  bool _isLoadingActivityTypes = false;
+  bool get isLoadingActivityTypes => _isLoadingActivityTypes;
+
+  Future<void> fetchActivityTypes() async {
+    _isLoadingActivityTypes = true;
+    notifyListeners();
+
+    try {
+      final response = await ApiServices.getActivityTypes();
+      if (response != null && response['status'] == true) {
+        _activityTypes = response['data'] ?? [];
+      } else {
+        _activityTypes = [];
+      }
+    } catch (e) {
+      _activityTypes = [];
+    }
+
+    if (_activityTypes.isEmpty) {
+      _activityTypes = [
+        {"activity_type_id": "13", "activity_name": "Branding"},
+        {"activity_type_id": "10", "activity_name": "Banner"},
+        {"activity_type_id": "11", "activity_name": "Poster"},
+        {"activity_type_id": "12", "activity_name": "Pamphlet"},
+        {"activity_type_id": "7", "activity_name": "Collection"},
+        {"activity_type_id": "5", "activity_name": "Competitor Activity"},
+        {"activity_type_id": "8", "activity_name": "Feedback"},
+        {"activity_type_id": "9", "activity_name": "New Outlet Registration"},
+        {"activity_type_id": "1", "activity_name": "POB"},
+        {"activity_type_id": "2", "activity_name": "POS Sale"},
+        {"activity_type_id": "3", "activity_name": "POS Sampling"},
+        {"activity_type_id": "4", "activity_name": "POS Stock"},
+        {"activity_type_id": "6", "activity_name": "Product Display"}
+      ];
+    }
+
+    _isLoadingActivityTypes = false;
+    notifyListeners();
+  }
+
+  Future<Map<String, dynamic>> submitOutletActivity({
+    required int visitId,
+    required String activityTypeId,
+    required String remarks,
+    required List<File> files,
+  }) async {
+    try {
+      final response = await ApiServices.createOutletActivity(
+        visitId: visitId.toString(),
+        activityTypeId: activityTypeId,
+        remarks: remarks,
+        attachments: files,
+      );
+
+      if (response != null && response['status'] == true) {
+        return {
+          "status": true,
+          "message": response['message'] ?? "Activity created successfully",
+          "activity_id": response['activity_id'],
+        };
+      }
+      return {
+        "status": false,
+        "message": response?['message'] ?? "Failed to create activity",
+      };
+    } catch (e) {
+      return {
+        "status": false,
+        "message": "Submission error: $e",
+      };
+    }
+  }
+
+  List<dynamic> _activityHistory = [];
+  List<dynamic> get activityHistory => _activityHistory;
+  bool _isLoadingHistory = false;
+  bool get isLoadingHistory => _isLoadingHistory;
+
+  Future<void> fetchOutletHistory(int outletId) async {
+    _isLoadingHistory = true;
+    notifyListeners();
+
+    try {
+      final response = await ApiServices.getOutletHistory(outletId: outletId);
+      if (response != null && response['status'] == true) {
+        final visitHistory = response['visit_history'] as List<dynamic>? ?? [];
+        final List<dynamic> allActivities = [];
+        for (var visit in visitHistory) {
+          final activities = visit['activity_history'] as List<dynamic>? ?? [];
+          for (var act in activities) {
+            allActivities.add({
+              ...act,
+              "visit_date": visit['visit_date'],
+            });
+          }
+        }
+        allActivities.sort((a, b) {
+          final dateA = a['activity_date']?.toString() ?? '';
+          final dateB = b['activity_date']?.toString() ?? '';
+          return dateB.compareTo(dateA);
+        });
+        _activityHistory = allActivities;
+      } else {
+        _activityHistory = [];
+      }
+    } catch (e) {
+      _activityHistory = [];
+    }
+
+    _isLoadingHistory = false;
+    notifyListeners();
+  }
 }

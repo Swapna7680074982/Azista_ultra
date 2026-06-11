@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,10 +5,14 @@ import 'package:provider/provider.dart';
 import '../../../constants/app_colors.dart';
 import 'outlet_activity_provider.dart';
 import '../../../utilities/common_widgets.dart';
+import '../../../permissions/SessionManager.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 
 class MarketingBody extends StatefulWidget {
   final int outletId;
-  const MarketingBody({super.key, required this.outletId});
+  final int? visitId;
+  const MarketingBody({super.key, required this.outletId, this.visitId});
 
   @override
   State<MarketingBody> createState() => _MarketingBodyState();
@@ -20,7 +23,7 @@ class _MarketingBodyState extends State<MarketingBody>
   late TabController _tabController;
 
   // ADD Form state variables
-  String selectedActivityType = "Branding";
+  String? selectedActivityTypeId;
 
   // Selected product/sku
   int? selectedProductId;
@@ -29,23 +32,10 @@ class _MarketingBodyState extends State<MarketingBody>
   String? selectedSkuName;
 
   final TextEditingController remarksController = TextEditingController();
-  XFile? _capturedImage;
+  final List<File> _selectedFiles = [];
   final ImagePicker _imagePicker = ImagePicker();
   bool _isSubmitting = false;
   bool _productsFetched = false;
-
-  // History state
-  List<Map<String, dynamic>> _historyItems = [];
-  bool _isLoadingHistory = true;
-
-  final List<String> activityTypes = [
-    "Branding",
-    "Promotion",
-    "Poster",
-    "Banner",
-    "Pamphlet",
-    "Other"
-  ];
 
   @override
   void initState() {
@@ -62,6 +52,8 @@ class _MarketingBodyState extends State<MarketingBody>
       _productsFetched = true;
       Provider.of<OutletActivityProvider>(context, listen: false)
           .fetchProductsWithSkus();
+      Provider.of<OutletActivityProvider>(context, listen: false)
+          .fetchActivityTypes();
     }
   }
 
@@ -73,18 +65,21 @@ class _MarketingBodyState extends State<MarketingBody>
   }
 
   Future<void> _loadHistory() async {
-    setState(() => _isLoadingHistory = true);
     try {
-      // Use SharedPreferences if needed — keep local history
-      setState(() => _historyItems = []);
+      Provider.of<OutletActivityProvider>(context, listen: false)
+          .fetchOutletHistory(widget.outletId);
     } catch (e) {
       debugPrint("Error loading history: $e");
-    } finally {
-      setState(() => _isLoadingHistory = false);
     }
   }
 
   Future<void> _pickImage(ImageSource source) async {
+    if (_selectedFiles.length >= 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Maximum 5 files allowed")),
+      );
+      return;
+    }
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: source,
@@ -92,7 +87,7 @@ class _MarketingBodyState extends State<MarketingBody>
       );
       if (image != null) {
         setState(() {
-          _capturedImage = image;
+          _selectedFiles.add(File(image.path));
         });
       }
     } catch (e) {
@@ -106,50 +101,68 @@ class _MarketingBodyState extends State<MarketingBody>
   }
 
   Future<void> _submitActivity() async {
+    final provider = Provider.of<OutletActivityProvider>(context, listen: false);
+
+    if (selectedActivityTypeId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select an activity type")),
+      );
+      return;
+    }
+
     if (selectedProductId == null || selectedSkuId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a product SKU")),
+        const SnackBar(content: Text("Please select a brand and SKU")),
       );
       return;
     }
 
     setState(() => _isSubmitting = true);
 
-    await Future.delayed(const Duration(milliseconds: 600));
+    final resolvedVisitId = widget.visitId ?? await SessionManager.getOutletCheckInVisitId();
 
-    String? base64Image;
-    if (_capturedImage != null) {
-      try {
-        final bytes = await File(_capturedImage!.path).readAsBytes();
-        base64Image = base64Encode(bytes);
-      } catch (e) {
-        debugPrint("Error encoding image: $e");
-      }
+    if (resolvedVisitId == null) {
+      setState(() => _isSubmitting = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No active visit session found. Please check in first.")),
+      );
+      return;
     }
 
-    final newItem = <String, dynamic>{
-      "activity_type": selectedActivityType,
-      "product_id": selectedProductId,
-      "sku_id": selectedSkuId,
-      "product": selectedProductName ?? "",
-      "sku": selectedSkuName ?? "",
-      "remarks": remarksController.text.trim(),
-      "date": DateTime.now().toIso8601String(),
-      "image": base64Image,
-    };
+    final response = await provider.submitOutletActivity(
+      visitId: resolvedVisitId,
+      activityTypeId: selectedActivityTypeId!,
+      remarks: remarksController.text.trim(),
+      files: _selectedFiles,
+    );
 
-    setState(() {
-      _historyItems.insert(0, newItem);
-      _isSubmitting = false;
-      remarksController.clear();
-      _capturedImage = null;
-    });
+    setState(() => _isSubmitting = false);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Marketing Activity Saved Successfully!")),
-      );
-      _tabController.animateTo(1);
+    if (response['status'] == true) {
+      setState(() {
+        remarksController.clear();
+        _selectedFiles.clear();
+        selectedProductId = null;
+        selectedSkuId = null;
+        selectedProductName = null;
+        selectedSkuName = null;
+      });
+
+      _loadHistory();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['message'] ?? "Activity Saved Successfully!")),
+        );
+        _tabController.animateTo(1);
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['message'] ?? "Failed to save activity")),
+        );
+      }
     }
   }
 
@@ -200,78 +213,136 @@ class _MarketingBodyState extends State<MarketingBody>
                 style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
               ),
               const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: selectedActivityType,
-                    isExpanded: true,
-                    items: activityTypes.map((type) {
-                      return DropdownMenuItem(value: type, child: Text(type));
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => selectedActivityType = val);
-                    },
+              if (provider.isLoadingActivityTypes)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: selectedActivityTypeId,
+                      isExpanded: true,
+                      hint: const Text("Select Activity Type"),
+                      items: provider.activityTypes.map((type) {
+                        final typeId = type['activity_type_id']?.toString() ?? '';
+                        final typeName = type['activity_name']?.toString() ?? '';
+                        return DropdownMenuItem<String>(
+                          value: typeId,
+                          child: Text(typeName),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            selectedActivityTypeId = val;
+                          });
+                        }
+                      },
+                    ),
                   ),
                 ),
-              ),
               const SizedBox(height: 20),
 
-              // Product / SKU picker section
+              // Brand dropdown
               const Text(
-                "SELECT PRODUCT & SKU",
+                "SELECT BRAND",
                 style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
               ),
               const SizedBox(height: 8),
-
-              // Header row
-              Container(
-                color: Colors.grey.shade200,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        "Product / SKU",
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      "SELECT",
-                      style: TextStyle(
-                        color: Colors.grey.shade700,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
               if (provider.isLoadingProducts)
                 const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
+                  padding: EdgeInsets.symmetric(vertical: 10),
                   child: Center(child: LogoProgressIndicator()),
                 )
-              else if (provider.productsWithSkus.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: Text("No products found")),
-                )
               else
-                ...provider.productsWithSkus.map((product) {
-                  return _buildProductSection(product);
-                }),
-
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: selectedProductId,
+                      isExpanded: true,
+                      hint: const Text("Select Brand"),
+                      items: provider.productsWithSkus.map((product) {
+                        final prodId = product['product_id'] as int;
+                        final prodName = product['product_name']?.toString() ?? 'Unknown';
+                        return DropdownMenuItem<int>(
+                          value: prodId,
+                          child: Text(prodName),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          final product = provider.productsWithSkus.firstWhere((p) => p['product_id'] == val);
+                          setState(() {
+                            selectedProductId = val;
+                            selectedProductName = product['product_name']?.toString() ?? 'Unknown';
+                            selectedSkuId = null;
+                            selectedSkuName = null;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ),
               const SizedBox(height: 20),
+
+              // SKU Dropdown
+              if (selectedProductId != null) ...[
+                const Text(
+                  "SELECT SKU",
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: selectedSkuId,
+                      isExpanded: true,
+                      hint: const Text("Select SKU"),
+                      items: (() {
+                        final product = provider.productsWithSkus.firstWhere((p) => p['product_id'] == selectedProductId);
+                        final skus = product['skus'] as List<dynamic>? ?? [];
+                        return skus.map((sku) {
+                          final sId = sku['sku_id'] as int;
+                          final sName = sku['sku_displayname']?.toString() ?? 'Unknown';
+                          return DropdownMenuItem<int>(
+                            value: sId,
+                            child: Text(sName),
+                          );
+                        }).toList();
+                      })(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          final product = provider.productsWithSkus.firstWhere((p) => p['product_id'] == selectedProductId);
+                          final skus = product['skus'] as List<dynamic>? ?? [];
+                          final sku = skus.firstWhere((s) => s['sku_id'] == val);
+                          setState(() {
+                            selectedSkuId = val;
+                            selectedSkuName = sku['sku_displayname']?.toString() ?? 'Unknown';
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
 
               // Remarks
               const Text(
@@ -298,7 +369,7 @@ class _MarketingBodyState extends State<MarketingBody>
 
               // Image Capture
               const Text(
-                "CAPTURE / UPLOAD PHOTO",
+                "CAPTURE / UPLOAD PHOTOS (MAX 5)",
                 style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
               ),
               const SizedBox(height: 8),
@@ -309,51 +380,74 @@ class _MarketingBodyState extends State<MarketingBody>
                       backgroundColor: AppColors.button,
                       foregroundColor: Colors.white,
                     ),
-                    onPressed: () => _pickImage(ImageSource.camera),
+                    onPressed: _selectedFiles.length >= 5 ? null : () => _pickImage(ImageSource.camera),
                     icon: const Icon(Icons.camera_alt),
                     label: const Text("Camera"),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.grey[600],
                       foregroundColor: Colors.white,
                     ),
-                    onPressed: () => _pickImage(ImageSource.gallery),
+                    onPressed: _selectedFiles.length >= 5 ? null : () => _pickImage(ImageSource.gallery),
                     icon: const Icon(Icons.photo_library),
                     label: const Text("Gallery"),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              if (_capturedImage != null)
-                Stack(
-                  children: [
-                    Container(
-                      height: 150,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        image: DecorationImage(
-                          image: FileImage(File(_capturedImage!.path)),
-                          fit: BoxFit.cover,
+              if (_selectedFiles.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 100,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _selectedFiles.length,
+                    itemBuilder: (context, idx) {
+                      final file = _selectedFiles[idx];
+                      return Container(
+                        width: 90,
+                        margin: const EdgeInsets.only(right: 10),
+                        child: Stack(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.file(
+                                  file,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 2,
+                              right: 2,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedFiles.removeAt(idx);
+                                  });
+                                },
+                                child: CircleAvatar(
+                                  backgroundColor: Colors.black.withValues(alpha: 0.6),
+                                  radius: 12,
+                                  child: const Icon(Icons.close, color: Colors.white, size: 14),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: GestureDetector(
-                        onTap: () => setState(() => _capturedImage = null),
-                        child: const CircleAvatar(
-                          backgroundColor: Colors.red,
-                          radius: 16,
-                          child: Icon(Icons.delete, color: Colors.white, size: 16),
-                        ),
-                      ),
-                    ),
-                  ],
+                      );
+                    },
+                  ),
                 ),
+              ],
               const SizedBox(height: 30),
 
               // Submit Button
@@ -371,7 +465,7 @@ class _MarketingBodyState extends State<MarketingBody>
                         ),
                         onPressed: _submitActivity,
                         child: const Text(
-                          "SUBMIT MARKETING ACTIVITY",
+                          "SUBMIT ACTIVITY",
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -388,201 +482,227 @@ class _MarketingBodyState extends State<MarketingBody>
     );
   }
 
-  Widget _buildProductSection(dynamic product) {
-    final title = product['product_name']?.toString() ?? 'Unknown Product';
-    final skus = product['skus'] as List<dynamic>? ?? [];
-    final productId = product['product_id'] as int?;
-
-    if (skus.isEmpty || productId == null) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Center(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: Colors.black87,
-              ),
-            ),
-          ),
-        ),
-        ...skus.map((sku) => _buildSkuRow(productId, title, sku)),
-      ],
-    );
-  }
-
-  Widget _buildSkuRow(int productId, String productName, dynamic sku) {
-    final skuName = sku['sku_displayname']?.toString() ?? 'Unknown SKU';
-    final skuId = sku['sku_id'] as int?;
-    if (skuId == null) return const SizedBox.shrink();
-
-    final isSelected = selectedProductId == productId && selectedSkuId == skuId;
-
-    return InkWell(
-      onTap: () {
-        setState(() {
-          selectedProductId = productId;
-          selectedSkuId = skuId;
-          selectedProductName = productName;
-          selectedSkuName = skuName;
-        });
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : Colors.transparent,
-          border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.grey.shade200,
-            width: isSelected ? 1.5 : 1,
-          ),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                skuName,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected ? AppColors.primary : Colors.black87,
-                ),
-              ),
-            ),
-            Icon(
-              isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-              color: isSelected ? AppColors.primary : Colors.grey.shade400,
-              size: 20,
-            ),
-          ],
-        ),
-      ),
-    );
+  Future<void> _openAttachmentUrl(String urlString) async {
+    if (urlString.isEmpty) return;
+    try {
+      final Uri url = Uri.parse(urlString);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Could not launch attachment")),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error opening link: $e")),
+        );
+      }
+    }
   }
 
   Widget _buildHistoryTab() {
-    if (_isLoadingHistory) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_historyItems.isEmpty) {
-      return const Center(child: Text("No marketing activities recorded"));
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: _historyItems.length,
-      itemBuilder: (context, index) {
-        final item = _historyItems[index];
-        final type = item["activity_type"]?.toString() ?? "Marketing";
-        final productName = item["product"]?.toString() ?? "N/A";
-        final skuName = item["sku"]?.toString() ?? "";
-        final remarks = item["remarks"]?.toString() ?? "";
-        final dateStr = item["date"]?.toString() ?? "";
-        final imgBase64 = item["image"]?.toString();
-
-        String formattedDate = "-";
-        if (dateStr.isNotEmpty) {
-          try {
-            final dt = DateTime.parse(dateStr);
-            formattedDate =
-                "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} "
-                "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
-          } catch (_) {
-            formattedDate = dateStr;
-          }
+    return Consumer<OutletActivityProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoadingHistory) {
+          return const Center(child: CircularProgressIndicator());
         }
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        if (provider.activityHistory.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (imgBase64 != null)
-                  Container(
-                    width: 70,
-                    height: 70,
-                    margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(6),
-                      image: DecorationImage(
-                        image: MemoryImage(base64Decode(imgBase64)),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  )
-                else
-                  Container(
-                    width: 70,
-                    height: 70,
-                    margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Icon(Icons.image_not_supported,
-                        color: Colors.grey[400]),
-                  ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            type.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          Text(
-                            formattedDate,
-                            style: const TextStyle(
-                                fontSize: 11, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        productName,
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w600),
-                      ),
-                      if (skuName.isNotEmpty)
-                        Text(
-                          skuName,
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey.shade600),
-                        ),
-                      if (remarks.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          remarks,
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey[700]),
-                        ),
-                      ],
-                    ],
+                Icon(Icons.history, size: 48, color: Colors.grey),
+                SizedBox(height: 12),
+                Text(
+                  "No activities recorded",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
-          ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: provider.activityHistory.length,
+          itemBuilder: (context, index) {
+            final item = provider.activityHistory[index];
+            final type = item["activity_name"]?.toString() ?? "Activity";
+            final remarks = item["remarks"]?.toString() ?? "";
+            final dateStr = item["activity_date"]?.toString() ?? item["visit_date"]?.toString() ?? "";
+            final files = item["files"] as List<dynamic>? ?? [];
+
+            String formattedDate = "-";
+            if (dateStr.isNotEmpty) {
+              try {
+                final dt = DateTime.parse(dateStr);
+                formattedDate = DateFormat('dd/MM/yyyy hh:mm a').format(dt);
+              } catch (_) {
+                formattedDate = dateStr;
+              }
+            }
+
+            // Filter image files to display in a horizontal row preview
+            final imageFiles = files.where((file) {
+              final name = file["file_name"]?.toString() ?? "";
+              final url = file["file_url"]?.toString() ?? "";
+              final lowercase = (url.isNotEmpty ? url : name).toLowerCase();
+              return lowercase.endsWith('.jpg') ||
+                  lowercase.endsWith('.jpeg') ||
+                  lowercase.endsWith('.png') ||
+                  lowercase.endsWith('.webp') ||
+                  lowercase.endsWith('.gif');
+            }).toList();
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          type.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        Text(
+                          formattedDate,
+                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                    if (remarks.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        remarks,
+                        style: TextStyle(fontSize: 13, color: Colors.grey[800]),
+                      ),
+                    ],
+                    // Render image thumbnail preview row if there are images
+                    if (imageFiles.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 70,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: imageFiles.length,
+                          itemBuilder: (context, idx) {
+                            final file = imageFiles[idx];
+                            final url = file["file_url"]?.toString() ?? "";
+                            return GestureDetector(
+                              onTap: () => _openAttachmentUrl(url),
+                              child: Container(
+                                width: 70,
+                                height: 70,
+                                margin: const EdgeInsets.only(right: 10),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Image.network(
+                                    url,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: Colors.grey[200],
+                                        child: const Icon(Icons.broken_image, color: Colors.grey, size: 24),
+                                      );
+                                    },
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return const Center(
+                                        child: SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                    // Render attachment chips for all files
+                    if (files.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: files.map<Widget>((file) {
+                          final name = file["file_name"]?.toString() ?? "Attachment";
+                          final url = file["file_url"]?.toString() ?? "";
+                          final lowercaseName = name.toLowerCase();
+                          IconData icon = Icons.insert_drive_file;
+                          if (lowercaseName.endsWith('.pdf')) {
+                            icon = Icons.picture_as_pdf;
+                          } else if (lowercaseName.endsWith('.png') ||
+                              lowercaseName.endsWith('.jpg') ||
+                              lowercaseName.endsWith('.jpeg')) {
+                            icon = Icons.image;
+                          }
+
+                          return GestureDetector(
+                            onTap: () => _openAttachmentUrl(url),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(icon, size: 14, color: AppColors.primary),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey[800],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );

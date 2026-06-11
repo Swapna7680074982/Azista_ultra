@@ -1508,4 +1508,152 @@ class ApiServices {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>?> getActivityTypes() async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      AppLogger.info("Get Activity Types API called: ${AppUrls.getActivityTypes}");
+
+      final response = await _dio.get(
+        AppUrls.getActivityTypes,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      AppLogger.info("Get Activity Types response: ${response.statusCode} - ${response.data}");
+
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Activity Types error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> createOutletActivity({
+    required String visitId,
+    required String activityTypeId,
+    required String remarks,
+    List<File>? attachments,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final Map<String, dynamic> fields = {
+        "visit_id": visitId,
+        "activity_type_id": activityTypeId,
+        "remarks": remarks,
+      };
+
+      final FormData formData = FormData.fromMap(fields);
+
+      if (attachments != null && attachments.isNotEmpty) {
+        for (var file in attachments) {
+          final fileName = file.path.split('/').last.split('\\').last;
+          final extension = fileName.split('.').last.toLowerCase();
+          
+          String mimeType = 'octet-stream';
+          String mimeSubtype = 'octet-stream';
+          if (extension == 'pdf') {
+            mimeType = 'application';
+            mimeSubtype = 'pdf';
+          } else if (extension == 'png') {
+            mimeType = 'image';
+            mimeSubtype = 'png';
+          } else if (extension == 'jpg' || extension == 'jpeg') {
+            mimeType = 'image';
+            mimeSubtype = 'jpeg';
+          }
+
+          formData.files.add(MapEntry(
+            "attachments[]",
+            await MultipartFile.fromFile(
+              file.path,
+              filename: fileName,
+              contentType: MediaType(mimeType, mimeSubtype),
+            ),
+          ));
+        }
+      }
+
+      AppLogger.info("Create Outlet Activity API call: ${AppUrls.createOutletActivity}");
+      AppLogger.info("Fields: $fields");
+      AppLogger.info("Attachments count: ${attachments?.length ?? 0}");
+
+      final response = await _dio.post(
+        AppUrls.createOutletActivity,
+        data: formData,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      AppLogger.info("Create Outlet Activity response status: ${response.statusCode}");
+      AppLogger.info("Create Outlet Activity response data: ${response.data}");
+
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Create Outlet Activity error", e);
+      if (e is DioException) {
+        AppLogger.error("Create Outlet Activity status code: ${e.response?.statusCode}");
+        AppLogger.error("Create Outlet Activity response data: ${e.response?.data}");
+      }
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getOutletHistory({
+    required int outletId,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final payload = {
+        "outlet_id": outletId,
+      };
+
+      AppLogger.info("Get Outlet History API called: ${AppUrls.outletHistory}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.outletHistory,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      AppLogger.info("Get Outlet History response status: ${response.statusCode}");
+      AppLogger.info("Get Outlet History response data: ${response.data}");
+
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Outlet History error", e);
+      if (e is DioException) {
+        AppLogger.error("Get Outlet History status code: ${e.response?.statusCode}");
+        AppLogger.error("Get Outlet History response data: ${e.response?.data}");
+      }
+      return null;
+    }
+  }
 }

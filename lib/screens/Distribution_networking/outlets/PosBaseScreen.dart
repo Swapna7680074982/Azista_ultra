@@ -240,9 +240,9 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       ];
     }
     
-    // Add MARKETING module manually if not present
+    // Add ACTIVITY module manually if not present
     if (!tabs.any((t) => t['module_code'] == 'MKT' || t['module_code'] == 'MARKETING')) {
-      tabs.add({"module_name": "MARKETING", "module_code": "MKT"});
+      tabs.add({"module_name": "ACTIVITY", "module_code": "MKT"});
     }
 
     setState(() {
@@ -276,7 +276,10 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       case "SALE":
         return SaleBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
       case "MKT":
-        return MarketingBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
+        return MarketingBody(
+          outletId: int.tryParse(widget.outlet.id) ?? 0,
+          visitId: _visitId,
+        );
       default:
         return Center(child: Text("$moduleCode Screen"));
     }
@@ -332,7 +335,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                       const SizedBox(width: 8),
                       Text(
                         _checkInTime != null
-                            ? "Checked-in at: ${DateFormat('hh:mm a').format(_checkInTime!)}"
+                            ? "Checked-in at: ${DateFormat('dd/MM/yyyy hh:mm a').format(_checkInTime!)}"
                             : "Checked-in",
                         style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13),
                       ),
