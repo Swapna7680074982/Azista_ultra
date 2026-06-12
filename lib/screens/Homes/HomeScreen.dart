@@ -314,15 +314,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
                           // Target values from API
                           final targets = provider.targetsData;
-                          final tcTarget = double.tryParse(targets?["tc_target"]?.toString() ?? "600") ?? 600.0;
-                          final pcTarget = double.tryParse(targets?["pc_target"]?.toString() ?? "300") ?? 300.0;
+                          
+                          // Daily targets from API (daily_target map)
+                          final dailyTargetMap = targets?["daily_target"] as Map<String, dynamic>?;
+                          final dailyTcTarget = double.tryParse(dailyTargetMap?["tc_target"]?.toString() ?? "25") ?? 25.0;
+                          final dailyPcTarget = double.tryParse(dailyTargetMap?["pc_target"]?.toString() ?? "12") ?? 12.0;
 
-                          // Dynamic total targets (removing static 30 and 500)
-                          final dailyTotalTarget = dailyTarget > (tcTarget / 30.0) ? dailyTarget : (tcTarget / 30.0);
-                          final dailyProductiveTotalTarget = dailyProductive > (pcTarget / 30.0) ? dailyProductive : (pcTarget / 30.0);
+                          // Monthly targets from API (monthly_target map)
+                          final monthlyTargetMap = targets?["monthly_target"] as Map<String, dynamic>?;
+                          final monthlyTcTarget = double.tryParse(monthlyTargetMap?["tc_target"]?.toString() ?? "600") ?? 600.0;
+                          final monthlyPcTarget = double.tryParse(monthlyTargetMap?["pc_target"]?.toString() ?? "300") ?? 300.0;
 
-                          final monthlyTotalTarget = monthlyTarget > tcTarget ? monthlyTarget : tcTarget;
-                          final monthlyProductiveTotalTarget = monthlyProductive > pcTarget ? monthlyProductive : pcTarget;
+                          // Dynamic total targets (removing static/assumed values)
+                          final dailyTotalTarget = dailyTarget > dailyTcTarget ? dailyTarget : dailyTcTarget;
+                          final dailyProductiveTotalTarget = dailyProductive > dailyPcTarget ? dailyProductive : dailyPcTarget;
+
+                          final monthlyTotalTarget = monthlyTarget > monthlyTcTarget ? monthlyTarget : monthlyTcTarget;
+                          final monthlyProductiveTotalTarget = monthlyProductive > monthlyPcTarget ? monthlyProductive : monthlyPcTarget;
 
                           if (_selectedSummaryType == "Daily") {
                             return Row(
@@ -532,9 +540,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                   final pobSaleValue = counts["pob_sale_value"] ?? 0.0;
 
                                   final targets = provider.targetsData ?? {};
-                                  final newOutletsTarget = targets["new_outlets_target"]?.toString();
-                                  final outletVisitsTarget = targets["outlet_visits_target"]?.toString();
-                                  final saleValueTarget = targets["sale_value_target"];
+                                  Map<String, dynamic>? selectedTargetMap;
+                                  if (provider.selectedCountsFilter == "today") {
+                                    selectedTargetMap = targets["daily_target"] as Map<String, dynamic>?;
+                                  } else if (provider.selectedCountsFilter == "month") {
+                                    selectedTargetMap = targets["monthly_target"] as Map<String, dynamic>?;
+                                  }
+
+                                  final newOutletsTarget = selectedTargetMap?["new_outlets_target"]?.toString();
+                                  final outletVisitsTarget = selectedTargetMap?["outlet_visits_target"]?.toString();
+                                  final saleValueTarget = selectedTargetMap?["sale_value_target"];
                                   
                                   String? saleValueTargetStr;
                                   if (saleValueTarget != null) {
@@ -555,12 +570,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                         newOutlets.toString(),
                                         Icons.storefront,
                                         AppColors.primary,
+                                        targetValue: newOutletsTarget,
                                       ),
                                       _buildMetricTile(
                                         "OUTLET VISITS",
                                         outletVisits.toString(),
                                         Icons.pin_drop_outlined,
                                         Colors.blue.shade700,
+                                        targetValue: outletVisitsTarget,
                                       ),
                                       _buildMetricTile(
                                         "POBS DONE",
