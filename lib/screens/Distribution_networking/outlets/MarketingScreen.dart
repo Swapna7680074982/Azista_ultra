@@ -392,7 +392,7 @@ class _MarketingBodyState extends State<MarketingBody>
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey[600],
+                      backgroundColor: AppColors.button,
                       foregroundColor: Colors.white,
                     ),
                     onPressed: _selectedFiles.length >= 5 ? null : () => _pickImage(ImageSource.gallery),

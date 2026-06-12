@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../../services/api_services.dart';
 
 class DistributionListProvider extends ChangeNotifier {
+  DistributionListProvider() {
+    _selectedMonth = _months[DateTime.now().month - 1];
+  }
+
   // DistributorStatusScreen State
   List<bool> _statusList = [true, false, false, false];
   List<bool> _buttonEnabled = [false, true, false, false];
@@ -23,7 +27,7 @@ class DistributionListProvider extends ChangeNotifier {
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   ];
-  String _selectedMonth = "April";
+  late String _selectedMonth;
 
   List<String> get months => _months;
   String get selectedMonth => _selectedMonth;
@@ -39,30 +43,118 @@ class DistributionListProvider extends ChangeNotifier {
   bool _isLoadingStock = false;
   bool get isLoadingStock => _isLoadingStock;
 
+  // Distributor Selection and Creation State
+  bool _isLoadingDistributors = false;
+  bool get isLoadingDistributors => _isLoadingDistributors;
+
+  List<dynamic> _distributors = [];
+  List<dynamic> get distributors => _distributors;
+
+  dynamic _selectedDistributor;
+  dynamic get selectedDistributor => _selectedDistributor;
+
+  int _selectedStockMonth = DateTime.now().month;
+  int get selectedStockMonth => _selectedStockMonth;
+
+  int _selectedStockYear = DateTime.now().year;
+  int get selectedStockYear => _selectedStockYear;
+
+  void selectDistributor(dynamic dist) {
+    _selectedDistributor = dist;
+    notifyListeners();
+  }
+
+  void setStockMonth(int month) {
+    _selectedStockMonth = month;
+    notifyListeners();
+  }
+
+  void setStockYear(int year) {
+    _selectedStockYear = year;
+    notifyListeners();
+  }
+
+  Future<void> fetchDistributorsList() async {
+    _isLoadingDistributors = true;
+    notifyListeners();
+
+    final response = await ApiServices.getDistributors();
+    if (response != null && response['status'] == true) {
+      _distributors = response['data'] ?? [];
+      if (_selectedDistributor != null) {
+        final existingId = _selectedDistributor['distributor_id']?.toString();
+        final match = _distributors.firstWhere(
+          (d) => d['distributor_id']?.toString() == existingId,
+          orElse: () => null,
+        );
+        if (match != null) {
+          _selectedDistributor = match;
+        } else {
+          _selectedDistributor = _distributors.isNotEmpty ? _distributors.first : null;
+        }
+      } else if (_distributors.isNotEmpty) {
+        _selectedDistributor = _distributors.first;
+      }
+    } else {
+      _distributors = [];
+      _selectedDistributor = null;
+    }
+
+    _isLoadingDistributors = false;
+    notifyListeners();
+  }
+
+  Future<bool> createDistributor(Map<String, dynamic> payload) async {
+    final response = await ApiServices.createDistributor(payload: payload);
+    if (response != null && response['status'] == true) {
+      await fetchDistributorsList();
+      return true;
+    }
+    return false;
+  }
+
   Future<void> fetchDistributorStock(int distributorId) async {
     _isLoadingStock = true;
     notifyListeners();
 
-    final response = await ApiServices.getDistributorStock(distributorId: distributorId);
+    // Map month name to number
+    final monthMap = {
+      "January": 1, "February": 2, "March": 3, "April": 4, "May": 5, "June": 6,
+      "July": 7, "August": 8, "September": 9, "October": 10, "November": 11, "December": 12
+    };
+    final monthNum = monthMap[_selectedMonth] ?? DateTime.now().month;
+    final year = DateTime.now().year; // Dynamically use the current year
+    final lastDay = DateTime(year, monthNum + 1, 0).day;
+    final fromDate = "$year-${monthNum.toString().padLeft(2, '0')}-01";
+    final toDate = "$year-${monthNum.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}";
+
+    final payload = {
+      "distributor_id": distributorId,
+      "from_date": fromDate,
+      "to_date": toDate,
+      "limit": 50,
+      "offset": 0
+    };
+
+    final response = await ApiServices.getDistributorStockHistory(payload: payload);
     _submissions.clear();
 
-    if (response != null && response['status'] == true) {
+    if (response != null && response['status'] == "success") {
       final data = response['data'] as List<dynamic>? ?? [];
-      for (var product in data) {
-        final skus = product['skus'] as List<dynamic>? ?? [];
-        for (var sku in skus) {
-          final createdOn = sku['created_on']?.toString() ?? "";
-          if (createdOn.isNotEmpty) {
-            // e.g. "2026-05-05 10:12:07" -> "2026-05-05"
-            final datePart = createdOn.split(' ')[0]; 
-            if (!_submissions.containsKey(datePart)) {
-              _submissions[datePart] = [];
-            }
+      for (var record in data) {
+        final createdAt = record['created_at']?.toString() ?? "";
+        final items = record['items'] as List<dynamic>? ?? [];
+        if (createdAt.isNotEmpty) {
+          final datePart = createdAt.split(' ')[0];
+          if (!_submissions.containsKey(datePart)) {
+            _submissions[datePart] = [];
+          }
+          for (var item in items) {
             _submissions[datePart]!.add({
-              "product_id": product['product_id'] ?? product['id'],
-              "product_name": product['product_name'] ?? product['name'] ?? 'Unknown Product',
-              "sku_name": sku['sku_name']?.toString().isNotEmpty == true ? sku['sku_name'] : (sku['display_name'] ?? sku['sku_displayname'] ?? sku['sku_id']?.toString() ?? 'Unknown SKU'),
-              "qty": sku['stock_qty']?.toString() ?? "0",
+              "product_id": item['product_id'],
+              "product_name": item['product_name'] ?? 'Unknown Product',
+              "sku_name": item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'Unknown SKU',
+              "qty": item['quantity']?.toString() ?? "0",
             });
           }
         }
@@ -104,7 +196,13 @@ class DistributionListProvider extends ChangeNotifier {
   }
 
   Future<bool> submitDistributorStock(int? distributorId) async {
-    List<Map<String, dynamic>> stocks = [];
+    final distId = _selectedDistributor != null
+        ? int.tryParse(_selectedDistributor['distributor_id']?.toString() ?? '')
+        : distributorId;
+
+    if (distId == null) return false;
+
+    List<Map<String, dynamic>> items = [];
 
     _stockQuantities.forEach((key, quantity) {
       if (quantity > 0) {
@@ -112,7 +210,7 @@ class DistributionListProvider extends ChangeNotifier {
         final productId = int.parse(parts[0]);
         final skuId = int.parse(parts[1]);
         
-        stocks.add({
+        items.add({
           "product_id": productId,
           "sku_id": skuId,
           "quantity": quantity,
@@ -120,18 +218,20 @@ class DistributionListProvider extends ChangeNotifier {
       }
     });
 
-    if (stocks.isEmpty) {
+    if (items.isEmpty) {
       return false; // Nothing to submit
     }
 
     final payload = {
-      if (distributorId != null) "distributor_id": distributorId,
-      "stocks": stocks,
+      "distributor_id": distId,
+      "month": _selectedStockMonth,
+      "year": _selectedStockYear,
+      "items": items,
     };
 
-    final response = await ApiServices.insertDistributorStock(payload: payload);
+    final response = await ApiServices.distributorStockInsert(payload: payload);
     
-    if (response != null && response['status'] == true) {
+    if (response != null && response['status'] == "success") {
       _stockQuantities.clear();
       notifyListeners();
       return true;

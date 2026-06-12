@@ -22,6 +22,8 @@ class HomeProvider extends ChangeNotifier {
   Map<String, dynamic>? dashboardCounts;
   bool isCountsLoading = false;
   String selectedCountsFilter = "month"; // 'today', 'month', 'custom'
+  Map<String, dynamic>? targetsData;
+  bool isTargetsLoading = false;
   DateTimeRange? customCountsRange;
 
   Future<void> loadDistributors([AppStateProvider? appState]) async {
@@ -325,6 +327,23 @@ class HomeProvider extends ChangeNotifier {
     fetchDashboardCounts(distributorId: distributorId);
   }
 
+  Future<void> fetchTargets() async {
+    isTargetsLoading = true;
+    notifyListeners();
+    try {
+      final res = await ApiServices.getTargets();
+      if (res != null && res["status"] == true) {
+        targetsData = res["data"];
+      } else {
+        targetsData = null;
+      }
+    } catch (e) {
+      targetsData = null;
+    }
+    isTargetsLoading = false;
+    notifyListeners();
+  }
+
   void reset() {
     distributors = [];
     selectedDistributor = null;
@@ -340,6 +359,8 @@ class HomeProvider extends ChangeNotifier {
     isCountsLoading = false;
     selectedCountsFilter = "month";
     customCountsRange = null;
+    targetsData = null;
+    isTargetsLoading = false;
     _autoCheckoutSubscription?.cancel();
     notifyListeners();
   }

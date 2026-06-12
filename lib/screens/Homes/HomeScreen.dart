@@ -42,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
     homeProvider.fetchMonthlyCallSummary(appState.selectedDistributorId);
     homeProvider.fetchDashboardCounts(distributorId: appState.selectedDistributorId);
+    homeProvider.fetchTargets();
   }
 
   @override
@@ -60,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
       homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
       homeProvider.fetchMonthlyCallSummary(appState.selectedDistributorId);
       homeProvider.fetchDashboardCounts(distributorId: appState.selectedDistributorId);
+      homeProvider.fetchTargets();
 
       final role = await SessionManager.getUserRole();
       appState.setUserRole(role);
@@ -310,9 +312,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           final monthlyTarget = (monthlySummary?["target_calls"] ?? 0).toDouble();
                           final monthlyProductive = (monthlySummary?["productive_calls"] ?? 0).toDouble();
 
-                          // Dynamic total targets
-                          final dailyTotalTarget = dailyTarget > 30.0 ? dailyTarget : 30.0;
-                          final monthlyTotalTarget = monthlyTarget > 500.0 ? monthlyTarget : 500.0;
+                          // Target values from API
+                          final targets = provider.targetsData;
+                          final tcTarget = double.tryParse(targets?["tc_target"]?.toString() ?? "600") ?? 600.0;
+                          final pcTarget = double.tryParse(targets?["pc_target"]?.toString() ?? "300") ?? 300.0;
+
+                          // Dynamic total targets (removing static 30 and 500)
+                          final dailyTotalTarget = dailyTarget > (tcTarget / 30.0) ? dailyTarget : (tcTarget / 30.0);
+                          final dailyProductiveTotalTarget = dailyProductive > (pcTarget / 30.0) ? dailyProductive : (pcTarget / 30.0);
+
+                          final monthlyTotalTarget = monthlyTarget > tcTarget ? monthlyTarget : tcTarget;
+                          final monthlyProductiveTotalTarget = monthlyProductive > pcTarget ? monthlyProductive : pcTarget;
 
                           if (_selectedSummaryType == "Daily") {
                             return Row(
@@ -334,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     fit: BoxFit.scaleDown,
                                     child: DonutChart(
                                       value: dailyProductive,
-                                      total: dailyTotalTarget,
+                                      total: dailyProductiveTotalTarget,
                                       label: "Target Productive",
                                       color: Colors.green,
                                     ),
@@ -362,7 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     fit: BoxFit.scaleDown,
                                     child: DonutChart(
                                       value: monthlyProductive,
-                                      total: monthlyTotalTarget,
+                                      total: monthlyProductiveTotalTarget,
                                       label: "Target Productive",
                                       color: Colors.green,
                                     ),
@@ -521,13 +531,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                   final pobsDone = counts["pobs_done"] ?? 0;
                                   final pobSaleValue = counts["pob_sale_value"] ?? 0.0;
 
+                                  final targets = provider.targetsData ?? {};
+                                  final newOutletsTarget = targets["new_outlets_target"]?.toString();
+                                  final outletVisitsTarget = targets["outlet_visits_target"]?.toString();
+                                  final saleValueTarget = targets["sale_value_target"];
+                                  
+                                  String? saleValueTargetStr;
+                                  if (saleValueTarget != null) {
+                                    final val = double.tryParse(saleValueTarget.toString()) ?? 0.0;
+                                    saleValueTargetStr = "₹ ${val.toStringAsFixed(2)}";
+                                  }
+
                                   return GridView.count(
                                     crossAxisCount: 2,
                                     shrinkWrap: true,
                                     physics: const NeverScrollableScrollPhysics(),
                                     crossAxisSpacing: 12,
                                     mainAxisSpacing: 12,
-                                    childAspectRatio: 1.60,
+                                    childAspectRatio: 1.45,
                                     children: [
                                       _buildMetricTile(
                                         "NEW OUTLETS",
@@ -552,6 +573,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         "₹ ${double.tryParse(pobSaleValue.toString())?.toStringAsFixed(2) ?? "0.00"}",
                                         Icons.currency_rupee,
                                         AppColors.green,
+                                        targetValue: saleValueTargetStr,
                                       ),
                                     ],
                                   );
@@ -851,8 +873,9 @@ class _HomeScreenState extends State<HomeScreen> {
     String title,
     String value,
     IconData icon,
-    Color color,
-  ) {
+    Color color, {
+    String? targetValue,
+  }) {
     final isPrice = value.contains('₹');
     return Container(
       padding: const EdgeInsets.all(12),
@@ -894,15 +917,29 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: isPrice ? 18 : 22,
-              fontWeight: FontWeight.bold,
-              color: AppColors.black,
+          const SizedBox(height: 10),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: isPrice ? 16 : 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.black,
+              ),
             ),
           ),
+          if (targetValue != null && targetValue.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              "Target: $targetValue",
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ],
       ),
     );

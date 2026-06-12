@@ -17,10 +17,17 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
   void initState() {
     super.initState();
     Future.microtask(() {
+      final provider = Provider.of<DistributionListProvider>(context, listen: false);
       final appState = Provider.of<AppStateProvider>(context, listen: false);
-      if (appState.selectedDistributorId != null) {
-        Provider.of<DistributionListProvider>(context, listen: false)
-            .fetchDistributorStock(appState.selectedDistributorId!);
+      
+      int? distId;
+      if (provider.selectedDistributor != null) {
+        distId = int.tryParse(provider.selectedDistributor['distributor_id']?.toString() ?? '');
+      }
+      distId ??= appState.selectedDistributorId;
+
+      if (distId != null) {
+        provider.fetchDistributorStock(distId);
       }
     });
   }
@@ -64,9 +71,9 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "YEAR: 2026",
-              style: TextStyle(
+            Text(
+              "YEAR: ${DateTime.now().year}",
+              style: const TextStyle(
                 color: Colors.red,
                 fontWeight: FontWeight.bold,
               ),
@@ -95,6 +102,14 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
                 onChanged: (value) {
                   if (value != null) {
                     provider.setSelectedMonth(value);
+                    int? distId;
+                    if (provider.selectedDistributor != null) {
+                      distId = int.tryParse(provider.selectedDistributor['distributor_id']?.toString() ?? '');
+                    }
+                    distId ??= Provider.of<AppStateProvider>(context, listen: false).selectedDistributorId;
+                    if (distId != null) {
+                      provider.fetchDistributorStock(distId);
+                    }
                   }
                 },
               ),

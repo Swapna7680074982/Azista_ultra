@@ -896,6 +896,7 @@ class ApiServices {
         ),
       );
 
+      print("Supply POB API Response: ${response.data}");
       if (response.statusCode == 200 && response.data["status"] == "success") {
         return response.data;
       }
@@ -924,6 +925,7 @@ class ApiServices {
         ),
       );
 
+      print("POB History API Response: ${response.data}");
       if (response.statusCode == 200 && response.data["status"] == "success") {
         return response.data;
       }
@@ -1666,6 +1668,145 @@ class ApiServices {
         AppLogger.error("Get Dashboard Counts status code: ${e.response?.statusCode}");
         AppLogger.error("Get Dashboard Counts response data: ${e.response?.data}");
       }
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> createDistributor({
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.post(
+        AppUrls.createDistributor,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("Create Distributor API Response: ${response.data}");
+      if (response.statusCode == 200 && response.data["status"] == true) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Create Distributor error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getDistributors() async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.get(
+        AppUrls.getDistributors,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      print("Get Distributors API Response: ${response.data}");
+      if (response.statusCode == 200 && response.data["status"] == true) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Distributors error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> distributorStockInsert({
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.post(
+        AppUrls.distributorStockInsert,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("Distributor Stock Insert API Response: ${response.data}");
+      if (response.statusCode == 200 && response.data["status"] == "success") {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Distributor Stock Insert error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getDistributorStockHistory({
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.post(
+        AppUrls.distributorStockHistory,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("Distributor Stock History API Response: ${response.data}");
+      if (response.statusCode == 200 && response.data["status"] == "success") {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Distributor Stock History error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getTargets() async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final response = await _dio.post(
+        AppUrls.getTargets,
+        data: {},
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("Get Targets API Response: ${response.data}");
+      if (response.statusCode == 200 && response.data["status"] == true) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Targets error", e);
       return null;
     }
   }

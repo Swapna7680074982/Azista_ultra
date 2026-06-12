@@ -40,4 +40,10 @@ class AppUrls {
   static const String createOutletActivity = "$baseUrl/distribution/create_outlet_activity";
   static const String outletHistory = "$baseUrl/distribution/outlet_history";
   static const String dashboardCounts = "$baseUrl/distribution/dashboard_counts";
+
+  static const String createDistributor = "$baseUrl/distribution/create_distributor";
+  static const String getDistributors = "$baseUrl/distribution/get_distributors";
+  static const String distributorStockInsert = "$baseUrl/distribution/distributor_stock_insert";
+  static const String distributorStockHistory = "$baseUrl/distribution/distributor_stock_history";
+  static const String getTargets = "$baseUrl/distribution/get_targets";
 }

@@ -110,14 +110,60 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
     }
   }
 
+  void _viewAttachment(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: Colors.black.withValues(alpha: 0.85),
+            ),
+            Center(
+              child: InteractiveViewer(
+                maxScale: 4.0,
+                child: url.toLowerCase().endsWith('.pdf')
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.picture_as_pdf, color: Colors.red, size: 80),
+                          const SizedBox(height: 10),
+                          Text(
+                            url.split('/').last,
+                            style: const TextStyle(color: Colors.white, fontSize: 16),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      )
+                    : Image.network(
+                        url,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.white, size: 50),
+                      ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _pobHistoryTab() {
-    final appState = Provider.of<AppStateProvider>(context, listen: false);
-    final distributorId = appState.selectedDistributorId ?? 6;
-    
     final lastDay = DateTime(selectedYear, selectedMonth + 1, 0).day;
     final Map<String, dynamic> payload = {
       "outlet_id": widget.outletId,
-      "distributor_id": distributorId,
       "from_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-01",
       "to_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}",
     };
@@ -165,9 +211,40 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
                   borderRadius: BorderRadius.circular(6),
                   boxShadow: [BoxShadow(color: Colors.grey.shade300, blurRadius: 3)],
                 ),
-                child: Text(
-                  "SUBMISSION ON ${DateFormatter.formatDateTime(date)}",
-                  style: const TextStyle(fontWeight: FontWeight.w500),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        "SUBMISSION ON ${DateFormatter.formatDateTime(date)}",
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    if (pob['order_copy_url'] != null && pob['order_copy_url'].toString().isNotEmpty) ...[
+                      const SizedBox(width: 10),
+                      GestureDetector(
+                        onTap: () => _viewAttachment(context, pob['order_copy_url']),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: pob['order_copy_url'].toString().toLowerCase().endsWith('.pdf')
+                                ? const Icon(Icons.picture_as_pdf, color: Colors.red, size: 24)
+                                : Image.network(
+                                    pob['order_copy_url'],
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 24),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ]
+                  ],
                 ),
               ),
             );

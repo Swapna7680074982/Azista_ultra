@@ -206,7 +206,7 @@ class _PobBodyState extends State<PobBody> {
                                 const SizedBox(width: 12),
                                 ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.grey[600],
+                                    backgroundColor: AppColors.button,
                                     foregroundColor: Colors.white,
                                   ),
                                   onPressed: () => _pickImage(ImageSource.gallery),

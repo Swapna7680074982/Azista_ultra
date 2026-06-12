@@ -184,14 +184,47 @@ class OutletActivityProvider extends ChangeNotifier {
 
     final payload = {
       "outlet_id": outletId,
-      if (distributorId != null) "distributor_id": distributorId,
     };
 
     final response = await ApiServices.getPobHistory(payload: payload);
     if (response != null && response['status'] == "success") {
       final data = response['data'] as List<dynamic>? ?? [];
-      _pendingPobs = data.where((pob) => pob['status'] == 'pending' || pob['status'] == 'partial').toList();
-      _suppliedPobs = data.where((pob) => pob['status'] == 'supplied').toList();
+      final List<dynamic> normalizedData = [];
+      for (var pob in data) {
+        if (pob is Map) {
+          final pobMap = Map<String, dynamic>.from(pob);
+          final items = pobMap['items'] as List<dynamic>? ?? [];
+          bool allItemsSupplied = false;
+          if (items.isNotEmpty) {
+            allItemsSupplied = true;
+            for (var item in items) {
+              final double quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
+              final double remainingQty = double.tryParse(item['remaining_qty']?.toString() ?? '0') ?? 0;
+              final double suppliedQty = double.tryParse(item['supplied_qty']?.toString() ?? '0') ?? 0;
+              
+              if (item['remaining_qty'] != null) {
+                if (remainingQty > 0) {
+                  allItemsSupplied = false;
+                  break;
+                }
+              } else {
+                if (suppliedQty < quantity) {
+                  allItemsSupplied = false;
+                  break;
+                }
+              }
+            }
+          }
+          if (allItemsSupplied || pobMap['status'] == 'supplied') {
+            pobMap['status'] = 'supplied';
+          }
+          normalizedData.add(pobMap);
+        } else {
+          normalizedData.add(pob);
+        }
+      }
+      _pendingPobs = normalizedData.where((pob) => pob['status'] == 'pending' || pob['status'] == 'partial').toList();
+      _suppliedPobs = normalizedData.where((pob) => pob['status'] == 'supplied').toList();
     } else {
       _pendingPobs = [];
       _suppliedPobs = [];

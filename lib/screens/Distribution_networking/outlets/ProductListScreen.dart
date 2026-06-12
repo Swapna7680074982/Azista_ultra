@@ -262,17 +262,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 }
                 _supplyQuantities.clear();
               });
-
-              final outletId = widget.pobData?['outlet_id'] is String
-                  ? int.tryParse(widget.pobData!['outlet_id'])
-                  : widget.pobData?['outlet_id'];
-              final distributorId = widget.pobData?['distributor_id'] is String
-                  ? int.tryParse(widget.pobData!['distributor_id'])
-                  : widget.pobData?['distributor_id'];
-              if (outletId != null) {
-                Provider.of<OutletActivityProvider>(context, listen: false)
-                    .fetchPobHistory(outletId, distributorId: distributorId);
-              }
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("Failed to supply POB")),

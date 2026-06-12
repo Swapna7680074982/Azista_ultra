@@ -209,8 +209,13 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
       "to_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}",
     };
 
+    final Map<String, dynamic> pobPayload = {
+      "from_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-01",
+      "to_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}",
+    };
+
     final results = await Future.wait([
-      ApiServices.getPobHistory(payload: payload),
+      ApiServices.getPobHistory(payload: pobPayload),
       ApiServices.getPosHistory(payload: {...payload, "pos_type": "sale"}),
       ApiServices.getPosHistory(payload: {...payload, "pos_type": "stock"}),
       ApiServices.getUserOutlets(),

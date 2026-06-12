@@ -67,6 +67,56 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
     }
   }
 
+  void _viewAttachment(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: Colors.black.withValues(alpha: 0.85),
+            ),
+            Center(
+              child: InteractiveViewer(
+                maxScale: 4.0,
+                child: url.toLowerCase().endsWith('.pdf')
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.picture_as_pdf, color: Colors.red, size: 80),
+                          const SizedBox(height: 10),
+                          Text(
+                            url.split('/').last,
+                            style: const TextStyle(color: Colors.white, fontSize: 16),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      )
+                    : Image.network(
+                        url,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.white, size: 50),
+                      ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _summaryItem(String label, String value) {
     return Column(
       children: [
@@ -143,7 +193,7 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
 
           final productiveCalls = pobCount;
           final orderValue = allFiltered.fold<double>(0.0, (sum, pob) {
-            final amt = pob['total_amount'] ?? pob['order_value'] ?? pob['total_value'] ?? 0.0;
+            final amt = pob['ptr_incl_gst_total_amount'] ?? pob['total_amount'] ?? pob['order_value'] ?? pob['total_value'] ?? 0.0;
             return sum + (double.tryParse(amt.toString()) ?? 0.0);
           });
 
@@ -245,7 +295,7 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
         double suppliedAmount = 0.0;
         double remainingAmount = 0.0;
         for (var item in items) {
-          final price = double.tryParse(item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
+          final price = double.tryParse(item['ptr_incl_gst_price']?.toString() ?? item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
           final qty = int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
           final suppliedQty = int.tryParse(item['supplied_qty']?.toString() ?? '0') ?? 0;
           final remainingQty = int.tryParse(item['remaining_qty']?.toString() ?? '0') ?? 0;
@@ -257,17 +307,19 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
 
         return GestureDetector(
           onTap: () async {
+            final appState = Provider.of<AppStateProvider>(context, listen: false);
+            final provider = Provider.of<OutletActivityProvider>(context, listen: false);
+            final distributorId = appState.selectedDistributorId;
+            final outletId = widget.outletId;
+
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => ProductListScreen(pobData: pob),
               ),
             );
-            if (!mounted) return;
             if (result == true) {
-              final appState = Provider.of<AppStateProvider>(context, listen: false);
-              Provider.of<OutletActivityProvider>(context, listen: false)
-                  .fetchPobHistory(widget.outletId, distributorId: appState.selectedDistributorId);
+              provider.fetchPobHistory(outletId, distributorId: distributorId);
             }
           },
           child: Container(
@@ -284,41 +336,72 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                 )
               ],
             ),
-            child: Column(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "POB NUMBER: ${pob['pob_number'] ?? 'N/A'}",
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      "₹${totalAmount.toStringAsFixed(2)}",
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "POB NUMBER: ${pob['pob_number'] ?? 'N/A'}",
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            "₹${totalAmount.toStringAsFixed(2)}",
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Text("Date: ${DateFormatter.formatDateTime(pob['created_at'] ?? pob['created_on'])}"),
+                      Text("Status: ${pob['status'] ?? 'N/A'}"),
+                      const SizedBox(height: 6),
+                      const Divider(height: 1, thickness: 0.5),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Supplied: ₹${suppliedAmount.toStringAsFixed(2)}",
+                            style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.w500),
+                          ),
+                          Text(
+                            "Remaining: ₹${remainingAmount.toStringAsFixed(2)}",
+                            style: const TextStyle(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 5),
-                Text("Date: ${DateFormatter.formatDateTime(pob['created_at'] ?? pob['created_on'])}"),
-                Text("Status: ${pob['status'] ?? 'N/A'}"),
-                const SizedBox(height: 6),
-                const Divider(height: 1, thickness: 0.5),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Supplied: ₹${suppliedAmount.toStringAsFixed(2)}",
-                      style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.w500),
+                if (pob['order_copy_url'] != null && pob['order_copy_url'].toString().isNotEmpty) ...[
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: () => _viewAttachment(context, pob['order_copy_url']),
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: pob['order_copy_url'].toString().toLowerCase().endsWith('.pdf')
+                            ? const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30)
+                            : Image.network(
+                                pob['order_copy_url'],
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 30),
+                              ),
+                      ),
                     ),
-                    Text(
-                      "Remaining: ₹${remainingAmount.toStringAsFixed(2)}",
-                      style: const TextStyle(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -339,7 +422,7 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
         final items = pob['items'] as List<dynamic>? ?? [];
         double totalAmount = 0.0;
         for (var item in items) {
-          final price = double.tryParse(item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
+          final price = double.tryParse(item['ptr_incl_gst_price']?.toString() ?? item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
           final qty = int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
           totalAmount += qty * price;
         }
@@ -367,25 +450,56 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                 )
               ],
             ),
-            child: Column(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "POB NUMBER: ${pob['pob_number'] ?? 'N/A'}",
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      "₹${totalAmount.toStringAsFixed(2)}",
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "POB NUMBER: ${pob['pob_number'] ?? 'N/A'}",
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            "₹${totalAmount.toStringAsFixed(2)}",
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Text("Date: ${DateFormatter.formatDateTime(pob['created_at'] ?? pob['created_on'])}"),
+                      Text("Status: ${pob['status'] ?? 'N/A'}"),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 5),
-                Text("Date: ${DateFormatter.formatDateTime(pob['created_at'] ?? pob['created_on'])}"),
-                Text("Status: ${pob['status'] ?? 'N/A'}"),
+                if (pob['order_copy_url'] != null && pob['order_copy_url'].toString().isNotEmpty) ...[
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: () => _viewAttachment(context, pob['order_copy_url']),
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: pob['order_copy_url'].toString().toLowerCase().endsWith('.pdf')
+                            ? const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30)
+                            : Image.network(
+                                pob['order_copy_url'],
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 30),
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
