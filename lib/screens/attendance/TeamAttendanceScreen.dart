@@ -79,9 +79,36 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
                                       Text("Date: ${DateFormatter.formatDateOnly(user.attendanceDate)}", style: const TextStyle(fontSize: 11, color: Colors.grey)),
                                     ],
                                   ),
-                                  children: logs.map<Widget>((log) {
-                                    return _buildDetailLogItem(log);
-                                  }).toList(),
+                                  children: [
+                                    Builder(builder: (context) {
+                                      String? earliestCheckIn;
+                                      String? latestCheckOut;
+                                      int totalMinutes = 0;
+
+                                      for (var log in logs) {
+                                        final checkInStr = log['first_checkin']?.toString();
+                                        final checkOutStr = log['last_checkout']?.toString();
+                                        
+                                        if (checkInStr != null && checkInStr.isNotEmpty && checkInStr != 'N/A') {
+                                          if (earliestCheckIn == null || checkInStr.compareTo(earliestCheckIn) < 0) {
+                                            earliestCheckIn = checkInStr;
+                                          }
+                                        }
+                                        
+                                        if (checkOutStr != null && checkOutStr.isNotEmpty && checkOutStr != 'N/A') {
+                                          if (latestCheckOut == null || checkOutStr.compareTo(latestCheckOut) > 0) {
+                                            latestCheckOut = checkOutStr;
+                                          }
+                                        }
+
+                                        final rawMin = log['working_minutes'];
+                                        final int min = rawMin is int ? rawMin : int.tryParse(rawMin?.toString() ?? "0") ?? 0;
+                                        totalMinutes += min;
+                                      }
+
+                                      return _buildSummaryLogItem(earliestCheckIn, latestCheckOut, totalMinutes);
+                                    }),
+                                  ],
                                 ),
                               );
                             },
@@ -94,9 +121,12 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
     );
   }
 
-  Widget _buildDetailLogItem(dynamic log) {
-    String checkIn = DateFormatter.formatTimeOnly(log['first_checkin']);
-    String checkOut = DateFormatter.formatTimeOnly(log['last_checkout']);
+
+
+  Widget _buildSummaryLogItem(String? earliestCheckIn, String? latestCheckOut, int totalMinutes) {
+    String checkIn = DateFormatter.formatTimeOnly(earliestCheckIn);
+    String checkOut = DateFormatter.formatTimeOnly(latestCheckOut);
+    final double hours = totalMinutes / 60.0;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
@@ -113,12 +143,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               const Text("WORKED", style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
-              Builder(builder: (context) {
-                final rawMin = log['working_minutes'];
-                final int min = rawMin is int ? rawMin : int.tryParse(rawMin?.toString() ?? "0") ?? 0;
-                final double hours = min / 60.0;
-                return Text("${hours.toStringAsFixed(1)}h", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.button));
-              }),
+              Text("${hours.toStringAsFixed(1)}h", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.button)),
             ],
           ),
         ],

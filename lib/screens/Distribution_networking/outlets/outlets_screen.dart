@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../constants/app_colors.dart';
 import '../../../services/call_service.dart';
 import '../../../services/directions_map_screen.dart';
+import '../../../permissions/SessionManager.dart';
 import 'NewOutletScreen.dart';
 import 'PosBaseScreen.dart';
 import 'outlet_provider.dart';
@@ -23,24 +24,38 @@ class OutletsScreen extends StatefulWidget {
 }
 
 class _OutletsScreenState extends State<OutletsScreen> {
+  int? _checkedInOutletId;
+
   @override
   void initState() {
     super.initState();
+    _loadCheckInStatus();
     Future.microtask(() {
       Provider.of<OutletProvider>(context, listen: false)
           .fetchOutlets(widget.routeId);
     });
   }
 
+  Future<void> _loadCheckInStatus() async {
+    final id = await SessionManager.getOutletCheckInOutletId();
+    if (mounted) {
+      setState(() {
+        _checkedInOutletId = id;
+      });
+    }
+  }
+
   Widget outletCard(Outlet outlet, BuildContext context) {
+    final isCheckedIn = _checkedInOutletId != null && _checkedInOutletId == int.tryParse(outlet.id);
     return InkWell(
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => PosBaseScreen(outlet: outlet),
             ),
           );
+          _loadCheckInStatus();
         },
     child :Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -55,8 +70,39 @@ class _OutletsScreenState extends State<OutletsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(outlet.name.toUpperCase(),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(outlet.name.toUpperCase(),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              ),
+              if (isCheckedIn)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade600,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_outline, color: Colors.white, size: 12),
+                      SizedBox(width: 4),
+                      Text(
+                        "CHECKED IN",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
 
           Text("OUTLET ID: ${outlet.id}",style: const TextStyle(fontSize: 15)),
 

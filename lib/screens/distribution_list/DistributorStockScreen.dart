@@ -248,6 +248,7 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
                     ),
                   ),
                 ),
+                /*
                 const SizedBox(width: 8),
                 SizedBox(
                   height: 45,
@@ -267,6 +268,7 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
                     ),
                   ),
                 ),
+                */
               ],
             ),
             const SizedBox(height: 10),
@@ -335,6 +337,7 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
     );
   }
 
+  /*
   InputDecoration _dialogInputDecoration({
     required String labelText,
     required String hintText,
@@ -371,7 +374,9 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
       ),
     );
   }
+  */
 
+  /*
   void _showCreateDistributorDialog(BuildContext context, DistributionListProvider provider) {
     final nameController = TextEditingController();
     final ownerController = TextEditingController();
@@ -532,17 +537,17 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
                   LoadingDialog.show(context, message: "Creating distributor...");
                   final success = await provider.createDistributor(payload);
                   if (context.mounted) {
-                    LoadingDialog.hide(context);
-                    if (success) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Distributor Created successfully!")),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Failed to create distributor")),
-                      );
-                    }
+                     LoadingDialog.hide(context);
+                     if (success) {
+                       Navigator.pop(context);
+                       ScaffoldMessenger.of(context).showSnackBar(
+                         const SnackBar(content: Text("Distributor Created successfully!")),
+                       );
+                     } else {
+                       ScaffoldMessenger.of(context).showSnackBar(
+                         const SnackBar(content: Text("Failed to create distributor")),
+                       );
+                     }
                   }
                 }
               },
@@ -553,4 +558,5 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
       },
     );
   }
+  */
 }

@@ -57,7 +57,7 @@ class ProfileDrawer extends StatelessWidget {
 
           sectionTitle("GENERAL"),
 
-          menuItem(context, "Dashbard"),
+          menuItem(context, "Dashboard"),
           menuItem(context, "Near Me"),
           menuItem(context, "Distribution Network"),
 

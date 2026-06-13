@@ -9,6 +9,7 @@ import '../Distribution_networking/outlets/outlet_provider.dart';
 import '../Distribution_networking/outlets/PosBaseScreen.dart';
 import '../../services/directions_map_screen.dart';
 import '../../utilities/wavy_app_bar.dart';
+import '../../permissions/SessionManager.dart';
 
 class NearMeScreen extends StatefulWidget {
   const NearMeScreen({super.key});
@@ -18,9 +19,12 @@ class NearMeScreen extends StatefulWidget {
 }
 
 class _NearMeScreenState extends State<NearMeScreen> {
+  int? _checkedInOutletId;
+
   @override
   void initState() {
     super.initState();
+    _loadCheckInStatus();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final distProvider = Provider.of<DistributionProvider>(context, listen: false);
       final routeId = distProvider.selectedRouteId != null 
@@ -30,15 +34,26 @@ class _NearMeScreenState extends State<NearMeScreen> {
     });
   }
 
+  Future<void> _loadCheckInStatus() async {
+    final id = await SessionManager.getOutletCheckInOutletId();
+    if (mounted) {
+      setState(() {
+        _checkedInOutletId = id;
+      });
+    }
+  }
+
   Widget outletCard(Outlet outlet, BuildContext context) {
+    final isCheckedIn = _checkedInOutletId != null && _checkedInOutletId == int.tryParse(outlet.id);
     return InkWell(
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => PosBaseScreen(outlet: outlet),
             ),
           );
+          _loadCheckInStatus();
         },
     child :Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -55,8 +70,39 @@ class _NearMeScreenState extends State<NearMeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(outlet.name.toUpperCase(),
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(outlet.name.toUpperCase(),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                  if (isCheckedIn)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade600,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle_outline, color: Colors.white, size: 12),
+                          SizedBox(width: 4),
+                          Text(
+                            "CHECKED IN",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
               
               const SizedBox(height: 4),
               Row(

@@ -39,9 +39,34 @@ class AttendanceProvider extends ChangeNotifier {
         List<Attendance> temp = [];
 
         for (var day in response) {
-          if (day["sessions"] != null) {
-            for (var session in day["sessions"]) {
-              temp.add(Attendance.fromJson(session));
+          if (day["sessions"] != null && day["sessions"] is List && (day["sessions"] as List).isNotEmpty) {
+            final sessionsList = day["sessions"] as List;
+            List<Attendance> daySessions = [];
+            for (var session in sessionsList) {
+              daySessions.add(Attendance.fromJson(session));
+            }
+
+            if (daySessions.isNotEmpty) {
+              // Sort sessions by start time ascending
+              daySessions.sort((a, b) => a.start.compareTo(b.start));
+
+              DateTime firstStart = daySessions.first.start;
+              
+              // If any session has end == null, the overall end is null (meaning checked in)
+              DateTime? lastEnd;
+              bool hasActiveSession = daySessions.any((s) => s.end == null);
+              if (!hasActiveSession) {
+                lastEnd = daySessions.last.end;
+              }
+
+              double totalWorkingHours = daySessions.fold(0.0, (sum, s) => sum + s.workingHours);
+
+              temp.add(Attendance(
+                start: firstStart,
+                end: lastEnd,
+                workingHours: totalWorkingHours,
+                checkoutType: daySessions.last.checkoutType,
+              ));
             }
           }
         }
