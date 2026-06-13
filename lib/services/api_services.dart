@@ -1273,14 +1273,20 @@ class ApiServices {
   }) async {
     try {
       final token = await SessionManager.getToken();
-      if (token == null) return null;
+      if (token == null) {
+        print("❌ TEAM ATTENDANCE: Session Token is null");
+        return null;
+      }
 
       final payload = <String, dynamic>{};
       if (month != null) payload["month"] = month;
       if (today != null) payload["today"] = today;
 
-      AppLogger.info("Team Attendance Report API called");
-      AppLogger.info("Payload: $payload");
+      print("━━━━━━━ TEAM ATTENDANCE REPORT REQUEST ━━━━━━━");
+      print("URL: ${AppUrls.teamAttendanceReport}");
+      print("Headers: {Authorization: Bearer $token, Content-Type: application/json}");
+      print("Payload: $payload");
+      print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
       final response = await _dio.post(
         AppUrls.teamAttendanceReport,
@@ -1293,13 +1299,21 @@ class ApiServices {
         ),
       );
 
-      AppLogger.info("Team Attendance Report response: ${response.data}");
+      print("━━━━━━━ TEAM ATTENDANCE REPORT RESPONSE ━━━━━━━");
+      print("Status: ${response.statusCode}");
+      print("Response Data: ${response.data}");
+      print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
       if (response.statusCode == 200) {
         return response.data;
       }
       return null;
     } catch (e) {
+      print("❌ Team Attendance Report error: $e");
+      if (e is DioException) {
+        print("❌ DioException Status Code: ${e.response?.statusCode}");
+        print("❌ DioException Response Data: ${e.response?.data}");
+      }
       AppLogger.error("Team Attendance Report error", e);
       return null;
     }

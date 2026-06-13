@@ -28,10 +28,10 @@ class TeamAttendanceProvider extends ChangeNotifier {
   Future<void> fetchTeamAttendance({String? month, bool isToday = true, String? defaultRole, String? currentUserRole}) async {
     _isLoading = true;
     if (defaultRole != null && _selectedRole == 'ALL') {
-      _selectedRole = defaultRole;
+      _selectedRole = _normalizeRole(defaultRole);
     }
     if (currentUserRole != null) {
-      _currentUserRole = currentUserRole;
+      _currentUserRole = _normalizeRole(currentUserRole);
     }
     if (isToday) {
       _selectedDate = DateTime.now();
@@ -44,7 +44,8 @@ class TeamAttendanceProvider extends ChangeNotifier {
         today: isToday ? 1 : null,
       );
 
-      if (response != null && response['status'] == true) {
+      final status = response != null ? response['status'] : null;
+      if (response != null && (status == true || status == "success" || status == "true" || status == 1)) {
         print("TEAM ATTENDANCE RESPONSE: $response");
         final List data = response['data'] ?? [];
         _rawResponseList = data; // Save all logs
@@ -66,7 +67,7 @@ class TeamAttendanceProvider extends ChangeNotifier {
   }
 
   void setRoleFilter(String role) {
-    _selectedRole = role;
+    _selectedRole = role == 'ALL' ? 'ALL' : _normalizeRole(role);
     _applyFilter();
   }
 
@@ -77,13 +78,13 @@ class TeamAttendanceProvider extends ChangeNotifier {
       roleFiltered = List.from(_allAttendance);
     } else {
       roleFiltered = _allAttendance
-          .where((item) => item.roleCode.toUpperCase() == _selectedRole.toUpperCase())
+          .where((item) => _normalizeRole(item.roleCode) == _normalizeRole(_selectedRole))
           .toList();
     }
 
     // If currentUserRole is 'AM', exclude 'RM' records completely
     if (_currentUserRole == 'AM') {
-      roleFiltered = roleFiltered.where((item) => item.roleCode.toUpperCase() != 'RM').toList();
+      roleFiltered = roleFiltered.where((item) => _normalizeRole(item.roleCode) != 'RM').toList();
     }
 
     // Filter by the selected date (year, month, day)
@@ -121,5 +122,17 @@ class TeamAttendanceProvider extends ChangeNotifier {
       final monthStr = "${date.year}-${date.month.toString().padLeft(2, '0')}";
       fetchTeamAttendance(month: monthStr, isToday: false);
     }
+  }
+
+  String _normalizeRole(String role) {
+    final norm = role.trim().toUpperCase();
+    if (norm == 'ASM' || norm == 'AM') {
+      return 'AM';
+    } else if (norm == 'RM') {
+      return 'RM';
+    } else if (norm == 'SO' || norm.contains('SALE OFF') || norm.contains('SALES OFF') || norm.contains('SALE OFFICER') || norm.contains('SALES OFFICER')) {
+      return 'SO';
+    }
+    return norm;
   }
 }

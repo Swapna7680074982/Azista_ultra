@@ -26,7 +26,7 @@ class TeamAttendance {
       userId: json['user_id']?.toString() ?? '',
       employeeName: json['employee_name']?.toString() ?? '',
       employeeId: json['employee_id']?.toString() ?? '',
-      roleCode: json['rolecode']?.toString() ?? '',
+      roleCode: _normalizeRole(json['rolecode']?.toString() ?? ''),
       attendanceDate: json['attendance_date']?.toString() ?? '',
       firstCheckin: json['first_checkin']?.toString(),
       lastCheckout: json['last_checkout']?.toString(),
@@ -34,4 +34,16 @@ class TeamAttendance {
       totalLogs: (json['total_logs'] as num?)?.toInt() ?? 0,
     );
   }
+}
+
+String _normalizeRole(String role) {
+  final norm = role.trim().toUpperCase();
+  if (norm == 'ASM' || norm == 'AM') {
+    return 'AM';
+  } else if (norm == 'RM') {
+    return 'RM';
+  } else if (norm == 'SO' || norm.contains('SALE OFF') || norm.contains('SALES OFF') || norm.contains('SALE OFFICER') || norm.contains('SALES OFFICER')) {
+    return 'SO';
+  }
+  return norm;
 }

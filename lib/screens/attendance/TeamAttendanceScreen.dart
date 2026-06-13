@@ -28,7 +28,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
       }
       teamAttendanceProvider.fetchTeamAttendance(
         isToday: true,
-        defaultRole: appState.userRole == 'AM' ? 'SO' : (appState.userRole == 'RM' ? 'AM' : null),
+        defaultRole: 'ALL',
         currentUserRole: appState.userRole,
       );
     });

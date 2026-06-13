@@ -18,6 +18,8 @@ class AppStateProvider extends ChangeNotifier {
         userRole = 'AM';
       } else if (norm == 'RM') {
         userRole = 'RM';
+      } else if (norm == 'SO' || norm.contains('SALE OFF') || norm.contains('SALES OFF') || norm.contains('SALE OFFICER') || norm.contains('SALES OFFICER')) {
+        userRole = 'SO';
       } else {
         userRole = norm;
       }
