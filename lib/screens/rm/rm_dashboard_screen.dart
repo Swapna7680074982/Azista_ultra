@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../permissions/AppStateProvider.dart';
+import '../../permissions/SessionManager.dart';
 import '../profile_screen.dart';
 import '../Homes/HomeProvider.dart';
 import '../Distribution_networking/distribution_network_screen.dart';
@@ -20,9 +21,11 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    final homeProvider = Provider.of<HomeProvider>(context, listen: false);
+    final appState = Provider.of<AppStateProvider>(context, listen: false);
     Future.microtask(() async {
-      final homeProvider = Provider.of<HomeProvider>(context, listen: false);
-      final appState = Provider.of<AppStateProvider>(context, listen: false);
+      final role = await SessionManager.getUserRole();
+      appState.setUserRole(role);
       await homeProvider.initializeAttendance(appState);
       await homeProvider.loadDistributors(appState);
       await homeProvider.fetchTodayAttendance();

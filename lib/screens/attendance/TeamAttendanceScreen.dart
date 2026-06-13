@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
 import '../../utilities/wavy_app_bar.dart';
 import '../../permissions/AppStateProvider.dart';
+import '../../permissions/SessionManager.dart';
 import '../../utilities/date_formatter.dart';
 import 'team_attendance_provider.dart';
 
@@ -18,9 +19,14 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      final appState = context.read<AppStateProvider>();
-      context.read<TeamAttendanceProvider>().fetchTeamAttendance(
+    final appState = context.read<AppStateProvider>();
+    final teamAttendanceProvider = context.read<TeamAttendanceProvider>();
+    Future.microtask(() async {
+      if (appState.userRole == null) {
+        final role = await SessionManager.getUserRole();
+        appState.setUserRole(role);
+      }
+      teamAttendanceProvider.fetchTeamAttendance(
         isToday: true,
         defaultRole: appState.userRole == 'AM' ? 'SO' : (appState.userRole == 'RM' ? 'AM' : null),
         currentUserRole: appState.userRole,
@@ -30,6 +36,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppStateProvider>();
     return Scaffold(
       appBar: const WavyAppBar(
         title: "TEAM ATTENDANCE",
@@ -39,7 +46,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
           return Column(
             children: [
               _buildCalendarFilter(context, provider),
-              _buildFilterSection(provider),
+              _buildFilterSection(appState, provider),
               Expanded(
                 child: provider.isLoading
                     ? const Center(child: CircularProgressIndicator())
@@ -99,11 +106,24 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
                                           if (latestCheckOut == null || checkOutStr.compareTo(latestCheckOut) > 0) {
                                             latestCheckOut = checkOutStr;
                                           }
+                                          final rawMin = log['working_minutes'];
+                                          final int min = rawMin is int ? rawMin : int.tryParse(rawMin?.toString() ?? "0") ?? 0;
+                                          totalMinutes += min;
+                                        } else {
+                                          if (checkInStr != null && checkInStr.isNotEmpty && checkInStr != 'N/A') {
+                                            try {
+                                              final checkInTime = DateTime.parse(checkInStr);
+                                              final diff = DateTime.now().difference(checkInTime);
+                                              if (diff.inMinutes > 0) {
+                                                totalMinutes += diff.inMinutes;
+                                              }
+                                            } catch (e) {
+                                              final rawMin = log['working_minutes'];
+                                              final int min = rawMin is int ? rawMin : int.tryParse(rawMin?.toString() ?? "0") ?? 0;
+                                              totalMinutes += min;
+                                            }
+                                          }
                                         }
-
-                                        final rawMin = log['working_minutes'];
-                                        final int min = rawMin is int ? rawMin : int.tryParse(rawMin?.toString() ?? "0") ?? 0;
-                                        totalMinutes += min;
                                       }
 
                                       return _buildSummaryLogItem(earliestCheckIn, latestCheckOut, totalMinutes);
@@ -127,6 +147,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
     String checkIn = DateFormatter.formatTimeOnly(earliestCheckIn);
     String checkOut = DateFormatter.formatTimeOnly(latestCheckOut);
     final double hours = totalMinutes / 60.0;
+    final String workedString = totalMinutes < 60 ? "${totalMinutes}m" : "${hours.toStringAsFixed(1)}h";
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
@@ -143,7 +164,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               const Text("WORKED", style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
-              Text("${hours.toStringAsFixed(1)}h", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.button)),
+              Text(workedString, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.button)),
             ],
           ),
         ],
@@ -267,8 +288,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
     }
   }
 
-  Widget _buildFilterSection(TeamAttendanceProvider provider) {
-    final appState = context.read<AppStateProvider>();
+  Widget _buildFilterSection(AppStateProvider appState, TeamAttendanceProvider provider) {
     final roles = appState.userRole == 'AM' ? ['AM', 'SO'] : ['RM', 'AM', 'SO'];
 
     return Container(

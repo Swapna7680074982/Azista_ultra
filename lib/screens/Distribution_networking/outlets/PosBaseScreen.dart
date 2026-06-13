@@ -7,7 +7,6 @@ import '../../../services/directions_map_screen.dart';
 import 'BrandingScreen.dart';
 import 'PobScreen.dart';
 import 'MarketingScreen.dart';
-import 'package:intl/intl.dart';
 import 'PreviousTransactionsScreen.dart';
 import 'PromotionsScreen.dart';
 import 'SamplingScreen.dart';
@@ -17,6 +16,7 @@ import 'outlet_provider.dart';
 import '../../../services/api_services.dart';
 import '../../../utilities/common_widgets.dart';
 import '../../../permissions/SessionManager.dart';
+import '../../../utilities/date_formatter.dart';
 
 class PosBaseScreen extends StatefulWidget {
   final Outlet outlet;
@@ -43,20 +43,53 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   }
 
   Future<void> _loadOutletCheckInStatus() async {
-    final savedOutletId = await SessionManager.getOutletCheckInOutletId();
     final currentOutletId = int.tryParse(widget.outlet.id);
-    if (savedOutletId != null && currentOutletId != null && savedOutletId == currentOutletId) {
-      final visitId = await SessionManager.getOutletCheckInVisitId();
-      final checkInTime = await SessionManager.getOutletCheckInTime();
-      if (visitId != null && checkInTime != null) {
-        if (mounted) {
-          setState(() {
-            _isCheckedIn = true;
-            _visitId = visitId;
-            _checkInTime = checkInTime;
-          });
+    if (currentOutletId == null) return;
+
+    try {
+      final history = await ApiServices.getOutletHistory(outletId: currentOutletId);
+      if (history != null && history['status'] == true) {
+        final List visits = history['visit_history'] ?? [];
+        final activeVisit = visits.firstWhere(
+          (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
+          orElse: () => null,
+        );
+
+        if (activeVisit != null) {
+          final visitId = int.tryParse(activeVisit['visit_id']?.toString() ?? "") ?? 0;
+          final checkInTimeStr = activeVisit['checkin_time']?.toString() ?? "";
+          final checkInTime = DateTime.tryParse(checkInTimeStr);
+
+          await SessionManager.saveOutletCheckIn(
+            outletId: currentOutletId,
+            visitId: visitId,
+            checkInTime: checkInTime ?? DateTime.now(),
+          );
+
+          if (mounted) {
+            setState(() {
+              _isCheckedIn = true;
+              _visitId = visitId;
+              _checkInTime = checkInTime;
+            });
+          }
+          return;
         }
       }
+    } catch (e) {
+      debugPrint("Error loading check-in status from API: $e");
+    }
+
+    final savedOutletId = await SessionManager.getOutletCheckInOutletId();
+    if (savedOutletId == currentOutletId) {
+      await SessionManager.clearOutletCheckIn();
+    }
+    if (mounted) {
+      setState(() {
+        _isCheckedIn = false;
+        _visitId = null;
+        _checkInTime = null;
+      });
     }
   }
 
@@ -335,7 +368,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                       const SizedBox(width: 8),
                       Text(
                         _checkInTime != null
-                            ? "Checked-in at: ${DateFormat('dd/MM/yyyy hh:mm a').format(_checkInTime!)}"
+                            ? "Checked-in at: ${DateFormatter.formatDateTime(_checkInTime!.toIso8601String())}"
                             : "Checked-in",
                         style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13),
                       ),

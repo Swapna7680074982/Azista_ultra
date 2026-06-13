@@ -123,13 +123,39 @@ class TeamAttendanceDetailScreen extends StatelessWidget {
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     Builder(builder: (context) {
-                      final rawMin = log['working_minutes'];
-                      final int min = rawMin is int ? rawMin : int.tryParse(rawMin?.toString() ?? "0") ?? 0;
-                      final double hours = min / 60.0;
-                      return Text(
-                        "Work: ${hours.toStringAsFixed(1)} hours",
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      );
+                      final checkInStr = log['first_checkin']?.toString();
+                      final checkOutStr = log['last_checkout']?.toString();
+                      int min = 0;
+                      if (checkOutStr == null || checkOutStr.isEmpty || checkOutStr == 'N/A') {
+                        if (checkInStr != null && checkInStr.isNotEmpty && checkInStr != 'N/A') {
+                          try {
+                            final checkInTime = DateTime.parse(checkInStr);
+                            final diff = DateTime.now().difference(checkInTime);
+                            if (diff.inMinutes > 0) {
+                              min = diff.inMinutes;
+                            }
+                          } catch (e) {
+                            final rawMin = log['working_minutes'];
+                            min = rawMin is int ? rawMin : int.tryParse(rawMin?.toString() ?? "0") ?? 0;
+                          }
+                        }
+                      } else {
+                        final rawMin = log['working_minutes'];
+                        min = rawMin is int ? rawMin : int.tryParse(rawMin?.toString() ?? "0") ?? 0;
+                      }
+
+                      if (min < 60) {
+                        return Text(
+                          "Work: ${min}m",
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        );
+                      } else {
+                        final double hours = min / 60.0;
+                        return Text(
+                          "Work: ${hours.toStringAsFixed(1)} hours",
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        );
+                      }
                     }),
                   ],
                 ),

@@ -12,7 +12,18 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   void setUserRole(String? role) {
-    userRole = role;
+    if (role != null) {
+      final norm = role.trim().toUpperCase();
+      if (norm == 'ASM' || norm == 'AM') {
+        userRole = 'AM';
+      } else if (norm == 'RM') {
+        userRole = 'RM';
+      } else {
+        userRole = norm;
+      }
+    } else {
+      userRole = null;
+    }
     notifyListeners();
   }
 
