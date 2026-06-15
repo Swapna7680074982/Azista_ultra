@@ -218,32 +218,27 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
                       border: Border.all(color: Colors.grey.shade300),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<dynamic>(
-                        value: provider.selectedDistributor != null
-                            ? provider.selectedDistributor['distributor_id']?.toString()
-                            : null,
-                        hint: const Text("Select Distributor", style: TextStyle(fontSize: 13)),
-                        isExpanded: true,
-                        items: provider.distributors.map<DropdownMenuItem<dynamic>>((dist) {
-                          return DropdownMenuItem<dynamic>(
-                            value: dist['distributor_id']?.toString(),
+                    child: GestureDetector(
+                      onTap: () => _showDistributorSearchBottomSheet(context, provider),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
                             child: Text(
-                              dist['distributor_name'] ?? 'Unknown',
-                              style: const TextStyle(fontSize: 13),
+                              provider.selectedDistributor != null
+                                  ? provider.selectedDistributor['distributor_name'] ?? 'Unknown'
+                                  : "Select Distributor",
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: provider.selectedDistributor != null
+                                    ? Colors.black87
+                                    : Colors.grey.shade600,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          final selected = provider.distributors.firstWhere(
-                            (d) => d['distributor_id']?.toString() == val,
-                            orElse: () => null,
-                          );
-                          if (selected != null) {
-                            provider.selectDistributor(selected);
-                          }
-                        },
+                          ),
+                          const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                        ],
                       ),
                     ),
                   ),
@@ -559,4 +554,138 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
     );
   }
   */
+
+  void _showDistributorSearchBottomSheet(
+      BuildContext context, DistributionListProvider provider) {
+    final searchController = TextEditingController();
+    List<dynamic> filteredDistributors = List.from(provider.distributors);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              padding: EdgeInsets.only(
+                top: 16,
+                left: 16,
+                right: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "SELECT DISTRIBUTOR",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: AppColors.primary,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: searchController,
+                    onChanged: (val) {
+                      setModalState(() {
+                        filteredDistributors = provider.distributors
+                            .where((d) => (d['distributor_name'] ?? '')
+                                .toString()
+                                .toLowerCase()
+                                .contains(val.toLowerCase()))
+                            .toList();
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: "Search Distributor...",
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      suffixIcon: searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, color: Colors.grey),
+                              onPressed: () {
+                                searchController.clear();
+                                setModalState(() {
+                                  filteredDistributors = List.from(provider.distributors);
+                                });
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: filteredDistributors.isEmpty
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20.0),
+                              child: Text(
+                                "No distributors found",
+                                style: TextStyle(color: Colors.grey, fontSize: 13),
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: filteredDistributors.length,
+                            itemBuilder: (context, index) {
+                              final dist = filteredDistributors[index];
+                              final isSelected = provider.selectedDistributor != null &&
+                                  provider.selectedDistributor['distributor_id'] ==
+                                      dist['distributor_id'];
+                              return ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                                title: Text(
+                                  dist['distributor_name'] ?? 'Unknown',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    color: isSelected ? AppColors.primary : Colors.black87,
+                                  ),
+                                ),
+                                trailing: isSelected
+                                    ? const Icon(Icons.check, color: AppColors.primary, size: 18)
+                                    : null,
+                                onTap: () {
+                                  provider.selectDistributor(dist);
+                                  Navigator.pop(context);
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }

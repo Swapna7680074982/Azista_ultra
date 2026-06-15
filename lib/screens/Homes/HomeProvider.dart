@@ -286,27 +286,42 @@ class HomeProvider extends ChangeNotifier {
     isCountsLoading = true;
     notifyListeners();
 
-    final Map<String, dynamic> payload = {};
+    final userInfo = await SessionManager.getUserInfo();
+    final userIdStr = userInfo?["user_id"]?.toString();
 
-    if (selectedCountsFilter == "today") {
-      payload["today"] = 1;
-    } else if (selectedCountsFilter == "month") {
-      final now = DateTime.now();
-      payload["month"] = now.month;
-      payload["year"] = now.year;
-    } else if (selectedCountsFilter == "custom" && customCountsRange != null) {
-      final from = customCountsRange!.start;
-      final to = customCountsRange!.end;
-      payload["from_date"] = "${from.year}-${from.month.toString().padLeft(2, '0')}-${from.day.toString().padLeft(2, '0')}";
-      payload["to_date"] = "${to.year}-${to.month.toString().padLeft(2, '0')}-${to.day.toString().padLeft(2, '0')}";
-    } else {
-      payload["today"] = 1;
+    int month = DateTime.now().month;
+    int year = DateTime.now().year;
+
+    if (selectedCountsFilter == "custom" && customCountsRange != null) {
+      month = customCountsRange!.start.month;
+      year = customCountsRange!.start.year;
     }
 
     try {
-      final res = await ApiServices.getDashboardCounts(payload: payload);
+      final res = await ApiServices.getTeamMembersSummary(
+        month: month,
+        year: year,
+      );
       if (res != null && res["status"] == true) {
-        dashboardCounts = res["data"];
+        final List members = res["data"] ?? [];
+        var memberData = members.firstWhere(
+          (m) => m["user_id"]?.toString() == userIdStr,
+          orElse: () => null,
+        );
+        if (memberData == null && members.length == 1) {
+          memberData = members.first;
+        }
+
+        if (memberData != null) {
+          dashboardCounts = {
+            "new_outlets": memberData["new_outlets"],
+            "outlet_visits": memberData["total_visits"],
+            "pobs_done": memberData["total_pobs"],
+            "pob_sale_value": memberData["pob_sale_value"],
+          };
+        } else {
+          dashboardCounts = null;
+        }
       } else {
         dashboardCounts = null;
       }

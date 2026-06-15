@@ -4,6 +4,7 @@ import '../../constants/app_colors.dart';
 import '../../services/api_services.dart';
 import '../../utilities/common_widgets.dart';
 import '../../utilities/date_formatter.dart';
+import 'TeamMemberDetailScreen.dart';
 
 class TeamPosHistoryScreen extends StatefulWidget {
   const TeamPosHistoryScreen({super.key});
@@ -18,12 +19,13 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
   bool _isLoading = false;
   List<dynamic> _transactions = [];
   DateTime selectedDate = DateTime.now();
+  final Map<String, String> _outletNameLookup = {};
 
   final List<Map<String, String>> _tabs = [
+    {"label": "POB", "code": "pob"},
     {"label": "STOCK", "code": "stock"},
     {"label": "SAMPLING", "code": "sampling"},
     {"label": "SALE", "code": "sale"},
-    {"label": "POB", "code": "pob"},
   ];
 
   @override
@@ -31,7 +33,61 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
     _tabController.addListener(_handleTabChange);
+    _loadOutletNames();
     _fetchHistory();
+  }
+
+  Future<void> _loadOutletNames() async {
+    if (!mounted) return;
+    try {
+      final userOutletsRes = await ApiServices.getUserOutlets();
+      if (userOutletsRes != null && userOutletsRes["status"] == true) {
+        final list = userOutletsRes["data"] as List<dynamic>? ?? [];
+        for (var o in list) {
+          final id = o['outlet_id']?.toString();
+          final name = o['outlet_name']?.toString() ?? o['name']?.toString();
+          if (id != null && name != null) {
+            _outletNameLookup[id] = name;
+          }
+        }
+      }
+
+      if (!mounted) return;
+      final summaryRes = await ApiServices.getTeamMembersSummary(
+        month: selectedDate.month,
+        year: selectedDate.year,
+      );
+      if (summaryRes != null && summaryRes["status"] == true) {
+        final List members = summaryRes["data"] ?? [];
+        for (var member in members) {
+          final userId = int.tryParse(member['user_id']?.toString() ?? '');
+          if (userId != null) {
+            if (!mounted) return;
+            final outletsRes = await ApiServices.getTeamMemberOutlets(
+              userId: userId,
+              month: selectedDate.month,
+              year: selectedDate.year,
+            );
+            if (outletsRes != null && outletsRes["status"] == true) {
+              final list = outletsRes["data"] as List<dynamic>? ?? [];
+              for (var o in list) {
+                final id = o['outlet_id']?.toString();
+                final name = o['outlet_name']?.toString() ?? o['name']?.toString();
+                if (id != null && name != null) {
+                  _outletNameLookup[id] = name;
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading outlet names lookup: $e");
+    } finally {
+      if (mounted) {
+        setState(() {});
+      }
+    }
   }
 
   @override
@@ -54,9 +110,16 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
 
     final type = _tabs[_tabController.index]["code"]!;
     try {
-      final data = (type == "pob")
-          ? await ApiServices.getTeamPobHistory()
-          : await ApiServices.getTeamPosHistory(posType: type);
+      dynamic data;
+      if (type == "pob") {
+        final res = await ApiServices.getTeamMembersSummary(
+          month: selectedDate.month,
+          year: selectedDate.year,
+        );
+        data = res != null ? res["data"] : null;
+      } else {
+        data = await ApiServices.getTeamPosHistory(posType: type);
+      }
       if (mounted) {
         setState(() {
           _transactions = data ?? [];
@@ -85,6 +148,9 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
       setState(() {
         selectedDate = picked;
       });
+      _outletNameLookup.clear();
+      _loadOutletNames();
+      _fetchHistory();
     }
   }
 
@@ -100,18 +166,19 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
 
   @override
   Widget build(BuildContext context) {
-    final filtered = filteredTransactions;
-    final Map<String, List<dynamic>> grouped = {};
-    final List<dynamic> groupedKeys;
     final type = _tabs[_tabController.index]["code"]!;
+    final List<dynamic> groupedKeys;
+    final Map<String, List<dynamic>> grouped = {};
 
     if (type == "pob") {
-      groupedKeys = filtered;
+      groupedKeys = _transactions;
     } else {
+      final filtered = filteredTransactions;
       for (var tx in filtered) {
         final userId = tx["user_id"]?.toString() ?? tx["employee_id"]?.toString() ?? "unknown";
         final createdOn = tx["created_on"]?.toString() ?? "unknown";
-        final key = "${userId}_${createdOn}";
+        final outletId = tx["outlet_id"]?.toString() ?? tx["outlet_name"]?.toString() ?? "unknown";
+        final key = "${userId}_${outletId}_$createdOn";
         if (!grouped.containsKey(key)) {
           grouped[key] = [];
         }
@@ -195,9 +262,8 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
                         itemCount: groupedKeys.length,
                         itemBuilder: (context, index) {
                           if (type == "pob") {
-                            final pob = groupedKeys[index];
-                            final items = pob["items"] as List<dynamic>? ?? [];
-                            return _buildPobGroupedCard(pob, items);
+                            final member = groupedKeys[index];
+                            return _buildTeamMemberCard(member);
                           } else {
                             final key = groupedKeys[index];
                             final items = grouped[key]!;
@@ -235,47 +301,91 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     );
   }
 
-  Widget _buildPobGroupedCard(dynamic pob, List<dynamic> items) {
-    final empName = pob["employee_name"]?.toString() ?? "Unknown SO";
-    final empId = pob["employee_id"]?.toString() ?? pob["user_id"]?.toString() ?? "-";
-    final role = pob["rolecode"]?.toString() ?? "SO";
-    final outletName = pob["outlet_name"]?.toString() ?? "Unknown Outlet";
-    final status = pob["status"]?.toString() ?? "pending";
-    final totalAmount = pob["total_amount"]?.toString() ?? "0.00";
-    final createdAt = pob["created_at"]?.toString() ?? "";
-    final totalSkus = items.length;
+  Widget _buildTeamMemberCard(dynamic member) {
+    final name = member["fullname"]?.toString() ?? "Unknown User";
+    final empId = member["employee_id"]?.toString() ?? member["user_id"]?.toString() ?? "-";
+    final role = member["rolecode"]?.toString() ?? "SO";
+    final outlets = member["total_outlets"] ?? 0;
+    final newOutlets = member["new_outlets"] ?? 0;
+    final visits = member["total_visits"] ?? 0;
+    final activities = member["total_activities"] ?? 0;
+    final pobs = member["total_pobs"] ?? 0;
+    final pobVal = double.tryParse(member["pob_sale_value"]?.toString() ?? '') ?? 0.0;
+
+    Color roleColor;
+    if (role.toUpperCase() == "RM") {
+      roleColor = Colors.purple.shade700;
+    } else if (role.toUpperCase() == "AM") {
+      roleColor = Colors.orange.shade800;
+    } else {
+      roleColor = Colors.blue.shade700;
+    }
 
     return Card(
       color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3,
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () => _showProductPopup(context, items, title: "POB DETAILS: ${pob["pob_number"]}", isPob: true),
-        borderRadius: BorderRadius.circular(10),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TeamMemberDetailScreen(
+                userId: int.tryParse(member['user_id']?.toString() ?? '') ?? 0,
+                fullname: name,
+                rolecode: role,
+                month: selectedDate.month,
+                year: selectedDate.year,
+              ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  Container(
+                    width: 4,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: roleColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  CircleAvatar(
+                    backgroundColor: roleColor.withValues(alpha: 0.1),
+                    radius: 18,
+                    child: Text(
+                      role.substring(0, role.length > 2 ? 2 : role.length).toUpperCase(),
+                      style: TextStyle(
+                        color: roleColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          empName.toUpperCase(),
-                          style: const TextStyle(
+                          name.toUpperCase(),
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
-                            color: Colors.black87,
+                            color: roleColor,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
-                          "ID: $empId | $role | Outlet: ${outletName.toUpperCase()}",
+                          "Employee ID: $empId",
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey.shade600,
@@ -285,54 +395,23 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
                       ],
                     ),
                   ),
-                  if (createdAt.isNotEmpty)
-                    Text(
-                      DateFormatter.formatDateTime(createdAt),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade500,
-                      ),
-                    ),
+                  Icon(
+                    Icons.chevron_right,
+                    color: Colors.grey.shade400,
+                  ),
                 ],
               ),
               const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
+                padding: EdgeInsets.symmetric(vertical: 12.0),
                 child: Divider(height: 1, thickness: 0.5),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        "$totalSkus SKU(s) | Value: ₹$totalAmount",
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: (status.toLowerCase().trim() == "supplied")
-                          ? AppColors.button.withValues(alpha: 0.15)
-                          : Colors.orange.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      status.toUpperCase(),
-                      style: TextStyle(
-                        color: (status.toLowerCase().trim() == "supplied") ? AppColors.button : Colors.orange,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                  _buildMetricCol("Outlets", "$outlets ($newOutlets New)", Colors.blue.shade700),
+                  _buildMetricCol("Visits/Acts", "$visits/$activities", Colors.orange.shade800),
+                  _buildMetricCol("POBs Done", "$pobs", Colors.purple.shade700),
+                  _buildMetricCol("POB Value", "₹${pobVal.toStringAsFixed(0)}", AppColors.green),
                 ],
               ),
             ],
@@ -342,14 +421,67 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     );
   }
 
+  Widget _buildMetricCol(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+        ),
+        child: Column(
+          children: [
+            Text(
+              label.toUpperCase(),
+              style: TextStyle(
+                fontSize: 9,
+                color: color.withValues(alpha: 0.8),
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+
   Widget _buildGroupedCard(List<dynamic> items) {
     if (items.isEmpty) return const SizedBox.shrink();
     final first = items.first;
     final empName = first["employee_name"]?.toString() ?? "Unknown SO";
     final empId = first["employee_id"]?.toString() ?? first["user_id"]?.toString() ?? "-";
     final role = first["rolecode"]?.toString() ?? "SO";
-    final createdOn = first["created_on"]?.toString() ?? "";
+    final createdOn = first["created_on"]?.toString() ?? first["created_at"]?.toString() ?? "";
     final totalSkus = items.length;
+    final outletIdStr = first["outlet_id"]?.toString() ?? "";
+    final outletName = first["outlet_name"]?.toString() ?? _outletNameLookup[outletIdStr] ?? "Unknown Outlet";
+
+    Color roleColor;
+    if (role.toUpperCase() == "RM") {
+      roleColor = Colors.purple.shade700;
+    } else if (role.toUpperCase() == "AM") {
+      roleColor = Colors.orange.shade800;
+    } else {
+      roleColor = Colors.blue.shade700;
+    }
 
     return Card(
       color: Colors.white,
@@ -357,7 +489,7 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () => _showProductPopup(context, items, title: "${empName.toUpperCase()} - DETAILS"),
+        onTap: () => _showProductPopup(context, items, title: "${outletName.toUpperCase()} - DETAILS"),
         borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -365,38 +497,57 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    width: 4,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: roleColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          empName.toUpperCase(),
+                          outletName.toUpperCase(),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
-                            color: Colors.black87,
+                            color: AppColors.primary,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 3),
                         Text(
-                          "ID: $empId | $role",
+                          "Submitted by: $empName ($role)",
                           style: TextStyle(
                             fontSize: 11,
-                            color: Colors.grey.shade600,
+                            color: Colors.grey.shade700,
                             fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          "Employee ID: $empId",
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey.shade500,
                           ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
                   if (createdOn.isNotEmpty)
                     Text(
                       DateFormatter.formatDateTime(createdOn),
                       style: TextStyle(
                         fontSize: 11,
                         color: Colors.grey.shade500,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                 ],
@@ -410,7 +561,7 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.primary),
+                      Icon(Icons.inventory_2_outlined, size: 16, color: roleColor),
                       const SizedBox(width: 6),
                       Text(
                         "$totalSkus SKU(s) Submitted",
@@ -429,14 +580,14 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          color: roleColor,
                         ),
                       ),
                       const SizedBox(width: 2),
                       Icon(
                         Icons.chevron_right,
                         size: 14,
-                        color: AppColors.primary,
+                        color: roleColor,
                       ),
                     ],
                   ),

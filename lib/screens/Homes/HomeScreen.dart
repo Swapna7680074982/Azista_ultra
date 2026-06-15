@@ -569,21 +569,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                         "NEW OUTLETS",
                                         newOutlets.toString(),
                                         Icons.storefront,
-                                        AppColors.primary,
+                                        Colors.blue.shade700,
                                         targetValue: newOutletsTarget,
                                       ),
                                       _buildMetricTile(
                                         "OUTLET VISITS",
                                         outletVisits.toString(),
                                         Icons.pin_drop_outlined,
-                                        Colors.blue.shade700,
+                                        Colors.orange.shade800,
                                         targetValue: outletVisitsTarget,
                                       ),
                                       _buildMetricTile(
                                         "POBS DONE",
                                         pobsDone.toString(),
                                         Icons.description_outlined,
-                                        Colors.orange.shade800,
+                                        Colors.purple.shade700,
                                       ),
                                       _buildMetricTile(
                                         "SALE VALUE",
@@ -942,7 +942,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontSize: isPrice ? 16 : 20,
                 fontWeight: FontWeight.bold,
-                color: AppColors.black,
+                color: color,
               ),
             ),
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
 import '../../utilities/date_formatter.dart';
 
@@ -123,28 +124,56 @@ class TeamAttendanceDetailScreen extends StatelessWidget {
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     Builder(builder: (context) {
-                      final checkInStr = log['first_checkin']?.toString();
-                      final checkOutStr = log['last_checkout']?.toString();
-                      int min = 0;
-                      if (checkOutStr == null || checkOutStr.isEmpty || checkOutStr == 'N/A') {
-                        if (checkInStr != null && checkInStr.isNotEmpty && checkInStr != 'N/A') {
+                      DateTime? parseDateTime(String? dateStr) {
+                        if (dateStr == null || dateStr.isEmpty || dateStr == 'N/A') return null;
+                        DateTime? parsed = DateTime.tryParse(dateStr.trim());
+                        if (parsed == null) {
                           try {
-                            final checkInTime = DateTime.parse(checkInStr);
-                            final diff = DateTime.now().difference(checkInTime);
-                            if (diff.inMinutes > 0) {
-                              min = diff.inMinutes;
-                            }
-                          } catch (e) {
-                            final rawMin = log['working_minutes'];
-                            min = rawMin is int ? rawMin : int.tryParse(rawMin?.toString() ?? "0") ?? 0;
-                          }
+                            parsed = DateFormat("yyyy-MM-dd HH:mm:ss").parse(dateStr.trim());
+                          } catch (_) {}
                         }
-                      } else {
-                        final rawMin = log['working_minutes'];
-                        min = rawMin is int ? rawMin : int.tryParse(rawMin?.toString() ?? "0") ?? 0;
+                        return parsed;
                       }
 
-                      if (min < 60) {
+                      final checkInStr = log['first_checkin']?.toString();
+                      final checkOutStr = log['last_checkout']?.toString();
+                      
+                      final checkInTime = parseDateTime(checkInStr);
+                      final checkOutTime = parseDateTime(checkOutStr);
+
+                      final attendanceDateStr = log['attendance_date']?.toString();
+                      final attendanceDate = attendanceDateStr != null ? DateTime.tryParse(attendanceDateStr) : null;
+                      final now = DateTime.now();
+                      final isToday = attendanceDate != null &&
+                          attendanceDate.year == now.year &&
+                          attendanceDate.month == now.month &&
+                          attendanceDate.day == now.day;
+
+                      bool hideWorkedHours = false;
+                      int min = 0;
+
+                      if (checkOutTime != null) {
+                        final diff = checkOutTime.difference(checkInTime ?? checkOutTime).inMinutes;
+                        if (diff > 0) {
+                          min = diff;
+                        }
+                      } else {
+                        if (isToday && checkInTime != null) {
+                          final diff = DateTime.now().difference(checkInTime).inMinutes;
+                          if (diff > 0) {
+                            min = diff;
+                          }
+                        } else {
+                          hideWorkedHours = true;
+                        }
+                      }
+
+                      if (hideWorkedHours) {
+                        return const Text(
+                          "Work: --",
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        );
+                      } else if (min < 60) {
                         return Text(
                           "Work: ${min}m",
                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),

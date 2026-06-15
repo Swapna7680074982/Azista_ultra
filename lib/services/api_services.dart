@@ -1824,4 +1824,158 @@ class ApiServices {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>?> getTeamMembersSummary({
+    required int month,
+    required int year,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final payload = {
+        "month": month,
+        "year": year,
+      };
+
+      AppLogger.info("Get Team Members Summary API call: ${AppUrls.teamMembersSummary} with payload: $payload");
+
+      final response = await _dio.post(
+        AppUrls.teamMembersSummary,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      AppLogger.info("Get Team Members Summary response: ${response.statusCode} - ${response.data}");
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Team Members Summary error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getTeamMemberOutlets({
+    required int userId,
+    required int month,
+    required int year,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final payload = {
+        "user_id": userId,
+        "month": month,
+        "year": year,
+      };
+
+      AppLogger.info("Get Team Member Outlets API call: ${AppUrls.teamMemberOutlets} with payload: $payload");
+
+      final response = await _dio.post(
+        AppUrls.teamMemberOutlets,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      AppLogger.info("Get Team Member Outlets response: ${response.statusCode} - ${response.data}");
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Team Member Outlets error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getOutletPobHistory({
+    required int outletId,
+    required int month,
+    required int year,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final payload = {
+        "outlet_id": outletId,
+        "month": month,
+        "year": year,
+      };
+
+      AppLogger.info("Get Outlet Pob History API call: ${AppUrls.outletPobHistory} with payload: $payload");
+
+      final response = await _dio.post(
+        AppUrls.outletPobHistory,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      AppLogger.info("Get Outlet Pob History response: ${response.statusCode} - ${response.data}");
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Outlet Pob History error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getOutletVisitActivityHistory({
+    required int outletId,
+    required int month,
+    required int year,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) return null;
+
+      final payload = {
+        "outlet_id": outletId,
+        "month": month,
+        "year": year,
+      };
+
+      AppLogger.info("Get Outlet Visit Activity History API call: ${AppUrls.outletVisitActivityHistory} with payload: $payload");
+
+      final response = await _dio.post(
+        AppUrls.outletVisitActivityHistory,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      AppLogger.info("Get Outlet Visit Activity History response: ${response.statusCode} - ${response.data}");
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Outlet Visit Activity History error", e);
+      return null;
+    }
+  }
 }

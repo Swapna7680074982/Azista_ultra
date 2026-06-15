@@ -57,7 +57,9 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
                             itemCount: provider.attendanceList.length,
                             itemBuilder: (context, index) {
                               final user = provider.attendanceList[index];
-                              final logs = provider.getAllLogsForUser(user.userId);
+                              final logs = provider.getAllLogsForUser(user.userId).where((log) {
+                                return log['attendance_date']?.toString() == user.attendanceDate;
+                              }).toList();
                               
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
@@ -88,45 +90,78 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
                                   ),
                                   children: [
                                     Builder(builder: (context) {
-                                      String? earliestCheckIn;
-                                      String? latestCheckOut;
-                                      int totalMinutes = 0;
+                                      DateTime? earliestCheckInTime;
+                                      DateTime? latestCheckOutTime;
+                                      String? earliestCheckInStr;
+                                      String? latestCheckOutStr;
+                                      bool hideWorkedHours = false;
 
                                       for (var log in logs) {
                                         final checkInStr = log['first_checkin']?.toString();
                                         final checkOutStr = log['last_checkout']?.toString();
                                         
-                                        if (checkInStr != null && checkInStr.isNotEmpty && checkInStr != 'N/A') {
-                                          if (earliestCheckIn == null || checkInStr.compareTo(earliestCheckIn) < 0) {
-                                            earliestCheckIn = checkInStr;
+                                        final checkInTime = _parseDateTime(checkInStr);
+                                        final checkOutTime = _parseDateTime(checkOutStr);
+
+                                        if (checkInTime != null) {
+                                          if (earliestCheckInTime == null || checkInTime.isBefore(earliestCheckInTime)) {
+                                            earliestCheckInTime = checkInTime;
+                                            earliestCheckInStr = checkInStr;
                                           }
                                         }
-                                        
-                                        if (checkOutStr != null && checkOutStr.isNotEmpty && checkOutStr != 'N/A') {
-                                          if (latestCheckOut == null || checkOutStr.compareTo(latestCheckOut) > 0) {
-                                            latestCheckOut = checkOutStr;
+
+                                        if (checkOutTime != null) {
+                                          if (latestCheckOutTime == null || checkOutTime.isAfter(latestCheckOutTime)) {
+                                            latestCheckOutTime = checkOutTime;
+                                            latestCheckOutStr = checkOutStr;
                                           }
-                                          final rawMin = log['working_minutes'];
-                                          final int min = rawMin is int ? rawMin : int.tryParse(rawMin?.toString() ?? "0") ?? 0;
-                                          totalMinutes += min;
-                                        } else {
-                                          if (checkInStr != null && checkInStr.isNotEmpty && checkInStr != 'N/A') {
-                                            try {
-                                              final checkInTime = DateTime.parse(checkInStr);
-                                              final diff = DateTime.now().difference(checkInTime);
-                                              if (diff.inMinutes > 0) {
-                                                totalMinutes += diff.inMinutes;
+                                        }
+                                      }
+
+                                      int totalMinutes = 0;
+                                      final attendanceDate = DateTime.tryParse(user.attendanceDate);
+                                      final now = DateTime.now();
+                                      final isToday = attendanceDate != null &&
+                                          attendanceDate.year == now.year &&
+                                          attendanceDate.month == now.month &&
+                                          attendanceDate.day == now.day;
+
+                                      if (!isToday && latestCheckOutTime == null) {
+                                        hideWorkedHours = true;
+                                      }
+
+                                      if (!hideWorkedHours) {
+                                        for (var log in logs) {
+                                          final checkInStr = log['first_checkin']?.toString();
+                                          final checkOutStr = log['last_checkout']?.toString();
+                                          
+                                          final checkInTime = _parseDateTime(checkInStr);
+                                          final checkOutTime = _parseDateTime(checkOutStr);
+
+                                          if (checkInTime != null) {
+                                            if (checkOutTime != null) {
+                                              final diff = checkOutTime.difference(checkInTime).inMinutes;
+                                              if (diff > 0) {
+                                                totalMinutes += diff;
                                               }
-                                            } catch (e) {
-                                              final rawMin = log['working_minutes'];
-                                              final int min = rawMin is int ? rawMin : int.tryParse(rawMin?.toString() ?? "0") ?? 0;
-                                              totalMinutes += min;
+                                            } else {
+                                              if (isToday) {
+                                                final diff = DateTime.now().difference(checkInTime).inMinutes;
+                                                if (diff > 0) {
+                                                  totalMinutes += diff;
+                                                }
+                                              }
                                             }
                                           }
                                         }
                                       }
 
-                                      return _buildSummaryLogItem(earliestCheckIn, latestCheckOut, totalMinutes);
+                                      return _buildSummaryLogItem(
+                                        earliestCheckInStr,
+                                        latestCheckOutStr,
+                                        totalMinutes,
+                                        hideWorkedHours: hideWorkedHours,
+                                      );
                                     }),
                                   ],
                                 ),
@@ -141,13 +176,24 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
     );
   }
 
+  DateTime? _parseDateTime(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty || dateStr == 'N/A') return null;
+    DateTime? parsed = DateTime.tryParse(dateStr.trim());
+    if (parsed == null) {
+      try {
+        parsed = DateFormat("yyyy-MM-dd HH:mm:ss").parse(dateStr.trim());
+      } catch (_) {}
+    }
+    return parsed;
+  }
 
-
-  Widget _buildSummaryLogItem(String? earliestCheckIn, String? latestCheckOut, int totalMinutes) {
+  Widget _buildSummaryLogItem(String? earliestCheckIn, String? latestCheckOut, int totalMinutes, {bool hideWorkedHours = false}) {
     String checkIn = DateFormatter.formatTimeOnly(earliestCheckIn);
     String checkOut = DateFormatter.formatTimeOnly(latestCheckOut);
     final double hours = totalMinutes / 60.0;
-    final String workedString = totalMinutes < 60 ? "${totalMinutes}m" : "${hours.toStringAsFixed(1)}h";
+    final String workedString = hideWorkedHours
+        ? "--"
+        : (totalMinutes < 60 ? "${totalMinutes}m" : "${hours.toStringAsFixed(1)}h");
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
