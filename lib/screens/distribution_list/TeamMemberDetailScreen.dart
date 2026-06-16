@@ -29,6 +29,8 @@ class _TeamMemberDetailScreenState extends State<TeamMemberDetailScreen> {
   Map<String, dynamic>? _dashboardCounts;
   List<dynamic> _outlets = [];
   String? _errorMessage;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = "";
 
   @override
   void initState() {
@@ -91,6 +93,12 @@ class _TeamMemberDetailScreenState extends State<TeamMemberDetailScreen> {
         });
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -164,21 +172,75 @@ class _TeamMemberDetailScreenState extends State<TeamMemberDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      _outlets.isEmpty
-                          ? const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(30.0),
-                                child: Text(
-                                  "No outlets found for this member",
-                                  style: TextStyle(color: Colors.grey, fontSize: 13),
-                                ),
-                              ),
-                            )
-                          : Column(
-                              children: _outlets.map((outlet) {
-                                return _buildOutletCard(outlet);
-                              }).toList(),
+                      // Outlet Search Bar
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: "Search outlets by name...",
+                            prefixIcon: const Icon(Icons.search, color: AppColors.primary, size: 20),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 18),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {
+                                        _searchQuery = "";
+                                      });
+                                    },
+                                  )
+                                : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
                             ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: AppColors.primary),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                            fillColor: Colors.white,
+                            filled: true,
+                          ),
+                          onChanged: (val) {
+                            setState(() {
+                              _searchQuery = val.trim().toLowerCase();
+                            });
+                          },
+                        ),
+                      ),
+                      (() {
+                        var filteredOutlets = _outlets;
+                        if (_searchQuery.isNotEmpty) {
+                          filteredOutlets = filteredOutlets.where((outlet) {
+                            final name = (outlet["outlet_name"]?.toString() ?? "").toLowerCase();
+                            return name.contains(_searchQuery);
+                          }).toList();
+                        }
+
+                        if (filteredOutlets.isEmpty) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(30.0),
+                              child: Text(
+                                "No outlets found for this member",
+                                style: TextStyle(color: Colors.grey, fontSize: 13),
+                              ),
+                            ),
+                          );
+                        }
+
+                        return Column(
+                          children: filteredOutlets.map((outlet) {
+                            return _buildOutletCard(outlet);
+                          }).toList(),
+                        );
+                      })(),
                     ],
                   ),
                 ),

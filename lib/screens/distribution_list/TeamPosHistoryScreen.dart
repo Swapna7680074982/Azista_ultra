@@ -20,6 +20,8 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
   List<dynamic> _transactions = [];
   DateTime selectedDate = DateTime.now();
   final Map<String, String> _outletNameLookup = {};
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = "";
 
   final List<Map<String, String>> _tabs = [
     {"label": "POB", "code": "pob"},
@@ -92,6 +94,7 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
 
   @override
   void dispose() {
+    _searchController.dispose();
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     super.dispose();
@@ -99,6 +102,10 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
 
   void _handleTabChange() {
     if (_tabController.indexIsChanging) return;
+    _searchController.clear();
+    setState(() {
+      _searchQuery = "";
+    });
     _fetchHistory();
   }
 
@@ -171,9 +178,24 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     final Map<String, List<dynamic>> grouped = {};
 
     if (type == "pob") {
-      groupedKeys = _transactions;
+      var list = _transactions;
+      if (_searchQuery.isNotEmpty) {
+        list = list.where((member) {
+          final name = (member["fullname"]?.toString() ?? "").toLowerCase();
+          final empId = (member["employee_id"]?.toString() ?? member["user_id"]?.toString() ?? "").toLowerCase();
+          return name.contains(_searchQuery) || empId.contains(_searchQuery);
+        }).toList();
+      }
+      groupedKeys = list;
     } else {
-      final filtered = filteredTransactions;
+      var filtered = filteredTransactions;
+      if (_searchQuery.isNotEmpty) {
+        filtered = filtered.where((tx) {
+          final empName = (tx["employee_name"]?.toString() ?? "").toLowerCase();
+          final empId = (tx["employee_id"]?.toString() ?? tx["user_id"]?.toString() ?? "").toLowerCase();
+          return empName.contains(_searchQuery) || empId.contains(_searchQuery);
+        }).toList();
+      }
       for (var tx in filtered) {
         final userId = tx["user_id"]?.toString() ?? tx["employee_id"]?.toString() ?? "unknown";
         final createdOn = tx["created_on"]?.toString() ?? "unknown";
@@ -252,6 +274,49 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
             ),
           ),
 
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: "Search by name or ID...",
+                prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = "";
+                          });
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AppColors.primary),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                fillColor: Colors.white,
+                filled: true,
+              ),
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val.trim().toLowerCase();
+                });
+              },
+            ),
+          ),
+
           Expanded(
             child: _isLoading
                 ? const Center(child: LogoProgressIndicator(size: 85))
@@ -306,7 +371,6 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     final empId = member["employee_id"]?.toString() ?? member["user_id"]?.toString() ?? "-";
     final role = member["rolecode"]?.toString() ?? "SO";
     final outlets = member["total_outlets"] ?? 0;
-    final newOutlets = member["new_outlets"] ?? 0;
     final visits = member["total_visits"] ?? 0;
     final activities = member["total_activities"] ?? 0;
     final pobs = member["total_pobs"] ?? 0;
@@ -408,7 +472,7 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildMetricCol("Outlets", "$outlets ($newOutlets New)", Colors.blue.shade700),
+                  _buildMetricCol("Outlets", "$outlets", Colors.blue.shade700),
                   _buildMetricCol("Visits/Acts", "$visits/$activities", Colors.orange.shade800),
                   _buildMetricCol("POBs Done", "$pobs", Colors.purple.shade700),
                   _buildMetricCol("POB Value", "₹${pobVal.toStringAsFixed(0)}", AppColors.green),

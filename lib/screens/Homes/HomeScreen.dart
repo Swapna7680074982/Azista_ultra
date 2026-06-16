@@ -157,32 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
 
-          const SizedBox(width: 6),
-
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Stack(
-              children: [
-                const Icon(
-                  Icons.notifications,
-                  color: AppColors.white,
-                  size: 26,
-                ),
-                Positioned(
-                  right: 2,
-                  top: 4,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Colors.yellow,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const SizedBox(width: 12),
         ],
       ),
 

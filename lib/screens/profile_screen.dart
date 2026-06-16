@@ -6,6 +6,7 @@ import '../../permissions/AppStateProvider.dart';
 import 'Homes/HomeProvider.dart';
 import '../../services/api_services.dart';
 import 'login/login_screen.dart';
+import 'Homes/change_password.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -50,6 +51,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onSelected: (value) {
+              if (value == 'change_password') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+                );
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return [
+                const PopupMenuItem<String>(
+                  value: 'change_password',
+                  child: Row(
+                    children: [
+                      Icon(Icons.lock_outline, color: Colors.black87, size: 20),
+                      SizedBox(width: 8),
+                      Text('Change Password'),
+                    ],
+                  ),
+                ),
+              ];
+            },
+          ),
+        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -131,7 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
           ),
           const SizedBox(height: 15),
-          _buildInfoTile(Icons.location_on_outlined, "Regional Office", userInfo?['regionaloffice']),
+          _buildInfoTile(Icons.location_on_outlined, "Region", userInfo?['regionaloffice']),
           _buildInfoTile(Icons.supervisor_account, "Reporting Manager", userInfo?['reporting_manager_name']),
         ],
       ),
