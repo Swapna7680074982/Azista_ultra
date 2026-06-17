@@ -278,6 +278,13 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       tabs.add({"module_name": "ACTIVITY", "module_code": "MKT"});
     }
 
+    // Filter out Branding (BRD) and Promotions (PRM)
+    tabs.removeWhere((t) {
+      final code = t['module_code']?.toString().toUpperCase();
+      final name = t['module_name']?.toString().toUpperCase();
+      return code == 'BRD' || code == 'PRM' || name == 'BRANDING' || name == 'PROMOTIONS';
+    });
+
     setState(() {
       dynamicTabs = tabs;
       isLoadingTabs = false;
