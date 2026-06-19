@@ -187,7 +187,7 @@ class ApiServices {
     required String password,
   }) async {
     try {
-      final coords = await LocationService.getCoordinates();
+      final coords = await LocationService.getCoordinates().catchError((_) => ["0.0", "0.0"]);
 
       final deviceId =
           NotificationService.instance.deviceId ?? "no_device";
