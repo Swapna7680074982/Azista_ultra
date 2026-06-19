@@ -140,7 +140,10 @@ class ApiServices {
 
       final deviceId = NotificationService.instance.deviceId ?? "no_device";
       final deviceType = Platform.isAndroid ? "Android" : "iOS";
-      final coords = await LocationService.getCoordinates().catchError((_) => ["0.0", "0.0"]);
+      final coords = await LocationService.getCoordinates(
+        requestPermission: false,
+        throwOnError: false,
+      );
 
       final payload = {
         "refresh_token": refresh,
@@ -187,7 +190,10 @@ class ApiServices {
     required String password,
   }) async {
     try {
-      final coords = await LocationService.getCoordinates().catchError((_) => ["0.0", "0.0"]);
+      final coords = await LocationService.getCoordinates(
+        requestPermission: false,
+        throwOnError: false,
+      );
 
       final deviceId =
           NotificationService.instance.deviceId ?? "no_device";
@@ -225,7 +231,20 @@ class ApiServices {
       return response.data;
     } catch (e) {
       AppLogger.error("Login error", e);
-      return {"status": false, "message": "Login failed"};
+      String message = "Login failed";
+      if (e is DioException) {
+        if (e.response != null) {
+          final data = e.response?.data;
+          if (data is Map && data.containsKey("message")) {
+            message = data["message"]?.toString() ?? "Login failed";
+          } else {
+            message = "Server error (${e.response?.statusCode})";
+          }
+        } else {
+          message = "Network error: ${e.message ?? 'Connection failed'}";
+        }
+      }
+      return {"status": false, "message": message};
     }
   }
 
