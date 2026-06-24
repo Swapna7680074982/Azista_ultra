@@ -1072,6 +1072,8 @@ class ApiServices {
         ),
       );
 
+      print("Get Calls Info API Endpoint: ${AppUrls.callsInfo} | Response: ${response.data}");
+
       AppLogger.info("Get Calls Info response status: ${response.statusCode}");
       if (response.statusCode == 200 && response.data["status"] == "success") {
         return response.data;

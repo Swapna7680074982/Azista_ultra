@@ -218,6 +218,8 @@ class HomeProvider extends ChangeNotifier {
       distributorId: distributorId,
     );
 
+    print("fetchDailyCallSummary Response: $res");
+
     if (res != null) {
       if (res["summary"] != null) {
         dailyCallSummary = res["summary"];
@@ -255,6 +257,8 @@ class HomeProvider extends ChangeNotifier {
       month: monthStr,
       distributorId: distributorId,
     );
+
+    print("fetchMonthlyCallSummary Response: $res");
 
     if (res != null) {
       if (res["summary"] != null) {
