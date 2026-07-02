@@ -8,8 +8,20 @@ class LoginProvider extends ChangeNotifier {
   String? error;
 
   Future<bool> login(String phone, String password) async {
-    isLoading = true;
     error = null;
+
+    if (phone.isEmpty) {
+      error = "Mobile number is required";
+      notifyListeners();
+      return false;
+    }
+    if (password.isEmpty) {
+      error = "Password is required";
+      notifyListeners();
+      return false;
+    }
+
+    isLoading = true;
     notifyListeners();
 
     try {

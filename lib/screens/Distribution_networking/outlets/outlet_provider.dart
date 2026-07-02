@@ -42,8 +42,8 @@ class Outlet {
     return Outlet(
       id: json['outlet_id'].toString(),
       name: json['outlet_name']?.toString() ?? 'Unknown',
-      owner: json['owner_name']?.toString() ?? 'Unknown',
-      phone: json['mobile']?.toString() ?? '',
+      owner: (json['owner_name'] ?? json['owner'] ?? json['contact_person'] ?? json['contact_name'])?.toString() ?? 'Unknown',
+      phone: (json['mobile'] ?? json['phone'] ?? json['mobile_number'] ?? json['contact_number'])?.toString() ?? '',
       type: type,
       latitude: double.tryParse(json['location']?['latitude']?.toString() ?? '0') ?? 0.0,
       longitude: double.tryParse(json['location']?['longitude']?.toString() ?? '0') ?? 0.0,

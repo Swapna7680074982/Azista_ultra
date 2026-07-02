@@ -28,17 +28,27 @@ class DistributionListProvider extends ChangeNotifier {
     "July", "August", "September", "October", "November", "December"
   ];
   late String _selectedMonth;
+  int _selectedYear = DateTime.now().year;
 
   List<String> get months => _months;
   String get selectedMonth => _selectedMonth;
+  int get selectedYear => _selectedYear;
 
   void setSelectedMonth(String month) {
     _selectedMonth = month;
     notifyListeners();
   }
 
+  void setSelectedYear(int year) {
+    _selectedYear = year;
+    notifyListeners();
+  }
+
   Map<String, List<Map<String, dynamic>>> _submissions = {};
   Map<String, List<Map<String, dynamic>>> get submissions => _submissions;
+
+  String? _submitStockError;
+  String? get submitStockError => _submitStockError;
   
   bool _isLoadingStock = false;
   bool get isLoadingStock => _isLoadingStock;
@@ -123,7 +133,7 @@ class DistributionListProvider extends ChangeNotifier {
       "July": 7, "August": 8, "September": 9, "October": 10, "November": 11, "December": 12
     };
     final monthNum = monthMap[_selectedMonth] ?? DateTime.now().month;
-    final year = DateTime.now().year; // Dynamically use the current year
+    final year = _selectedYear;
     final lastDay = DateTime(year, monthNum + 1, 0).day;
     final fromDate = "$year-${monthNum.toString().padLeft(2, '0')}-01";
     final toDate = "$year-${monthNum.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}";
@@ -143,19 +153,42 @@ class DistributionListProvider extends ChangeNotifier {
       final data = response['data'] as List<dynamic>? ?? [];
       for (var record in data) {
         final createdAt = record['created_at']?.toString() ?? "";
+        final recordYear = record['year']?.toString() ?? record['stock_year']?.toString();
+        final recordMonth = record['month']?.toString() ?? record['stock_month']?.toString();
         final items = record['items'] as List<dynamic>? ?? [];
         if (createdAt.isNotEmpty) {
           final datePart = createdAt.split(' ')[0];
-          if (!_submissions.containsKey(datePart)) {
-            _submissions[datePart] = [];
-          }
-          for (var item in items) {
-            _submissions[datePart]!.add({
-              "product_id": item['product_id'],
-              "product_name": item['product_name'] ?? 'Unknown Product',
-              "sku_name": item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'Unknown SKU',
-              "qty": item['quantity']?.toString() ?? "0",
-            });
+          try {
+            final parsedDate = DateTime.parse(datePart);
+            if (parsedDate.year == year && parsedDate.month == monthNum) {
+              if (!_submissions.containsKey(datePart)) {
+                _submissions[datePart] = [];
+              }
+              for (var item in items) {
+                _submissions[datePart]!.add({
+                  "product_id": item['product_id'],
+                  "product_name": item['product_name'] ?? 'Unknown Product',
+                  "sku_name": item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'Unknown SKU',
+                  "qty": item['quantity']?.toString() ?? "0",
+                  "stock_year": recordYear ?? parsedDate.year.toString(),
+                  "stock_month": recordMonth ?? parsedDate.month.toString(),
+                });
+              }
+            }
+          } catch (_) {
+            if (!_submissions.containsKey(datePart)) {
+              _submissions[datePart] = [];
+            }
+            for (var item in items) {
+              _submissions[datePart]!.add({
+                "product_id": item['product_id'],
+                "product_name": item['product_name'] ?? 'Unknown Product',
+                "sku_name": item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'Unknown SKU',
+                "qty": item['quantity']?.toString() ?? "0",
+                "stock_year": recordYear ?? year.toString(),
+                "stock_month": recordMonth ?? monthNum.toString(),
+              });
+            }
           }
         }
       }
@@ -196,11 +229,15 @@ class DistributionListProvider extends ChangeNotifier {
   }
 
   Future<bool> submitDistributorStock(int? distributorId) async {
+    _submitStockError = null;
     final distId = _selectedDistributor != null
         ? int.tryParse(_selectedDistributor['distributor_id']?.toString() ?? '')
         : distributorId;
 
-    if (distId == null) return false;
+    if (distId == null) {
+      _submitStockError = "Distributor ID is invalid";
+      return false;
+    }
 
     List<Map<String, dynamic>> items = [];
 
@@ -219,16 +256,18 @@ class DistributionListProvider extends ChangeNotifier {
     });
 
     if (items.isEmpty) {
+      _submitStockError = "Please enter stock quantity for at least one item";
       return false; // Nothing to submit
     }
 
     final payload = {
       "distributor_id": distId,
-      "month": _selectedStockMonth,
-      "year": _selectedStockYear,
+      "month": DateTime.now().month,
+      "year": DateTime.now().year,
       "items": items,
     };
 
+    print("SUBMITTING DISTRIBUTOR STOCK DATA PAYLOAD: $payload");
     final response = await ApiServices.distributorStockInsert(payload: payload);
     
     if (response != null && response['status'] == "success") {
@@ -236,6 +275,9 @@ class DistributionListProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     }
+    
+    _submitStockError = response != null ? response['message']?.toString() : "Failed to submit stock";
+    notifyListeners();
     return false;
   }
 }

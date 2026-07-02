@@ -18,8 +18,7 @@ class StockSalePosScreen extends StatefulWidget {
 
 class _StockSalePosScreenState extends State<StockSalePosScreen> {
   int selectedTab = 0;
-  int selectedMonth = DateTime.now().month;
-  int selectedYear = DateTime.now().year;
+  DateTime selectedDate = DateTime.now();
 
   final tabs = ["STOCK", "SALE", "POB"];
 
@@ -161,11 +160,11 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
   }
 
   Widget _pobHistoryTab() {
-    final lastDay = DateTime(selectedYear, selectedMonth + 1, 0).day;
+    final lastDay = DateTime(selectedDate.year, selectedDate.month + 1, 0).day;
     final Map<String, dynamic> payload = {
       "outlet_id": widget.outletId,
-      "from_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-01",
-      "to_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}",
+      "from_date": "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-01",
+      "to_date": "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}",
     };
     
     return FutureBuilder<Map<String, dynamic>?>(
@@ -184,9 +183,11 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
           if (rawDate == null) return false;
           try {
             final date = DateTime.parse(rawDate.toString().trim());
-            return date.year == selectedYear && date.month == selectedMonth;
+            return date.year == selectedDate.year &&
+                   date.month == selectedDate.month &&
+                   date.day == selectedDate.day;
           } catch (e) {
-            return true;
+            return false;
           }
         }).toList();
         
@@ -258,13 +259,13 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
     final appState = Provider.of<AppStateProvider>(context, listen: false);
     final distributorId = appState.selectedDistributorId ?? 6;
     
-    final lastDay = DateTime(selectedYear, selectedMonth + 1, 0).day;
+    final lastDay = DateTime(selectedDate.year, selectedDate.month + 1, 0).day;
     final Map<String, dynamic> payload = {
       "outlet_id": widget.outletId,
       "distributor_id": distributorId,
       "pos_type": posType,
-      "from_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-01",
-      "to_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}",
+      "from_date": "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-01",
+      "to_date": "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}",
     };
     
     return FutureBuilder<Map<String, dynamic>?>(
@@ -283,9 +284,11 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
           if (rawDate == null) return false;
           try {
             final date = DateTime.parse(rawDate.toString().trim());
-            return date.year == selectedYear && date.month == selectedMonth;
+            return date.year == selectedDate.year &&
+                   date.month == selectedDate.month &&
+                   date.day == selectedDate.day;
           } catch (e) {
-            return true;
+            return false;
           }
         }).toList();
         
@@ -419,7 +422,7 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
   }
 
   Widget _monthYearFilter() {
-    final dateText = DateFormat('MMMM yyyy').format(DateTime(selectedYear, selectedMonth));
+    final dateText = DateFormat('dd MMMM yyyy').format(selectedDate);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       child: GestureDetector(
@@ -451,14 +454,13 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
   Future<void> _selectMonth(BuildContext context) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime(selectedYear, selectedMonth, 1),
+      initialDate: selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
     if (picked != null) {
       setState(() {
-        selectedMonth = picked.month;
-        selectedYear = picked.year;
+        selectedDate = picked;
       });
     }
   }

@@ -71,48 +71,110 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "YEAR: ${DateTime.now().year}",
-              style: const TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: DropdownButton<String>(
-                value: provider.selectedMonth,
-                isExpanded: true,
-                underline: const SizedBox(),
-                icon: const Icon(Icons.keyboard_arrow_down),
-                items: provider.months.map((month) {
-                  return DropdownMenuItem(
-                    value: month,
-                    child: Text(month),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    provider.setSelectedMonth(value);
-                    int? distId;
-                    if (provider.selectedDistributor != null) {
-                      distId = int.tryParse(provider.selectedDistributor['distributor_id']?.toString() ?? '');
-                    }
-                    distId ??= Provider.of<AppStateProvider>(context, listen: false).selectedDistributorId;
-                    if (distId != null) {
-                      provider.fetchDistributorStock(distId);
-                    }
-                  }
-                },
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "YEAR",
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: DropdownButton<int>(
+                          value: provider.selectedYear,
+                          isExpanded: true,
+                          underline: const SizedBox(),
+                          icon: const Icon(Icons.keyboard_arrow_down),
+                          items: List.generate(11, (index) => 2020 + index).map((year) {
+                            return DropdownMenuItem(
+                              value: year,
+                              child: Text(year.toString()),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              provider.setSelectedYear(value);
+                              int? distId;
+                              if (provider.selectedDistributor != null) {
+                                distId = int.tryParse(provider.selectedDistributor['distributor_id']?.toString() ?? '');
+                              }
+                              distId ??= Provider.of<AppStateProvider>(context, listen: false).selectedDistributorId;
+                              if (distId != null) {
+                                provider.fetchDistributorStock(distId);
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "MONTH",
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: DropdownButton<String>(
+                          value: provider.selectedMonth,
+                          isExpanded: true,
+                          underline: const SizedBox(),
+                          icon: const Icon(Icons.keyboard_arrow_down),
+                          items: provider.months.map((month) {
+                            return DropdownMenuItem(
+                              value: month,
+                              child: Text(month),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              provider.setSelectedMonth(value);
+                              int? distId;
+                              if (provider.selectedDistributor != null) {
+                                distId = int.tryParse(provider.selectedDistributor['distributor_id']?.toString() ?? '');
+                              }
+                              distId ??= Provider.of<AppStateProvider>(context, listen: false).selectedDistributorId;
+                              if (distId != null) {
+                                provider.fetchDistributorStock(distId);
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 20),
@@ -137,6 +199,17 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
                     final date = provider.submissions.keys.elementAt(index);
                     final products = provider.submissions[date]!;
                     
+                     String stockPeriodText = "";
+                    if (products.isNotEmpty) {
+                      final firstProd = products.first;
+                      final sMonth = int.tryParse(firstProd['stock_month']?.toString() ?? "");
+                      final sYear = firstProd['stock_year']?.toString();
+                      if (sMonth != null && sMonth >= 1 && sMonth <= 12 && sYear != null) {
+                        final monthName = provider.months[sMonth - 1];
+                        stockPeriodText = "Stock Period: $monthName $sYear";
+                      }
+                    }
+
                     return GestureDetector(
                       onTap: () {
                         _showProductPopup(context, products);
@@ -155,9 +228,25 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
                             )
                           ],
                         ),
-                        child: Text(
-                          "SUBMISSION ON ${DateFormatter.formatDateTime(date)}",
-                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "SUBMISSION ON ${DateFormatter.formatDateTime(date)}",
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            if (stockPeriodText.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                stockPeriodText,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     );

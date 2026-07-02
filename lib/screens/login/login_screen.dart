@@ -2,6 +2,7 @@ import 'package:azista_ultra/constants/app_colors.dart';
 import 'package:azista_ultra/constants/app_strings.dart';
 import 'package:azista_ultra/constants/image_constants.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../permissions/SessionManager.dart';
@@ -154,8 +155,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               TextField(
                                 controller: phoneController,
                                 keyboardType: TextInputType.phone,
+                                maxLength: 10,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(10),
+                                ],
                                 style: const TextStyle(fontWeight: FontWeight.w600),
                                 decoration: InputDecoration(
+                                  counterText: "",
                                   prefixIcon: const Icon(Icons.phone_android, color: AppColors.button),
                                   hintText: AppStrings.mobileHint,
                                   hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal),

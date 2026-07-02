@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../constants/app_colors.dart';
 import 'ProductListScreen.dart';
@@ -20,8 +21,7 @@ class PobHistoryScreen extends StatefulWidget {
 }
 
 class _PobHistoryScreenState extends State<PobHistoryScreen> {
-  int selectedMonth = DateTime.now().month;
-  int selectedYear = DateTime.now().year;
+  DateTime selectedDate = DateTime.now();
 
   @override
   void initState() {
@@ -33,38 +33,51 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
     });
   }
 
-  String _getMonthName(int month, int year) {
-    final months = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
-    ];
-    return "${months[month - 1]} $year";
-  }
-
   Future<void> _selectMonth(BuildContext context) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime(selectedYear, selectedMonth, 1),
+      initialDate: selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
     if (picked != null) {
       setState(() {
-        selectedMonth = picked.month;
-        selectedYear = picked.year;
+        selectedDate = picked;
       });
     }
+  }
+
+  DateTime? _parseDate(String dateStr) {
+    final cleaned = dateStr.trim();
+    DateTime? dt = DateTime.tryParse(cleaned);
+    if (dt == null) {
+      try {
+        dt = DateFormat("yyyy-MM-dd HH:mm:ss").parse(cleaned);
+      } catch (_) {
+        try {
+          dt = DateFormat("yyyy-MM-dd").parse(cleaned);
+        } catch (_) {
+          try {
+            dt = DateFormat("dd-MM-yyyy HH:mm:ss").parse(cleaned);
+          } catch (_) {
+            try {
+              dt = DateFormat("dd-MM-yyyy").parse(cleaned);
+            } catch (_) {}
+          }
+        }
+      }
+    }
+    return dt;
   }
 
   bool _isInSelectedMonth(dynamic pob) {
     final dateStr = pob['created_at'] ?? pob['created_on'];
     if (dateStr == null) return false;
-    try {
-      final dt = DateTime.parse(dateStr);
-      return dt.month == selectedMonth && dt.year == selectedYear;
-    } catch (e) {
-      return false;
-    }
+    final dt = _parseDate(dateStr.toString());
+    if (dt == null) return false;
+    return dt.year == selectedDate.year &&
+           dt.month == selectedDate.month &&
+           dt.day == selectedDate.day;
   }
 
   void _viewAttachment(BuildContext context, String url) {
@@ -213,7 +226,7 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        _getMonthName(selectedMonth, selectedYear),
+                        DateFormat('dd MMMM yyyy').format(selectedDate),
                         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
                       ),
                       const Icon(Icons.calendar_month, color: AppColors.primary),

@@ -119,13 +119,11 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
                           LoadingDialog.hide(context);
 
                           if (success) {
-                            SuccessDialog.show(context, message: "Stock Submitted Successfully!", onDismiss: () {
-                              Navigator.pop(context);
-                            });
+                            SuccessDialog.show(context, message: "Stock Submitted Successfully!");
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Failed to submit stock or no stock entered"),
+                              SnackBar(
+                                content: Text(provider.submitStockError ?? "Failed to submit stock or no stock entered"),
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );
@@ -189,9 +187,6 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
   }
 
   Widget _buildDistributorSelectionHeader(BuildContext context, DistributionListProvider provider) {
-    final currentYear = DateTime.now().year;
-    final years = List.generate(5, (index) => currentYear - 2 + index);
-
     return Card(
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -203,7 +198,7 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              "DISTRIBUTOR & PERIOD SELECTION",
+              "DISTRIBUTOR SELECTION",
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary),
             ),
             const SizedBox(height: 10),
@@ -229,97 +224,15 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
                                   ? provider.selectedDistributor['distributor_name'] ?? 'Unknown'
                                   : "Select Distributor",
                               style: TextStyle(
-                                fontSize: 13,
-                                color: provider.selectedDistributor != null
-                                    ? Colors.black87
-                                    : Colors.grey.shade600,
-                              ),
+                                  fontSize: 13,
+                                  color: provider.selectedDistributor != null
+                                      ? Colors.black87
+                                      : Colors.grey.shade600),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const Icon(Icons.arrow_drop_down, color: Colors.grey),
                         ],
-                      ),
-                    ),
-                  ),
-                ),
-                /*
-                const SizedBox(width: 8),
-                SizedBox(
-                  height: 45,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.button,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                    ),
-                    onPressed: () => _showCreateDistributorDialog(context, provider),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.add, color: Colors.white, size: 18),
-                        SizedBox(width: 4),
-                        Text("NEW", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                ),
-                */
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    height: 45,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<int>(
-                        value: provider.selectedStockMonth,
-                        items: List.generate(12, (index) {
-                          final months = [
-                            "January", "February", "March", "April", "May", "June",
-                            "July", "August", "September", "October", "November", "December"
-                          ];
-                          return DropdownMenuItem<int>(
-                            value: index + 1,
-                            child: Text(months[index], style: const TextStyle(fontSize: 13)),
-                          );
-                        }),
-                        onChanged: (val) {
-                          if (val != null) provider.setStockMonth(val);
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    height: 45,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<int>(
-                        value: provider.selectedStockYear,
-                        items: years.map((year) {
-                          return DropdownMenuItem<int>(
-                            value: year,
-                            child: Text(year.toString(), style: const TextStyle(fontSize: 13)),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) provider.setStockYear(val);
-                        },
                       ),
                     ),
                   ),

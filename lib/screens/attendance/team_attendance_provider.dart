@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/team_attendance_model.dart';
 import '../../services/api_services.dart';
 import '../../utilities/mylogger.dart';
+import '../../permissions/SessionManager.dart';
 
 class TeamAttendanceProvider extends ChangeNotifier {
   bool _isLoading = false;
@@ -25,6 +26,9 @@ class TeamAttendanceProvider extends ChangeNotifier {
   String? _currentUserRole;
   String? get currentUserRole => _currentUserRole;
 
+  String? _currentUserId;
+  String? get currentUserId => _currentUserId;
+
   Future<void> fetchTeamAttendance({String? month, bool isToday = true, String? defaultRole, String? currentUserRole}) async {
     _isLoading = true;
     if (defaultRole != null && _selectedRole == 'ALL') {
@@ -33,6 +37,11 @@ class TeamAttendanceProvider extends ChangeNotifier {
     if (currentUserRole != null) {
       _currentUserRole = _normalizeRole(currentUserRole);
     }
+    try {
+      final userInfo = await SessionManager.getUserInfo();
+      _currentUserId = userInfo?["user_id"]?.toString();
+    } catch (_) {}
+
     if (isToday) {
       _selectedDate = DateTime.now();
     }
@@ -82,10 +91,25 @@ class TeamAttendanceProvider extends ChangeNotifier {
           .toList();
     }
 
-    // If currentUserRole is 'AM', exclude 'RM' records completely
-    if (_currentUserRole == 'AM') {
-      roleFiltered = roleFiltered.where((item) => _normalizeRole(item.roleCode) != 'RM').toList();
-    }
+    // Hierarchical and self-exclusion logic for AM/RM
+    roleFiltered = roleFiltered.where((item) {
+      final itemRole = _normalizeRole(item.roleCode);
+      if (_currentUserRole == 'AM') {
+        if (itemRole == 'RM') {
+          return false; // Exclude RM
+        }
+        if (itemRole == 'AM') {
+          return _currentUserId == null || item.userId == _currentUserId; // Only his own AM record
+        }
+        return true; // Include SO and others
+      } else if (_currentUserRole == 'RM') {
+        if (itemRole == 'RM') {
+          return _currentUserId == null || item.userId == _currentUserId; // Only his own RM record
+        }
+        return true; // Include AM and SO
+      }
+      return true; // Default
+    }).toList();
 
     // Filter by the selected date (year, month, day)
     roleFiltered = roleFiltered.where((item) {

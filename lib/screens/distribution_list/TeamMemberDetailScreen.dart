@@ -50,10 +50,11 @@ class _TeamMemberDetailScreenState extends State<TeamMemberDetailScreen> {
         year: widget.year,
       );
 
+      final now = DateTime.now();
       final outletsFuture = ApiServices.getTeamMemberOutlets(
         userId: widget.userId,
-        month: widget.month,
-        year: widget.year,
+        month: now.month,
+        year: now.year,
       );
 
       final results = await Future.wait([summaryFuture, outletsFuture]);

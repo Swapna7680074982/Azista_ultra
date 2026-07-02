@@ -538,7 +538,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     physics: const NeverScrollableScrollPhysics(),
                                     crossAxisSpacing: 12,
                                     mainAxisSpacing: 12,
-                                    childAspectRatio: 1.45,
+                                    childAspectRatio: 1.2,
                                     children: [
                                       _buildMetricTile(
                                         "NEW OUTLETS",

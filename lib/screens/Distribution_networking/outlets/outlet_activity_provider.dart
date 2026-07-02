@@ -63,7 +63,15 @@ class OutletActivityProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchProductsWithSkus() async {
+  Future<void> fetchProductsWithSkus({bool forceRefresh = false}) async {
+    if (_productsWithSkus.isNotEmpty && !forceRefresh) {
+      _stockQuantities.clear();
+      _saleQuantities.clear();
+      _samplingQuantities.clear();
+      notifyListeners();
+      return;
+    }
+
     _isLoadingProducts = true;
     notifyListeners();
 
@@ -79,19 +87,29 @@ class OutletActivityProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearQuantities() {
+    _stockQuantities.clear();
+    _saleQuantities.clear();
+    _samplingQuantities.clear();
+    notifyListeners();
+  }
+
   void updateStockQuantity(int productId, int skuId, String value) {
     int qty = int.tryParse(value) ?? 0;
     _stockQuantities["${productId}_$skuId"] = qty;
+    notifyListeners();
   }
 
   void updateSaleQuantity(int productId, int skuId, String value) {
     int qty = int.tryParse(value) ?? 0;
     _saleQuantities["${productId}_$skuId"] = qty;
+    notifyListeners();
   }
 
   void updateSamplingQuantity(int productId, int skuId, String value) {
     int qty = int.tryParse(value) ?? 0;
     _samplingQuantities["${productId}_$skuId"] = qty;
+    notifyListeners();
   }
 
   Future<Map<String, dynamic>?> submitPosTransaction(String posType, int outletId, {int? distributorId}) async {

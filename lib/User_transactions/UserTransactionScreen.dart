@@ -19,8 +19,7 @@ class UserTransactionScreen extends StatefulWidget {
 }
 
 class _UserTransactionScreenState extends State<UserTransactionScreen> {
-  int selectedMonth = DateTime.now().month;
-  int selectedYear = DateTime.now().year;
+  DateTime selectedDate = DateTime.now();
 
   late Future<Map<String, Map<String, dynamic>>> _dataFuture;
   late MainTabProvider _tabProvider;
@@ -133,7 +132,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
   }
 
   Widget _monthYearFilter() {
-    final dateText = DateFormat('MMMM yyyy').format(DateTime(selectedYear, selectedMonth));
+    final dateText = DateFormat('dd MMMM yyyy').format(selectedDate);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       child: GestureDetector(
@@ -165,14 +164,13 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
   Future<void> _selectMonth(BuildContext context) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime(selectedYear, selectedMonth, 1),
+      initialDate: selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
     if (picked != null) {
       setState(() {
-        selectedMonth = picked.month;
-        selectedYear = picked.year;
+        selectedDate = picked;
         _dataFuture = _fetchData(); // reload when date changes
       });
     }
@@ -202,16 +200,16 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
   Future<Map<String, Map<String, dynamic>>> _fetchData() async {
     final appState = Provider.of<AppStateProvider>(context, listen: false);
     final distributorId = appState.selectedDistributorId ?? 6;
-    final lastDay = DateTime(selectedYear, selectedMonth + 1, 0).day;
+    final lastDay = DateTime(selectedDate.year, selectedDate.month + 1, 0).day;
     Map<String, dynamic> payload = {
       "distributor_id": distributorId,
-      "from_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-01",
-      "to_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}",
+      "from_date": "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-01",
+      "to_date": "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}",
     };
 
     final Map<String, dynamic> pobPayload = {
-      "from_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-01",
-      "to_date": "$selectedYear-${selectedMonth.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}",
+      "from_date": "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-01",
+      "to_date": "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}",
     };
 
     final results = await Future.wait([
@@ -251,9 +249,11 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
         if (rawDate == null) return false;
         try {
           final date = DateTime.parse(rawDate.toString().trim());
-          return date.year == selectedYear && date.month == selectedMonth;
+          return date.year == selectedDate.year &&
+                 date.month == selectedDate.month &&
+                 date.day == selectedDate.day;
         } catch (e) {
-          return true;
+          return false;
         }
       }).toList();
       for (var item in data) {
@@ -272,9 +272,11 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
         if (rawDate == null) return false;
         try {
           final date = DateTime.parse(rawDate.toString().trim());
-          return date.year == selectedYear && date.month == selectedMonth;
+          return date.year == selectedDate.year &&
+                 date.month == selectedDate.month &&
+                 date.day == selectedDate.day;
         } catch (e) {
-          return true;
+          return false;
         }
       }).toList();
       for (var item in data) {
@@ -293,9 +295,11 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
         if (rawDate == null) return false;
         try {
           final date = DateTime.parse(rawDate.toString().trim());
-          return date.year == selectedYear && date.month == selectedMonth;
+          return date.year == selectedDate.year &&
+                 date.month == selectedDate.month &&
+                 date.day == selectedDate.day;
         } catch (e) {
-          return true;
+          return false;
         }
       }).toList();
       for (var item in data) {

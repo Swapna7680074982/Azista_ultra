@@ -4,6 +4,7 @@ import '../../constants/app_colors.dart';
 import '../../services/api_services.dart';
 import '../../utilities/common_widgets.dart';
 import '../../utilities/date_formatter.dart';
+import 'package:intl/intl.dart';
 
 class TeamOutletHistoryScreen extends StatefulWidget {
   final int outletId;
@@ -33,9 +34,17 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
   String? _pobError;
   String? _visitError;
 
+  late DateTime selectedDate;
+
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    if (now.month == widget.month && now.year == widget.year) {
+      selectedDate = now;
+    } else {
+      selectedDate = DateTime(widget.year, widget.month, 1);
+    }
     _tabController = TabController(length: 2, vsync: this);
     _fetchPobHistory();
     _fetchVisitHistory();
@@ -56,8 +65,8 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
     try {
       final res = await ApiServices.getOutletPobHistory(
         outletId: widget.outletId,
-        month: widget.month,
-        year: widget.year,
+        month: selectedDate.month,
+        year: selectedDate.year,
       );
 
       if (mounted) {
@@ -90,8 +99,8 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
     try {
       final res = await ApiServices.getOutletVisitActivityHistory(
         outletId: widget.outletId,
-        month: widget.month,
-        year: widget.year,
+        month: selectedDate.month,
+        year: selectedDate.year,
       );
 
       if (mounted) {
@@ -113,6 +122,74 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
         });
       }
     }
+  }
+
+  Future<void> _pickMonth() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      final oldMonth = selectedDate.month;
+      final oldYear = selectedDate.year;
+      setState(() {
+        selectedDate = picked;
+      });
+      if (picked.month != oldMonth || picked.year != oldYear) {
+        _fetchPobHistory();
+        _fetchVisitHistory();
+      }
+    }
+  }
+
+  DateTime? _parseDate(String dateStr) {
+    final cleaned = dateStr.trim();
+    DateTime? dt = DateTime.tryParse(cleaned);
+    if (dt == null) {
+      try {
+        dt = DateFormat("yyyy-MM-dd HH:mm:ss").parse(cleaned);
+      } catch (_) {
+        try {
+          dt = DateFormat("yyyy-MM-dd").parse(cleaned);
+        } catch (_) {
+          try {
+            dt = DateFormat("dd-MM-yyyy HH:mm:ss").parse(cleaned);
+          } catch (_) {
+            try {
+              dt = DateFormat("dd-MM-yyyy").parse(cleaned);
+            } catch (_) {}
+          }
+        }
+      }
+    }
+    return dt;
+  }
+
+  List<dynamic> get filteredPobs {
+    return _pobHistory.where((pob) {
+      final dateStr = pob["created_at"]?.toString() ?? pob["created_on"]?.toString() ?? "";
+      if (dateStr.isEmpty) return false;
+      final parsed = _parseDate(dateStr);
+      if (parsed == null) return false;
+      return parsed.year == selectedDate.year &&
+             parsed.month == selectedDate.month &&
+             parsed.day == selectedDate.day;
+    }).toList();
+  }
+
+  List<dynamic> get filteredVisits {
+    return _visitHistory.where((visit) {
+      final dateStr = visit["visit_date"]?.toString() ?? visit["checkin_time"]?.toString() ?? "";
+      if (dateStr.isEmpty) return false;
+      final parsed = _parseDate(dateStr);
+      if (parsed == null) return false;
+      return parsed.year == selectedDate.year &&
+             parsed.month == selectedDate.month &&
+             parsed.day == selectedDate.day;
+    }).toList();
   }
 
   Future<void> _openFile(String? url) async {
@@ -171,11 +248,43 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildPobHistoryTab(),
-          _buildVisitsTab(),
+          GestureDetector(
+            onTap: _pickMonth,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              color: AppColors.primary.withValues(alpha: 0.1),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    DateFormat('dd MMMM yyyy').format(selectedDate).toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildPobHistoryTab(),
+                _buildVisitsTab(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -203,7 +312,8 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
       );
     }
 
-    if (_pobHistory.isEmpty) {
+    final filteredList = filteredPobs;
+    if (filteredList.isEmpty) {
       return const Center(
         child: Text(
           "No POB records found for this period",
@@ -216,9 +326,9 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
       onRefresh: _fetchPobHistory,
       child: ListView.builder(
         padding: const EdgeInsets.all(12),
-        itemCount: _pobHistory.length,
+        itemCount: filteredList.length,
         itemBuilder: (context, index) {
-          final pob = _pobHistory[index];
+          final pob = filteredList[index];
           final pobNum = pob["pob_number"]?.toString() ?? "POB-${pob["id"]}";
           final dateStr = pob["created_at"]?.toString() ?? "";
           final status = pob["status"]?.toString() ?? "pending";
@@ -400,7 +510,8 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
       );
     }
 
-    if (_visitHistory.isEmpty) {
+    final filteredList = filteredVisits;
+    if (filteredList.isEmpty) {
       return const Center(
         child: Text(
           "No visits logged for this period",
@@ -413,9 +524,9 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
       onRefresh: _fetchVisitHistory,
       child: ListView.builder(
         padding: const EdgeInsets.all(12),
-        itemCount: _visitHistory.length,
+        itemCount: filteredList.length,
         itemBuilder: (context, index) {
-          final visit = _visitHistory[index];
+          final visit = filteredList[index];
           final visitDate = visit["visit_date"]?.toString() ?? "";
           final checkin = visit["checkin_time"]?.toString() ?? "";
           final checkout = visit["checkout_time"]?.toString() ?? "";

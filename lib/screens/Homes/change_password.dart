@@ -55,12 +55,35 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               onPressed: provider.isLoading
                   ? null
                   : () async {
-                if (newController.text != confirmController.text) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Passwords do not match")),
-                  );
-                  return;
-                }
+                 final oldPassword = oldController.text.trim();
+                 final newPassword = newController.text.trim();
+                 final confirmPassword = confirmController.text.trim();
+
+                  final missingFields = <String>[];
+                  if (oldPassword.isEmpty) missingFields.add("Current Password");
+                  if (newPassword.isEmpty) missingFields.add("New Password");
+                  if (confirmPassword.isEmpty) missingFields.add("Repeat Password");
+
+                  if (missingFields.isNotEmpty) {
+                    String message;
+                    if (missingFields.length == 1) {
+                      message = "${missingFields[0]} is required";
+                    } else if (missingFields.length == 2) {
+                      message = "${missingFields[0]} and ${missingFields[1]} are required";
+                    } else {
+                      message = "${missingFields.sublist(0, missingFields.length - 1).join(', ')}, and ${missingFields.last} are required";
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(message)),
+                    );
+                    return;
+                  }
+                 if (newPassword != confirmPassword) {
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     const SnackBar(content: Text("Passwords do not match")),
+                   );
+                   return;
+                 }
 
                 final success = await provider.changePassword(
                   oldPassword: oldController.text,

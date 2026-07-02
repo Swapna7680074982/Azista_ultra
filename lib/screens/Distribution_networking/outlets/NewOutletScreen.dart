@@ -47,7 +47,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
   final TextEditingController altEmailController = TextEditingController();
   String selectedType = "Retailer";
   OutletCategory? selectedCategory;
-  String gender = "Male";
+  String gender = "";
   String vicinityType = "Near";
   String outletShape = "Square";
   String stockPosition = "Shelf Display";

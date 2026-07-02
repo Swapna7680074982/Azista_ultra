@@ -168,6 +168,7 @@ class ProfileDrawer extends StatelessWidget {
               break;
 
             case "Support":
+              navProvider.setTab(0);
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const SupportScreen()),
@@ -175,6 +176,7 @@ class ProfileDrawer extends StatelessWidget {
               break;
 
             case "Change Password":
+              navProvider.setTab(0);
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
@@ -182,6 +184,7 @@ class ProfileDrawer extends StatelessWidget {
               break;
 
             case "Logout":
+              navProvider.setTab(0);
               _showLogoutDialog(context);
               break;
           }

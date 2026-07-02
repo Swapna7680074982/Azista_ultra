@@ -119,9 +119,10 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     try {
       dynamic data;
       if (type == "pob") {
+        final now = DateTime.now();
         final res = await ApiServices.getTeamMembersSummary(
-          month: selectedDate.month,
-          year: selectedDate.year,
+          month: now.month,
+          year: now.year,
         );
         data = res != null ? res["data"] : null;
       } else {
@@ -161,13 +162,38 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     }
   }
 
+  DateTime? _parseDate(String dateStr) {
+    final cleaned = dateStr.trim();
+    DateTime? dt = DateTime.tryParse(cleaned);
+    if (dt == null) {
+      try {
+        dt = DateFormat("yyyy-MM-dd HH:mm:ss").parse(cleaned);
+      } catch (_) {
+        try {
+          dt = DateFormat("yyyy-MM-dd").parse(cleaned);
+        } catch (_) {
+          try {
+            dt = DateFormat("dd-MM-yyyy HH:mm:ss").parse(cleaned);
+          } catch (_) {
+            try {
+              dt = DateFormat("dd-MM-yyyy").parse(cleaned);
+            } catch (_) {}
+          }
+        }
+      }
+    }
+    return dt;
+  }
+
   List<dynamic> get filteredTransactions {
     return _transactions.where((tx) {
       final createdOn = tx["created_at"]?.toString() ?? tx["created_on"]?.toString() ?? "";
       if (createdOn.isEmpty) return false;
-      final parsedDate = DateTime.tryParse(createdOn);
+      final parsedDate = _parseDate(createdOn);
       if (parsedDate == null) return false;
-      return parsedDate.year == selectedDate.year && parsedDate.month == selectedDate.month;
+      return parsedDate.year == selectedDate.year &&
+             parsedDate.month == selectedDate.month &&
+             parsedDate.day == selectedDate.day;
     }).toList();
   }
 
@@ -246,33 +272,33 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
       ),
       body: Column(
         children: [
-          // Month picker
-          GestureDetector(
-            onTap: _pickMonth,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              color: AppColors.primary.withValues(alpha: 0.1),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    DateFormat('MMMM yyyy').format(selectedDate).toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
+          if (type != "pob")
+            GestureDetector(
+              onTap: _pickMonth,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                color: AppColors.primary.withValues(alpha: 0.1),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      DateFormat('dd MMMM yyyy').format(selectedDate).toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    Icon(
+                      Icons.calendar_today,
+                      size: 18,
                       color: AppColors.primary,
                     ),
-                  ),
-                  Icon(
-                    Icons.calendar_today,
-                    size: 18,
-                    color: AppColors.primary,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
 
           // Search Bar
           Padding(
@@ -399,8 +425,8 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
                 userId: int.tryParse(member['user_id']?.toString() ?? '') ?? 0,
                 fullname: name,
                 rolecode: role,
-                month: selectedDate.month,
-                year: selectedDate.year,
+                month: DateTime.now().month,
+                year: DateTime.now().year,
               ),
             ),
           );

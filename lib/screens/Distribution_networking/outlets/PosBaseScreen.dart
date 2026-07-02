@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
+import 'outlet_activity_provider.dart';
 import '../../../services/location_service.dart';
 import '../../../constants/app_colors.dart';
 import '../../../services/call_service.dart';
@@ -33,6 +35,11 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   bool isLoadingTabs = true;
   bool? isLocationValid;
   String locationError = "";
+  List<Widget> _tabViews = [];
+
+  void _buildTabViews() {
+    _tabViews = dynamicTabs.map((tab) => _getModuleBody(tab['module_code'], selectedTab)).toList();
+  }
 
   @override
   void initState() {
@@ -71,6 +78,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
               _isCheckedIn = true;
               _visitId = visitId;
               _checkInTime = checkInTime;
+              _buildTabViews();
             });
           }
           return;
@@ -116,12 +124,14 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
           setState(() {
             isLocationValid = false;
             locationError = "You are ${distance.toStringAsFixed(0)} meters away from the outlet. You must be within 50 meters to access POS.";
+            _buildTabViews();
           });
         }
       } else {
         if (mounted) {
           setState(() {
             isLocationValid = true;
+            _buildTabViews();
           });
         }
       }
@@ -130,6 +140,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         setState(() {
           isLocationValid = false;
           locationError = "Failed to get your location. Please check GPS and permissions.";
+          _buildTabViews();
         });
       }
     }
@@ -185,6 +196,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
             _isCheckedIn = true;
             _visitId = visitId;
             _checkInTime = checkInTime;
+            _buildTabViews();
           });
 
           SuccessDialog.show(
@@ -288,40 +300,45 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
     setState(() {
       dynamicTabs = tabs;
       isLoadingTabs = false;
+      _buildTabViews();
     });
   }
 
-  Widget _getModuleBody(String moduleCode) {
+  Widget _getModuleBody(String moduleCode, int currentTab) {
     if (isLocationValid == false) {
       return RestrictedModuleView(
+        key: ValueKey("restricted_${moduleCode}_$currentTab"),
         locationError: locationError,
         onRetry: _checkLocation,
       );
     }
+    final key = ValueKey("${moduleCode}_$currentTab");
     switch (moduleCode) {
       case "SAMP":
-        return SamplingBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
+        return SamplingBody(key: key, outletId: int.tryParse(widget.outlet.id) ?? 0);
       case "STOCK":
-        return StockBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
+        return StockBody(key: key, outletId: int.tryParse(widget.outlet.id) ?? 0);
       case "POB":
         return PobBody(
+          key: key,
           outletId: int.tryParse(widget.outlet.id) ?? 0,
           outletLat: widget.outlet.latitude,
           outletLng: widget.outlet.longitude,
         );
       case "BRD":
-        return const BrandingBody();
+        return BrandingBody(key: key);
       case "PRM":
-        return const PromotionsBody();
+        return PromotionsBody(key: key);
       case "SALE":
-        return SaleBody(outletId: int.tryParse(widget.outlet.id) ?? 0);
+        return SaleBody(key: key, outletId: int.tryParse(widget.outlet.id) ?? 0);
       case "MKT":
         return MarketingBody(
+          key: key,
           outletId: int.tryParse(widget.outlet.id) ?? 0,
           visitId: _visitId,
         );
       default:
-        return Center(child: Text("$moduleCode Screen"));
+        return Center(key: key, child: Text("$moduleCode Screen"));
     }
   }
 
@@ -423,7 +440,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
             Expanded(
               child: IndexedStack(
                 index: selectedTab,
-                children: dynamicTabs.map((tab) => _getModuleBody(tab['module_code'])).toList(),
+                children: _tabViews,
               ),
             ),
           ] else ...[
@@ -432,7 +449,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
               Expanded(
                 child: IndexedStack(
                   index: selectedTab,
-                  children: dynamicTabs.map((tab) => _getModuleBody(tab['module_code'])).toList(),
+                  children: _tabViews,
                 ),
               ),
             ] else
@@ -720,9 +737,13 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
 
           return GestureDetector(
             onTap: () {
-              setState(() {
-                selectedTab = index;
-              });
+              if (selectedTab != index) {
+                Provider.of<OutletActivityProvider>(context, listen: false).clearQuantities();
+                setState(() {
+                  selectedTab = index;
+                  _buildTabViews();
+                });
+              }
             },
             child: Container(
               padding: const EdgeInsets.symmetric(
