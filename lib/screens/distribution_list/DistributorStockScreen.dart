@@ -92,9 +92,41 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
                         return _buildProductSection(product, provider);
                       }).toList(),
                     const SizedBox(height: 10),
+                    // Error banner — shown when API returns an error
+                    if (provider.submitStockError != null)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          border: Border.all(color: Colors.red.shade300, width: 1.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                provider.submitStockError!,
+                                style: TextStyle(
+                                  color: Colors.red.shade800,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => provider.clearSubmitError(),
+                              child: Icon(Icons.close, color: Colors.red.shade400, size: 18),
+                            ),
+                          ],
+                        ),
+                      ),
                     Container(
                       width: double.infinity,
-                      margin: const EdgeInsets.symmetric(vertical: 10),
+                      margin: const EdgeInsets.symmetric(vertical: 4),
                       height: 45,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
@@ -119,15 +151,10 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
                           LoadingDialog.hide(context);
 
                           if (success) {
+                            provider.clearSubmitError();
                             SuccessDialog.show(context, message: "Stock Submitted Successfully!");
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(provider.submitStockError ?? "Failed to submit stock or no stock entered"),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
                           }
+                          // Error is shown via the banner above — no extra snackbar needed
                         },
                         child: const Text(
                           "SUBMIT STOCK UPDATE",
@@ -187,6 +214,14 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
   }
 
   Widget _buildDistributorSelectionHeader(BuildContext context, DistributionListProvider provider) {
+    final now = DateTime.now();
+    final monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    final monthName = monthNames[now.month - 1];
+    final year = now.year;
+
     return Card(
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -197,9 +232,38 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "DISTRIBUTOR SELECTION",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "DISTRIBUTOR SELECTION",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary),
+                ),
+                // Month & Year badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.calendar_month, size: 13, color: AppColors.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        "$monthName $year",
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             Row(
@@ -244,229 +308,6 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
       ),
     );
   }
-
-  /*
-  InputDecoration _dialogInputDecoration({
-    required String labelText,
-    required String hintText,
-    required IconData prefixIcon,
-  }) {
-    return InputDecoration(
-      labelText: labelText,
-      hintText: hintText,
-      prefixIcon: Icon(prefixIcon, color: AppColors.button, size: 20),
-      labelStyle: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      filled: true,
-      fillColor: Colors.grey.shade50,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: AppColors.button, width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Colors.red, width: 1),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Colors.red, width: 1.5),
-      ),
-    );
-  }
-  */
-
-  /*
-  void _showCreateDistributorDialog(BuildContext context, DistributionListProvider provider) {
-    final nameController = TextEditingController();
-    final ownerController = TextEditingController();
-    final contactController = TextEditingController();
-    final mobileController = TextEditingController();
-    final emailController = TextEditingController();
-    final addressController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: Row(
-            children: [
-              const Icon(Icons.add_business, color: AppColors.button, size: 24),
-              const SizedBox(width: 10),
-              const Text(
-                "CREATE DISTRIBUTOR",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: AppColors.button,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.9,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: nameController,
-                      style: const TextStyle(fontSize: 14),
-                      decoration: _dialogInputDecoration(
-                        labelText: "Distributor Name*",
-                        hintText: "e.g. ABC Distributors",
-                        prefixIcon: Icons.storefront,
-                      ),
-                      validator: (v) => v == null || v.trim().isEmpty ? "Required" : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: ownerController,
-                      style: const TextStyle(fontSize: 14),
-                      decoration: _dialogInputDecoration(
-                        labelText: "Owner Name*",
-                        hintText: "e.g. Ramesh Kumar",
-                        prefixIcon: Icons.person,
-                      ),
-                      validator: (v) => v == null || v.trim().isEmpty ? "Required" : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: contactController,
-                      style: const TextStyle(fontSize: 14),
-                      decoration: _dialogInputDecoration(
-                        labelText: "Contact Person*",
-                        hintText: "e.g. Suresh",
-                        prefixIcon: Icons.badge,
-                      ),
-                      validator: (v) => v == null || v.trim().isEmpty ? "Required" : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: mobileController,
-                      style: const TextStyle(fontSize: 14),
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(10),
-                      ],
-                      decoration: _dialogInputDecoration(
-                        labelText: "Mobile*",
-                        hintText: "e.g. 9876543210",
-                        prefixIcon: Icons.phone_iphone,
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return "Required";
-                        if (v.trim().length != 10) return "Must be 10 digits";
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: emailController,
-                      style: const TextStyle(fontSize: 14),
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: _dialogInputDecoration(
-                        labelText: "Email*",
-                        hintText: "e.g. abc@gmail.com",
-                        prefixIcon: Icons.email,
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return "Required";
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v.trim())) {
-                          return "Enter a valid email";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: addressController,
-                      style: const TextStyle(fontSize: 14),
-                      maxLines: 2,
-                      decoration: _dialogInputDecoration(
-                        labelText: "Address*",
-                        hintText: "e.g. Hyderabad",
-                        prefixIcon: Icons.location_on,
-                      ),
-                      validator: (v) => v == null || v.trim().isEmpty ? "Required" : null,
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.grey.shade600,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              ),
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                "CANCEL",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.button,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                elevation: 2,
-              ),
-              onPressed: () async {
-                if (formKey.currentState?.validate() ?? false) {
-                  final payload = {
-                    "distributor_name": nameController.text.trim(),
-                    "owner_name": ownerController.text.trim(),
-                    "contact_person": contactController.text.trim(),
-                    "mobile": mobileController.text.trim(),
-                    "email": emailController.text.trim(),
-                    "address": addressController.text.trim(),
-                  };
-                  LoadingDialog.show(context, message: "Creating distributor...");
-                  final success = await provider.createDistributor(payload);
-                  if (context.mounted) {
-                     LoadingDialog.hide(context);
-                     if (success) {
-                       Navigator.pop(context);
-                       ScaffoldMessenger.of(context).showSnackBar(
-                         const SnackBar(content: Text("Distributor Created successfully!")),
-                       );
-                     } else {
-                       ScaffoldMessenger.of(context).showSnackBar(
-                         const SnackBar(content: Text("Failed to create distributor")),
-                       );
-                     }
-                  }
-                }
-              },
-              child: const Text("CREATE", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-  */
 
   void _showDistributorSearchBottomSheet(
       BuildContext context, DistributionListProvider provider) {

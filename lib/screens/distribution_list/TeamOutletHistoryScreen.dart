@@ -531,7 +531,17 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
           final checkin = visit["checkin_time"]?.toString() ?? "";
           final checkout = visit["checkout_time"]?.toString() ?? "";
           final address = visit["checkin_address"]?.toString() ?? "N/A";
-          final durationMins = int.tryParse(visit["duration_minutes"]?.toString() ?? '') ?? 0;
+          int durationMins = int.tryParse(visit["duration_minutes"]?.toString() ?? '') ?? 0;
+          // If visit is active (no checkout), compute live duration from check-in time
+          if (durationMins == 0 && checkout.isEmpty && checkin.isNotEmpty) {
+            try {
+              final parsedCheckIn = DateTime.tryParse(checkin.trim())?.toLocal();
+              if (parsedCheckIn != null) {
+                final liveDiff = DateTime.now().difference(parsedCheckIn).inMinutes;
+                if (liveDiff > 0) durationMins = liveDiff;
+              }
+            } catch (_) {}
+          }
           final durationStr = durationMins >= 60
               ? "${(durationMins / 60.0).toStringAsFixed(1)} Hours"
               : "$durationMins Mins";

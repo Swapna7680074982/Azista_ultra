@@ -20,11 +20,18 @@ class ApiServices {
         final path = response.requestOptions.path;
         final isLogin = path.contains('/user/login');
         final isRefresh = path.contains('/user/refresh_token');
+        final isLogout = path.contains('/user/logout');
 
-        if (!isLogin && !isRefresh &&
+        if (!isLogin && !isRefresh && !isLogout &&
             (response.statusCode == 401 ||
                 (response.data is Map &&
                     response.data["message"]?.toString().contains("Token expired") == true))) {
+          final token = await SessionManager.getToken();
+          final refreshTokenStr = await SessionManager.getRefreshToken();
+          if (token == null || refreshTokenStr == null || token.isEmpty || refreshTokenStr.isEmpty) {
+            return handler.next(response);
+          }
+
           final success = await refreshToken();
           if (success) {
             final token = await SessionManager.getToken();
@@ -47,7 +54,10 @@ class ApiServices {
               return handler.next(response);
             }
           } else {
-            await _handleTokenExpired();
+            final tokenNow = await SessionManager.getToken();
+            if (tokenNow != null && tokenNow.isNotEmpty) {
+              await _handleTokenExpired();
+            }
           }
         }
         return handler.next(response);
@@ -56,11 +66,18 @@ class ApiServices {
         final path = e.requestOptions.path;
         final isLogin = path.contains('/user/login');
         final isRefresh = path.contains('/user/refresh_token');
+        final isLogout = path.contains('/user/logout');
 
-        if (!isLogin && !isRefresh &&
+        if (!isLogin && !isRefresh && !isLogout &&
             (e.response?.statusCode == 401 ||
                 (e.response?.data is Map &&
                     e.response?.data["message"]?.toString().contains("Token expired") == true))) {
+          final token = await SessionManager.getToken();
+          final refreshTokenStr = await SessionManager.getRefreshToken();
+          if (token == null || refreshTokenStr == null || token.isEmpty || refreshTokenStr.isEmpty) {
+            return handler.next(e);
+          }
+
           final success = await refreshToken();
           if (success) {
             final token = await SessionManager.getToken();
@@ -83,7 +100,10 @@ class ApiServices {
               return handler.next(e);
             }
           } else {
-            await _handleTokenExpired();
+            final tokenNow = await SessionManager.getToken();
+            if (tokenNow != null && tokenNow.isNotEmpty) {
+              await _handleTokenExpired();
+            }
           }
         }
         return handler.next(e);

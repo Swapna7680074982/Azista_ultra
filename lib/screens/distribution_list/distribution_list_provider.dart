@@ -49,6 +49,11 @@ class DistributionListProvider extends ChangeNotifier {
 
   String? _submitStockError;
   String? get submitStockError => _submitStockError;
+
+  void clearSubmitError() {
+    _submitStockError = null;
+    notifyListeners();
+  }
   
   bool _isLoadingStock = false;
   bool get isLoadingStock => _isLoadingStock;
@@ -170,6 +175,7 @@ class DistributionListProvider extends ChangeNotifier {
                   "product_name": item['product_name'] ?? 'Unknown Product',
                   "sku_name": item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'Unknown SKU',
                   "qty": item['quantity']?.toString() ?? "0",
+                  "distributor_name": record['distributor_name'] ?? "",
                   "stock_year": recordYear ?? parsedDate.year.toString(),
                   "stock_month": recordMonth ?? parsedDate.month.toString(),
                 });
@@ -185,6 +191,7 @@ class DistributionListProvider extends ChangeNotifier {
                 "product_name": item['product_name'] ?? 'Unknown Product',
                 "sku_name": item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'Unknown SKU',
                 "qty": item['quantity']?.toString() ?? "0",
+                "distributor_name": record['distributor_name'] ?? "",
                 "stock_year": recordYear ?? year.toString(),
                 "stock_month": recordMonth ?? monthNum.toString(),
               });
@@ -275,8 +282,20 @@ class DistributionListProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     }
-    
-    _submitStockError = response != null ? response['message']?.toString() : "Failed to submit stock";
+
+    if (response != null) {
+      final message = response['message']?.toString().toLowerCase() ?? "";
+
+      if (message.contains("stock already uploaded")) {
+        _submitStockError =
+        "Stock has already been submitted for the selected distributor.";
+      } else {
+        _submitStockError = response['message']?.toString() ?? "Failed to submit stock.";
+      }
+    } else {
+      _submitStockError = "Failed to submit stock.";
+    }
+
     notifyListeners();
     return false;
   }

@@ -4,6 +4,7 @@ import '../../constants/app_colors.dart';
 import '../../services/api_services.dart';
 import '../../utilities/common_widgets.dart';
 import '../../utilities/date_formatter.dart';
+import '../../permissions/SessionManager.dart';
 import 'TeamMemberDetailScreen.dart';
 
 class TeamPosHistoryScreen extends StatefulWidget {
@@ -22,6 +23,9 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
   final Map<String, String> _outletNameLookup = {};
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
+  String? _currentUserRole;
+  String? _currentUserId;
+
 
   final List<Map<String, String>> _tabs = [
     {"label": "POB", "code": "pob"},
@@ -35,9 +39,28 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
     _tabController.addListener(_handleTabChange);
+    _loadUserRoleAndId();
     _loadOutletNames();
     _fetchHistory();
   }
+
+  Future<void> _loadUserRoleAndId() async {
+    try {
+      final role = await SessionManager.getUserRole();
+      final userInfo = await SessionManager.getUserInfo();
+      _currentUserRole = _normalizeRole(role);
+      _currentUserId = userInfo?['user_id']?.toString();
+    } catch (_) {}
+  }
+
+  String _normalizeRole(String role) {
+    final norm = role.trim().toUpperCase();
+    if (norm == 'ASM' || norm == 'AM') return 'AM';
+    if (norm == 'RM') return 'RM';
+    if (norm == 'SO' || norm.contains('SALE') || norm.contains('SALES')) return 'SO';
+    return norm;
+  }
+
 
   Future<void> _loadOutletNames() async {
     if (!mounted) return;
@@ -205,6 +228,22 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
 
     if (type == "pob") {
       var list = _transactions;
+      // Apply hierarchical role filter same as TeamAttendanceProvider
+      if (_currentUserRole != null) {
+        list = list.where((member) {
+          final memberRole = _normalizeRole(member["rolecode"]?.toString() ?? '');
+          final memberId = member['user_id']?.toString();
+          if (_currentUserRole == 'AM') {
+            if (memberRole == 'RM') return false;
+            if (memberRole == 'AM') return _currentUserId == null || memberId == _currentUserId;
+            return true; // SO and others
+          } else if (_currentUserRole == 'RM') {
+            if (memberRole == 'RM') return _currentUserId == null || memberId == _currentUserId;
+            return true; // AM and SO
+          }
+          return true;
+        }).toList();
+      }
       if (_searchQuery.isNotEmpty) {
         list = list.where((member) {
           final name = (member["fullname"]?.toString() ?? "").toLowerCase();

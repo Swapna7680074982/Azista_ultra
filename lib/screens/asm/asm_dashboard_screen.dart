@@ -191,7 +191,7 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                 ),
                 _buildMenuItem(
                   iconPath: Icons.history,
-                  label: "Team POS History",
+                  label: "Team POB History",
                   enabled: appState.isOnline,
                   onTap: () {
                     Navigator.push(
@@ -251,25 +251,50 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
     String checkIn = "-";
     bool hasActiveSession = false;
 
+    final today = DateTime.now();
+
+    // Separate completed sessions and find the single latest active session
+    Map<String, dynamic>? latestActiveSession;
+
     for (var session in sessions) {
       final sCheckIn = session["check_in"];
+      // Only count sessions from today
+      if (sCheckIn != null) {
+        try {
+          final sessionDate = DateTime.parse(sCheckIn.toString()).toLocal();
+          if (sessionDate.year != today.year ||
+              sessionDate.month != today.month ||
+              sessionDate.day != today.day) {
+            continue;
+          }
+        } catch (_) {}
+      }
+
       final sCheckOut = session["check_out"];
       final sHours = double.tryParse(session["working_hours"]?.toString() ?? "0") ?? 0.0;
 
       if (sCheckOut != null) {
+        // Completed session — add its recorded working hours
         totalHours += sHours;
       } else {
+        // Active (no check-out) — keep only the latest one
         if (sCheckIn != null) {
-          checkIn = sCheckIn;
-          hasActiveSession = true;
-          try {
-            final checkInTime = DateTime.parse(sCheckIn);
-            final diff = DateTime.now().difference(checkInTime);
-            totalHours += diff.inMinutes / 60.0;
-          } catch (e) {
-            totalHours += sHours;
-          }
+          latestActiveSession = session;
         }
+      }
+    }
+
+    // Add elapsed time for the single latest active session only
+    if (latestActiveSession != null) {
+      final sCheckIn = latestActiveSession["check_in"];
+      checkIn = sCheckIn;
+      hasActiveSession = true;
+      try {
+        final checkInTime = DateTime.parse(sCheckIn.toString()).toLocal();
+        final diff = DateTime.now().difference(checkInTime);
+        totalHours += diff.inMinutes / 60.0;
+      } catch (e) {
+        totalHours += double.tryParse(latestActiveSession["working_hours"]?.toString() ?? "0") ?? 0.0;
       }
     }
 

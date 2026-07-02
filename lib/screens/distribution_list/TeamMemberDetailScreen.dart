@@ -271,10 +271,6 @@ class _TeamMemberDetailScreenState extends State<TeamMemberDetailScreen> {
               ),
             ],
           ),
-          Text(
-            "Period: ${widget.month}/${widget.year}",
-            style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold),
-          ),
         ],
       ),
     );

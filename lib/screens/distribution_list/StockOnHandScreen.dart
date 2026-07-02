@@ -32,6 +32,8 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
     });
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     return Consumer<DistributionListProvider>(
@@ -198,7 +200,10 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
                   itemBuilder: (context, index) {
                     final date = provider.submissions.keys.elementAt(index);
                     final products = provider.submissions[date]!;
-                    
+                    final firstProd = products.first;
+
+                    final distributorName =
+                        firstProd['distributor_name']?.toString() ?? "";
                      String stockPeriodText = "";
                     if (products.isNotEmpty) {
                       final firstProd = products.first;
@@ -231,9 +236,25 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "SUBMISSION ON ${DateFormatter.formatDateTime(date)}",
-                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  distributorName,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Submitted On: ${DateFormatter.formatDateTime(date)}",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                             if (stockPeriodText.isNotEmpty) ...[
                               const SizedBox(height: 4),

@@ -348,7 +348,7 @@ class _PobBodyState extends State<PobBody> {
                                 );
                               },
                               child: const Text(
-                                "POS HISTORY",
+                                "POB HISTORY",
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
