@@ -754,8 +754,10 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
                         final price = double.tryParse(item["ptr_price"]?.toString() ?? '') ?? 0.0;
                         final subtotal = double.tryParse(item["ptr_subtotal"]?.toString() ?? '') ?? 0.0;
                         
-                        final isSuppliedOverall = status.toLowerCase().trim() == "supplied";
-                        final supplied = isSuppliedOverall ? (item["supplied_qty"]?.toString() ?? "0") : "0";
+                        final supplied = item["supplied_qty"]?.toString() ?? "0";
+                        final int totalQty = int.tryParse(qty) ?? 0;
+                        final int suppliedQty = int.tryParse(supplied) ?? 0;
+                        final int remaining = totalQty - suppliedQty;
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -795,6 +797,18 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
                                     child: Text(
                                       "Supplied: $supplied",
                                       style: TextStyle(fontSize: 10, color: Colors.green.shade800, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade50,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      "Remaining: $remaining",
+                                      style: TextStyle(fontSize: 10, color: Colors.orange.shade800, fontWeight: FontWeight.bold),
                                     ),
                                   ),
                                   const Spacer(),

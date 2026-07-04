@@ -25,7 +25,8 @@ class ApiServices {
         if (!isLogin && !isRefresh && !isLogout &&
             (response.statusCode == 401 ||
                 (response.data is Map &&
-                    response.data["message"]?.toString().contains("Token expired") == true))) {
+                    (response.data["message"]?.toString().contains("Token expired") == true ||
+                     response.data["message"]?.toString().contains("Token revoked") == true)))) {
           final token = await SessionManager.getToken();
           final refreshTokenStr = await SessionManager.getRefreshToken();
           if (token == null || refreshTokenStr == null || token.isEmpty || refreshTokenStr.isEmpty) {
@@ -71,7 +72,8 @@ class ApiServices {
         if (!isLogin && !isRefresh && !isLogout &&
             (e.response?.statusCode == 401 ||
                 (e.response?.data is Map &&
-                    e.response?.data["message"]?.toString().contains("Token expired") == true))) {
+                    (e.response?.data["message"]?.toString().contains("Token expired") == true ||
+                     e.response?.data["message"]?.toString().contains("Token revoked") == true)))) {
           final token = await SessionManager.getToken();
           final refreshTokenStr = await SessionManager.getRefreshToken();
           if (token == null || refreshTokenStr == null || token.isEmpty || refreshTokenStr.isEmpty) {

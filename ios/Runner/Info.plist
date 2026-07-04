@@ -67,11 +67,11 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app requires access to your location when in use to show your position on maps, verify your proximity to client outlets, and check in for daily attendance. For example, verifying you are at an outlet when submitting a Purchase Order Booking (POB) or checking in at a store.</string>
+	<string>This app requires access to your location when in use to show your current position on maps, verify your proximity to client outlets, and check in for daily attendance. For example, verifying you are physically at a client store when submitting a Purchase Order Booking (POB) or checking in for attendance.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>This app requires continuous access to your location to track sales routes, verify proximity to client outlets, and record attendance check-ins even when the app is in the background. For example, maintaining route tracking while traveling between client locations.</string>
+	<string>This app requires continuous access to your location to track sales routes, verify proximity to client outlets, and record attendance check-ins even when the app is in the background. For example, verifying your route while traveling between stores to register visits.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>This app requires access to your location in both the foreground and background to show your position on maps, verify proximity to client outlets, track sales routes, and record attendance check-ins. For example, verifying you are within the required range of a store to perform a check-in or submit a purchase order.</string>
+	<string>This app requires access to your location in both the foreground and background to show your position on maps, verify proximity to client outlets, track sales routes, and record attendance check-ins. For example, verifying you are within the required range of a store to perform a check-in or submit a Purchase Order Booking (POB).</string>
 	<key>NSCameraUsageDescription</key>
 	<string>This app requires access to your camera to capture photos of store displays, marketing materials, and products. For example, taking a photo of a shelf display when registering promotional materials at an outlet.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

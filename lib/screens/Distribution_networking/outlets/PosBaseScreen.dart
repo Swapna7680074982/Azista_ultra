@@ -123,7 +123,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         if (mounted) {
           setState(() {
             isLocationValid = false;
-            locationError = "You are ${distance.toStringAsFixed(0)} meters away from the outlet. You must be within 50 meters to access POS.";
+            locationError = "You are ${distance.toStringAsFixed(0)} meters away from the outlet. You must be within 50 meters to access POB.";
             _buildTabViews();
           });
         }
@@ -347,7 +347,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          "POINT OF SALE",
+          "PURCHASE ORDER BOOKING",
           style: TextStyle(
             color: AppColors.white,
             fontSize: 18,
@@ -404,7 +404,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                         context: context,
                         builder: (ctx) => AlertDialog(
                           title: const Text("Confirm Check-Out"),
-                          content: Text("Are you sure you want to check out of ${widget.outlet.name}? This will lock the point of sale features."),
+                          content: Text("Are you sure you want to check out of ${widget.outlet.name}? This will lock the POB features."),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(ctx),
@@ -474,7 +474,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                             ),
                             const SizedBox(height: 8),
                             const Text(
-                              "You must check in to this outlet to access POS and submit sales, stock, POB, or marketing activities.",
+                              "You must check in to this outlet to access POB features and submit sales, stock, POB, or marketing activities.",
                               textAlign: TextAlign.center,
                               style: TextStyle(fontSize: 13, color: Colors.grey),
                             ),

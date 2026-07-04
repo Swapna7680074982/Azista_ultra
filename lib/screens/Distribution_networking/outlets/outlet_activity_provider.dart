@@ -283,9 +283,9 @@ class OutletActivityProvider extends ChangeNotifier {
         {"activity_type_id": "8", "activity_name": "Feedback"},
         {"activity_type_id": "9", "activity_name": "New Outlet Registration"},
         {"activity_type_id": "1", "activity_name": "POB"},
-        {"activity_type_id": "2", "activity_name": "POS Sale"},
-        {"activity_type_id": "3", "activity_name": "POS Sampling"},
-        {"activity_type_id": "4", "activity_name": "POS Stock"},
+        {"activity_type_id": "2", "activity_name": "POB Sale"},
+        {"activity_type_id": "3", "activity_name": "POB Sampling"},
+        {"activity_type_id": "4", "activity_name": "POB Stock"},
         {"activity_type_id": "6", "activity_name": "Product Display"}
       ];
     }

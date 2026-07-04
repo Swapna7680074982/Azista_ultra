@@ -191,7 +191,7 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                 ),
                 _buildMenuItem(
                   iconPath: Icons.history,
-                  label: "Team POS History",
+                  label: "Team POB History",
                   enabled: appState.isOnline,
                   onTap: () {
                     Navigator.push(

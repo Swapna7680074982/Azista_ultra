@@ -277,7 +277,7 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          "TEAM POS HISTORY",
+          "TEAM POB HISTORY",
           style: TextStyle(
             color: AppColors.white,
             fontSize: 18,
