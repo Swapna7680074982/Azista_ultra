@@ -78,7 +78,13 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
     if (_isFetchingAddress) return;
     setState(() => _isFetchingAddress = true);
     try {
-      final dio = Dio();
+      final dio = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+          sendTimeout: const Duration(seconds: 15),
+        ),
+      );
       final url = "https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng";
       final response = await dio.get(
         url,

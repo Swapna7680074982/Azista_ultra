@@ -14,7 +14,13 @@ import 'navigation_service.dart';
 
 
 class ApiServices {
-  static final Dio _dio = Dio()..interceptors.add(
+  static final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
+      sendTimeout: const Duration(seconds: 15),
+    ),
+  )..interceptors.add(
     InterceptorsWrapper(
       onResponse: (response, handler) async {
         final path = response.requestOptions.path;
@@ -181,7 +187,13 @@ class ApiServices {
       AppLogger.info("Payload: ${jsonEncode(payload)}");
 
       // Use a separate Dio instance to avoid infinite loops
-      final dio = Dio();
+      final dio = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+          sendTimeout: const Duration(seconds: 15),
+        ),
+      );
       final response = await dio.post(
         AppUrls.refreshToken,
         data: payload,
