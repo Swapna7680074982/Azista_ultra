@@ -33,13 +33,23 @@ class LoginProvider extends ChangeNotifier {
       if (response != null) {
         final status = response["status"];
         if (status == true || status == "success" || status == 1) {
-          final data = response["data"];
+          final data = (response["data"] is Map) ? response["data"] : response;
+          final token = data["access_token"] ?? response["access_token"];
+          final refreshToken = data["refresh_token"] ?? response["refresh_token"];
+
+          if (token == null || refreshToken == null) {
+            error = "Missing login tokens in response";
+            isLoading = false;
+            notifyListeners();
+            return false;
+          }
+
           await SessionManager.saveSession(
-            refreshToken: data["refresh_token"],
-            token: data["access_token"],
+            refreshToken: refreshToken,
+            token: token,
           );
 
-          final userInfo = data["user_info"];
+          final userInfo = data["user_info"] ?? response["user_info"];
           if (userInfo != null) {
             final name = userInfo["name"]?.toString() ?? "Unknown";
             final rolecode = userInfo["rolecode"]?.toString().trim();
@@ -47,7 +57,7 @@ class LoginProvider extends ChangeNotifier {
             await SessionManager.saveUserDetails(name, role, userInfo: userInfo);
           }
 
-          final attendanceStatus = data["attendance_status"]?["today_status"];
+          final attendanceStatus = (data["attendance_status"] ?? response["attendance_status"])?["today_status"];
           await SessionManager.saveAttendanceStatus(attendanceStatus);
 
           isLoading = false;

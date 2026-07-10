@@ -179,8 +179,8 @@ class ApiServices {
         "device_name": Platform.isAndroid ? "Android Device" : "iOS Device",
         "device_type": deviceType,
         "app_version": "1.0.0",
-        "latitude": coords[0],
-        "longitude": coords[1],
+        "latitude": double.tryParse(coords[0]) ?? 0.0,
+        "longitude": double.tryParse(coords[1]) ?? 0.0,
       };
 
       AppLogger.info("Refresh Token API called");
@@ -242,7 +242,10 @@ class ApiServices {
         "meta": {
           "deviceId": deviceId,
           "deviceTS": _formatDateTime(),
-          "coordinates": coords,
+          "coordinates": [
+            double.tryParse(coords[0]) ?? 0.0,
+            double.tryParse(coords[1]) ?? 0.0,
+          ],
           "fcmToken": token,
         }
       };
