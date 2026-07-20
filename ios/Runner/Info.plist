@@ -66,8 +66,10 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationUsageDescription</key>
+	<string>This app requires access to your GPS location to verify your presence at client outlets for check-in/check-out, record attendance, and display nearby stores on the map. For example, when you perform a store check-in to submit a Purchase Order Booking (POB), the app uses your location to confirm you are physically at that outlet location.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app requires access to your location when open to show nearby client outlets on the map, verify your proximity to stores for check-in/check-out, and log your attendance. For example, when you check in to submit a Purchase Order Booking (POB) at a store, the app checks your GPS location to confirm you are within 50 meters of that specific outlet.</string>
+	<string>This app requires access to your GPS location while using the app to show nearby client outlets on the map, verify your proximity to stores for check-in and check-out, and record your attendance. For example, when you check in to submit a Purchase Order Booking (POB) at a store, the app checks your GPS location to confirm you are within 50 meters of that specific outlet.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>This app requires continuous access to your location to track sales routes, verify proximity to client outlets, and record attendance check-ins even when the app is in the background or closed. For example, tracking your route while traveling between stores to log sales visits and verify store check-ins automatically.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
