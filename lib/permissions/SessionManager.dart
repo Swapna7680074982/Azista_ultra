@@ -90,7 +90,20 @@ class SessionManager {
   }
 
   static Future<bool> isSessionExpired() async {
-    return false;
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(_tokenKey);
+    if (token == null || token.trim().isEmpty) {
+      return true;
+    }
+    final expiryStr = prefs.getString(_expiryKey);
+    if (expiryStr == null) {
+      return false;
+    }
+    final expiry = DateTime.tryParse(expiryStr);
+    if (expiry == null) {
+      return false;
+    }
+    return DateTime.now().isAfter(expiry);
   }
 
   static const _outletCheckInOutletIdKey = "outlet_check_in_outlet_id";

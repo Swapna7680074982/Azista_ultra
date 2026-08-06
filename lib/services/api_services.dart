@@ -16,9 +16,9 @@ import 'navigation_service.dart';
 class ApiServices {
   static final Dio _dio = Dio(
     BaseOptions(
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
-      sendTimeout: const Duration(seconds: 15),
+      connectTimeout: const Duration(seconds: 50),
+      receiveTimeout: const Duration(seconds: 50),
+      sendTimeout: const Duration(seconds: 50),
     ),
   )..interceptors.add(
     InterceptorsWrapper(
@@ -171,6 +171,9 @@ class ApiServices {
       final coords = await LocationService.getCoordinates(
         requestPermission: false,
         throwOnError: false,
+      ).timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => ["0.0", "0.0"],
       );
 
       final payload = {
@@ -189,9 +192,9 @@ class ApiServices {
       // Use a separate Dio instance to avoid infinite loops
       final dio = Dio(
         BaseOptions(
-          connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 15),
-          sendTimeout: const Duration(seconds: 15),
+          connectTimeout: const Duration(seconds: 50),
+          receiveTimeout: const Duration(seconds: 50),
+          sendTimeout: const Duration(seconds: 50),
         ),
       );
       final response = await dio.post(
@@ -227,6 +230,9 @@ class ApiServices {
       final coords = await LocationService.getCoordinates(
         requestPermission: false,
         throwOnError: false,
+      ).timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => ["0.0", "0.0"],
       );
 
       final deviceId =
