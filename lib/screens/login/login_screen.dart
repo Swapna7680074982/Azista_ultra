@@ -70,11 +70,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Container(
                     height: screenHeight * 0.42,
                     width: double.infinity,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Color(0x44EC161F),
-                          Color(0x449A014E),
+                          AppColors.primary.withOpacity(0.27),
+                          AppColors.button.withOpacity(0.27),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
