@@ -70,16 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Container(
                     height: screenHeight * 0.42,
                     width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary.withOpacity(0.27),
-                          AppColors.button.withOpacity(0.27),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
+                    color: AppColors.primary.withValues(alpha: 0.27),
                   ),
                 ),
                 // Wave 2: Foreground wave containing logo
@@ -88,16 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Container(
                     height: screenHeight * 0.39,
                     width: double.infinity,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary,
-                          AppColors.button,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
+                    color: AppColors.primary,
                     child: const Padding(
                       padding: EdgeInsets.only(top: 20, bottom: 40),
                       child: Center(child: _Logo()),
