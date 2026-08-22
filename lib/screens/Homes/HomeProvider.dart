@@ -28,20 +28,12 @@ class HomeProvider extends ChangeNotifier {
 
   Future<void> loadDistributors([AppStateProvider? appState]) async {
     distributors = await SessionManager.getDistributors();
-    // Do not auto-select the first distributor
-    /*
-    if (appState != null && distributors.isNotEmpty && appState.selectedDistributor == null) {
-      final defaultDistributor = distributors.first;
-      final name = defaultDistributor["distributor_name"];
-      int? id;
-      if (defaultDistributor["distributor_id"] is int) {
-        id = defaultDistributor["distributor_id"];
-      } else if (defaultDistributor["distributor_id"] != null) {
-        id = int.tryParse(defaultDistributor["distributor_id"].toString());
+    if (distributors.isEmpty) {
+      final res = await ApiServices.getDistributors();
+      if (res != null && res["data"] is List) {
+        distributors = res["data"];
       }
-      appState.setDistributor(name, id: id);
     }
-    */
     notifyListeners();
   }
 
@@ -223,8 +215,8 @@ class HomeProvider extends ChangeNotifier {
     if (res != null) {
       if (res["summary"] != null) {
         dailyCallSummary = res["summary"];
-      } else if (res["data"] != null) {
-        final dataList = res["data"] as List<dynamic>? ?? [];
+      } else if (res["data"] is List) {
+        final dataList = res["data"] as List<dynamic>;
         double targetCalls = 0;
         double productiveCalls = 0;
         for (var item in dataList) {
@@ -263,8 +255,8 @@ class HomeProvider extends ChangeNotifier {
     if (res != null) {
       if (res["summary"] != null) {
         monthlyCallSummary = res["summary"];
-      } else if (res["data"] != null) {
-        final dataList = res["data"] as List<dynamic>? ?? [];
+      } else if (res["data"] is List) {
+        final dataList = res["data"] as List<dynamic>;
         double targetCalls = 0;
         double productiveCalls = 0;
         for (var item in dataList) {

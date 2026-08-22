@@ -1,15 +1,12 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
-import '../../constants/image_constants.dart';
 import '../../permissions/AccessValidator.dart';
 import '../../permissions/AppStateProvider.dart';
 import '../Distribution_networking/outlets/outlet_provider.dart';
 import '../Distribution_networking/distribution_provider.dart';
 import 'HomeProvider.dart';
-import '../leave_management/leave_provider.dart';
 import '../attendance/attendance_provider.dart';
 import 'main_tab_provider.dart';
 
@@ -79,10 +76,47 @@ class CustomBottomNav extends StatelessWidget {
               },
               child: Column(
                 children: [
-                  Image.asset(
-                    ImageConstants.nearme,
+                  Container(
                     height: 70,
                     width: 70,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF8E0E13), // dark red outer circle
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Container(
+                        height: 52,
+                        width: 52,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFE53935), // light red middle circle
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Container(
+                            height: 34,
+                            width: 34,
+                            decoration: const BoxDecoration(
+                              color: Colors.white, // white inner circle
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.location_on,
+                                color: Color(0xFF8E0E13), // dark red icon
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(

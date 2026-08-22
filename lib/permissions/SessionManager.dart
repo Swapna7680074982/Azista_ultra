@@ -144,6 +144,11 @@ class SessionManager {
     return timeStr != null ? DateTime.parse(timeStr) : null;
   }
 
+  static Future<void> saveDistributors(List distributors) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_distributorsKey, jsonEncode(distributors));
+  }
+
   static Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();

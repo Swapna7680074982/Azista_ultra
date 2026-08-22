@@ -26,7 +26,12 @@ class ProductivityProvider extends ChangeNotifier {
 
     if (res != null) {
       callsSummary = res["summary"];
-      callsData = res["data"] ?? [];
+      final data = res["data"];
+      if (data is List) {
+        callsData = data;
+      } else {
+        callsData = [];
+      }
     } else {
       callsSummary = null;
       callsData = [];
