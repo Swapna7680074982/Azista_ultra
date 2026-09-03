@@ -55,7 +55,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
 
     try {
       final history = await ApiServices.getOutletHistory(outletId: currentOutletId);
-      if (history != null && history['status'] == true) {
+      if (history != null && (history['status'] == true || history['status'] == 'success' || history['visit_history'] != null)) {
         final List visits = history['visit_history'] ?? [];
         final activeVisit = visits.firstWhere(
           (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
@@ -181,7 +181,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         LoadingDialog.hide(context);
       }
 
-      if (response != null && response['status'] == true) {
+      if (response != null && (response['status'] == true || response['status'] == 'success')) {
         final visitId = response['visit_id'] ?? 0;
         final checkInTime = DateTime.now();
 
@@ -238,7 +238,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         LoadingDialog.hide(context);
       }
 
-      if (response != null && response['status'] == true) {
+      if (response != null && (response['status'] == true || response['status'] == 'success')) {
         await SessionManager.clearOutletCheckIn();
 
         if (mounted) {
@@ -271,7 +271,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   Future<void> _fetchModules() async {
     final response = await ApiServices.getModules();
     List<Map<String, dynamic>> tabs = [];
-    if (response != null && response['status'] == 'success') {
+    if (response != null && (response['status'] == 'success' || response['status'] == true || response['data'] != null)) {
       final List<dynamic> data = response['data'] ?? [];
       tabs = data.map((e) => e as Map<String, dynamic>).toList();
     } else {

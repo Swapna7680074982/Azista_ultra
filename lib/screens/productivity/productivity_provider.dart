@@ -18,22 +18,27 @@ class ProductivityProvider extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
-    final res = await ApiServices.getCallsInfo(
-      date: date,
-      month: month,
-      distributorId: distributorId,
-    );
+    try {
+      final res = await ApiServices.getCallsInfo(
+        date: date,
+        month: month,
+        distributorId: distributorId,
+      );
 
-    if (res != null) {
-      callsSummary = res["summary"];
-      callsData = res["data"] ?? [];
-    } else {
+      if (res != null) {
+        callsSummary = res["summary"];
+        callsData = res["data"] ?? [];
+      } else {
+        callsSummary = null;
+        callsData = [];
+      }
+    } catch (e) {
       callsSummary = null;
       callsData = [];
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
-
-    isLoading = false;
-    notifyListeners();
   }
 
   List<Map<String, String>> get dailyData {

@@ -168,7 +168,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         selectedDate = picked;
         _dataFuture = _fetchData(); // reload when date changes
@@ -212,17 +212,20 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
       "to_date": "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}",
     };
 
-    final results = await Future.wait([
+    final batch1 = await Future.wait([
       ApiServices.getPobHistory(payload: pobPayload),
-      ApiServices.getPosHistory(payload: {...payload, "pos_type": "sale"}),
-      ApiServices.getPosHistory(payload: {...payload, "pos_type": "stock"}),
       ApiServices.getUserOutlets(),
     ]);
+
+    final batch2 = await Future.wait([
+      ApiServices.getPosHistory(payload: {...payload, "pos_type": "sale"}),
+      ApiServices.getPosHistory(payload: {...payload, "pos_type": "stock"}),
+    ]);
     
-    final pobRes = results[0];
-    final saleRes = results[1];
-    final stockRes = results[2];
-    final outletsResponse = results[3];
+    final pobRes = batch1[0];
+    final outletsResponse = batch1[1];
+    final saleRes = batch2[0];
+    final stockRes = batch2[1];
 
     debugPrint("--- DEBUG USER TRANSACTIONS ---");
     debugPrint("POB HISTORY RESPONSE: $pobRes");
@@ -230,7 +233,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
     debugPrint("STOCK HISTORY RESPONSE: $stockRes");
 
     final Map<String, String> nameLookup = {};
-    if (outletsResponse != null && outletsResponse['status'] == true) {
+    if (outletsResponse != null && (outletsResponse['status'] == true || outletsResponse['status'] == 'success')) {
       final list = outletsResponse['data'] as List<dynamic>? ?? [];
       for (var o in list) {
         final id = o['outlet_id']?.toString();
@@ -243,7 +246,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
 
     final Map<String, Map<String, dynamic>> outletsMap = {};
     
-    if (pobRes != null && pobRes['status'] == 'success') {
+    if (pobRes != null && (pobRes['status'] == 'success' || pobRes['status'] == true)) {
       final data = (pobRes['data'] as List<dynamic>? ?? []).where((item) {
         final rawDate = item['created_at'] ?? item['created_on'];
         if (rawDate == null) return false;
@@ -266,7 +269,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
       }
     }
 
-    if (saleRes != null && saleRes['status'] == 'success') {
+    if (saleRes != null && (saleRes['status'] == 'success' || saleRes['status'] == true)) {
       final data = (saleRes['data'] as List<dynamic>? ?? []).where((item) {
         final rawDate = item['created_on'] ?? item['created_at'];
         if (rawDate == null) return false;
@@ -289,7 +292,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
       }
     }
 
-    if (stockRes != null && stockRes['status'] == 'success') {
+    if (stockRes != null && (stockRes['status'] == 'success' || stockRes['status'] == true)) {
       final data = (stockRes['data'] as List<dynamic>? ?? []).where((item) {
         final rawDate = item['created_on'] ?? item['created_at'];
         if (rawDate == null) return false;

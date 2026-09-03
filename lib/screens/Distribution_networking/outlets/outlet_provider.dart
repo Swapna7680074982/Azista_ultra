@@ -115,38 +115,54 @@ class OutletProvider extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
-    final response = await ApiServices.getUserOutlets(routeId: routeId);
-    if (response != null && response['data'] != null) {
-      final List<dynamic> data = response['data'];
-      _outlets = data.map((json) => Outlet.fromJson(json)).toList();
-    } else {
+    try {
+      final response = await ApiServices.getUserOutlets(routeId: routeId);
+      if (response != null && (response['status'] == true || response['status'] == 'success' || response['data'] != null)) {
+        final List<dynamic> data = response['data'] ?? [];
+        _outlets = data.map((json) => Outlet.fromJson(json)).toList();
+      } else {
+        _outlets = [];
+      }
+    } catch (e) {
+      debugPrint("Error fetching outlets: $e");
       _outlets = [];
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
-
-    isLoading = false;
-    notifyListeners();
   }
 
   Future<void> fetchNearbyOutlets(double latitude, double longitude, {int radius = 5, int? routeId}) async {
     isLoading = true;
     notifyListeners();
-    await _fetchNearbyOutletsInternal(latitude, longitude, radius: radius, routeId: routeId);
-    isLoading = false;
-    notifyListeners();
+    try {
+      await _fetchNearbyOutletsInternal(latitude, longitude, radius: radius, routeId: routeId);
+    } catch (e) {
+      debugPrint("Error fetching nearby outlets: $e");
+      _nearbyOutlets = [];
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> _fetchNearbyOutletsInternal(double latitude, double longitude, {int radius = 5, int? routeId}) async {
-    final response = await ApiServices.getNearbyOutlets(
-      latitude: latitude,
-      longitude: longitude,
-      radius: radius,
-      routeId: routeId,
-    );
-    
-    if (response != null && response['data'] != null) {
-      final List<dynamic> data = response['data'];
-      _nearbyOutlets = data.map((json) => Outlet.fromJson(json)).toList();
-    } else {
+    try {
+      final response = await ApiServices.getNearbyOutlets(
+        latitude: latitude,
+        longitude: longitude,
+        radius: radius,
+        routeId: routeId,
+      );
+      
+      if (response != null && (response['status'] == true || response['status'] == 'success' || response['data'] != null)) {
+        final List<dynamic> data = response['data'] ?? [];
+        _nearbyOutlets = data.map((json) => Outlet.fromJson(json)).toList();
+      } else {
+        _nearbyOutlets = [];
+      }
+    } catch (e) {
+      debugPrint("Error in _fetchNearbyOutletsInternal: $e");
       _nearbyOutlets = [];
     }
   }

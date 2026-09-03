@@ -44,23 +44,27 @@ class OutletActivityProvider extends ChangeNotifier {
     _isLoadingDistributorStock = true;
     notifyListeners();
 
-    final response = await ApiServices.getDistributorStock(distributorId: distributorId);
-    if (response != null && response['status'] == true) {
-      _distributorStock.clear();
-      final data = response['data'] as List<dynamic>? ?? [];
-      for (var product in data) {
-        final productId = product['product_id'];
-        final skus = product['skus'] as List<dynamic>? ?? [];
-        for (var sku in skus) {
-          final skuId = sku['sku_id'];
-          final stockQty = sku['stock_qty'] ?? 0;
-          _distributorStock["${productId}_$skuId"] = stockQty is int ? stockQty : int.tryParse(stockQty.toString()) ?? 0;
+    try {
+      final response = await ApiServices.getDistributorStock(distributorId: distributorId);
+      if (response != null && (response['status'] == true || response['status'] == "success" || response['data'] != null)) {
+        _distributorStock.clear();
+        final data = response['data'] as List<dynamic>? ?? [];
+        for (var product in data) {
+          final productId = product['product_id'];
+          final skus = product['skus'] as List<dynamic>? ?? [];
+          for (var sku in skus) {
+            final skuId = sku['sku_id'];
+            final stockQty = sku['stock_qty'] ?? 0;
+            _distributorStock["${productId}_$skuId"] = stockQty is int ? stockQty : int.tryParse(stockQty.toString()) ?? 0;
+          }
         }
       }
+    } catch (e) {
+      debugPrint("Error fetching distributor stock: $e");
+    } finally {
+      _isLoadingDistributorStock = false;
+      notifyListeners();
     }
-
-    _isLoadingDistributorStock = false;
-    notifyListeners();
   }
 
   Future<void> fetchProductsWithSkus({bool forceRefresh = false}) async {
@@ -75,16 +79,20 @@ class OutletActivityProvider extends ChangeNotifier {
     _isLoadingProducts = true;
     notifyListeners();
 
-    final response = await ApiServices.getProductsWithSkus();
-    if (response != null && response['status'] == true) {
-      _productsWithSkus = response['data'] ?? [];
-      _stockQuantities.clear();
-      _saleQuantities.clear();
-      _samplingQuantities.clear();
+    try {
+      final response = await ApiServices.getProductsWithSkus();
+      if (response != null && (response['status'] == true || response['status'] == "success" || response['data'] != null)) {
+        _productsWithSkus = response['data'] ?? [];
+        _stockQuantities.clear();
+        _saleQuantities.clear();
+        _samplingQuantities.clear();
+      }
+    } catch (e) {
+      debugPrint("Error fetching products with SKUs: $e");
+    } finally {
+      _isLoadingProducts = false;
+      notifyListeners();
     }
-
-    _isLoadingProducts = false;
-    notifyListeners();
   }
 
   void clearQuantities() {
@@ -149,14 +157,18 @@ class OutletActivityProvider extends ChangeNotifier {
       "items": items,
     };
 
-    final response = await ApiServices.submitPosTransaction(payload: payload);
-    
-    if (response != null && response['status'] == "success") {
-      targetMap.clear();
-      notifyListeners();
-      return {"status": true, "message": response['message'] ?? "$posType transaction success"};
+    try {
+      final response = await ApiServices.submitPosTransaction(payload: payload);
+      
+      if (response != null && (response['status'] == "success" || response['status'] == true)) {
+        targetMap.clear();
+        notifyListeners();
+        return {"status": true, "message": response['message'] ?? "$posType transaction success"};
+      }
+      return {"status": false, "message": response?['message'] ?? "Transaction failed"};
+    } catch (e) {
+      return {"status": false, "message": "Transaction error: $e"};
     }
-    return {"status": false, "message": "Transaction failed"};
   }
 
   Future<bool> submitPob(int outletId, {int? distributorId, File? imageFile, String remarks = ""}) async {
@@ -180,76 +192,85 @@ class OutletActivityProvider extends ChangeNotifier {
       return false; 
     }
 
-    final response = await ApiServices.generatePob(
-      outletId: outletId.toString(),
-      distributorId: distributorId?.toString(),
-      itemsJson: jsonEncode(items),
-      remarks: remarks,
-      orderCopy: imageFile,
-    );
-    
-    if (response != null && response['status'] == "success") {
-      _stockQuantities.clear();
-      notifyListeners();
-      return true;
+    try {
+      final response = await ApiServices.generatePob(
+        outletId: outletId.toString(),
+        distributorId: distributorId?.toString(),
+        itemsJson: jsonEncode(items),
+        remarks: remarks,
+        orderCopy: imageFile,
+      );
+      
+      if (response != null && (response['status'] == "success" || response['status'] == true)) {
+        _stockQuantities.clear();
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
     }
-    return false;
   }
 
   Future<void> fetchPobHistory(int outletId, {int? distributorId}) async {
     _isLoadingPobHistory = true;
     notifyListeners();
 
-    final payload = {
-      "outlet_id": outletId,
-    };
+    try {
+      final payload = {
+        "outlet_id": outletId,
+      };
 
-    final response = await ApiServices.getPobHistory(payload: payload);
-    if (response != null && response['status'] == "success") {
-      final data = response['data'] as List<dynamic>? ?? [];
-      final List<dynamic> normalizedData = [];
-      for (var pob in data) {
-        if (pob is Map) {
-          final pobMap = Map<String, dynamic>.from(pob);
-          final items = pobMap['items'] as List<dynamic>? ?? [];
-          bool allItemsSupplied = false;
-          if (items.isNotEmpty) {
-            allItemsSupplied = true;
-            for (var item in items) {
-              final double quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
-              final double remainingQty = double.tryParse(item['remaining_qty']?.toString() ?? '0') ?? 0;
-              final double suppliedQty = double.tryParse(item['supplied_qty']?.toString() ?? '0') ?? 0;
-              
-              if (item['remaining_qty'] != null) {
-                if (remainingQty > 0) {
-                  allItemsSupplied = false;
-                  break;
-                }
-              } else {
-                if (suppliedQty < quantity) {
-                  allItemsSupplied = false;
-                  break;
+      final response = await ApiServices.getPobHistory(payload: payload);
+      if (response != null && (response['status'] == "success" || response['status'] == true || response['data'] != null)) {
+        final data = response['data'] as List<dynamic>? ?? [];
+        final List<dynamic> normalizedData = [];
+        for (var pob in data) {
+          if (pob is Map) {
+            final pobMap = Map<String, dynamic>.from(pob);
+            final items = pobMap['items'] as List<dynamic>? ?? [];
+            bool allItemsSupplied = false;
+            if (items.isNotEmpty) {
+              allItemsSupplied = true;
+              for (var item in items) {
+                final double quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
+                final double remainingQty = double.tryParse(item['remaining_qty']?.toString() ?? '0') ?? 0;
+                final double suppliedQty = double.tryParse(item['supplied_qty']?.toString() ?? '0') ?? 0;
+                
+                if (item['remaining_qty'] != null) {
+                  if (remainingQty > 0) {
+                    allItemsSupplied = false;
+                    break;
+                  }
+                } else {
+                  if (suppliedQty < quantity) {
+                    allItemsSupplied = false;
+                    break;
+                  }
                 }
               }
             }
+            if (allItemsSupplied || pobMap['status'] == 'supplied') {
+              pobMap['status'] = 'supplied';
+            }
+            normalizedData.add(pobMap);
+          } else {
+            normalizedData.add(pob);
           }
-          if (allItemsSupplied || pobMap['status'] == 'supplied') {
-            pobMap['status'] = 'supplied';
-          }
-          normalizedData.add(pobMap);
-        } else {
-          normalizedData.add(pob);
         }
+        _pendingPobs = normalizedData.where((pob) => pob['status'] == 'pending' || pob['status'] == 'partial').toList();
+        _suppliedPobs = normalizedData.where((pob) => pob['status'] == 'supplied').toList();
+      } else {
+        _pendingPobs = [];
+        _suppliedPobs = [];
       }
-      _pendingPobs = normalizedData.where((pob) => pob['status'] == 'pending' || pob['status'] == 'partial').toList();
-      _suppliedPobs = normalizedData.where((pob) => pob['status'] == 'supplied').toList();
-    } else {
+    } catch (e) {
       _pendingPobs = [];
       _suppliedPobs = [];
+    } finally {
+      _isLoadingPobHistory = false;
+      notifyListeners();
     }
-
-    _isLoadingPobHistory = false;
-    notifyListeners();
   }
 
   List<dynamic> _activityTypes = [];
@@ -263,13 +284,16 @@ class OutletActivityProvider extends ChangeNotifier {
 
     try {
       final response = await ApiServices.getActivityTypes();
-      if (response != null && response['status'] == true) {
+      if (response != null && (response['status'] == true || response['status'] == "success" || response['data'] != null)) {
         _activityTypes = response['data'] ?? [];
       } else {
         _activityTypes = [];
       }
     } catch (e) {
       _activityTypes = [];
+    } finally {
+      _isLoadingActivityTypes = false;
+      notifyListeners();
     }
 
     if (_activityTypes.isEmpty) {
@@ -288,10 +312,8 @@ class OutletActivityProvider extends ChangeNotifier {
         {"activity_type_id": "4", "activity_name": "POB Stock"},
         {"activity_type_id": "6", "activity_name": "Product Display"}
       ];
+      notifyListeners();
     }
-
-    _isLoadingActivityTypes = false;
-    notifyListeners();
   }
 
   Future<Map<String, dynamic>> submitOutletActivity({
@@ -312,7 +334,7 @@ class OutletActivityProvider extends ChangeNotifier {
         attachments: files,
       );
 
-      if (response != null && response['status'] == true) {
+      if (response != null && (response['status'] == true || response['status'] == "success")) {
         return {
           "status": true,
           "message": response['message'] ?? "Activity created successfully",
@@ -342,7 +364,7 @@ class OutletActivityProvider extends ChangeNotifier {
 
     try {
       final response = await ApiServices.getOutletHistory(outletId: outletId);
-      if (response != null && response['status'] == true) {
+      if (response != null && (response['status'] == true || response['status'] == "success" || response['visit_history'] != null)) {
         final visitHistory = response['visit_history'] as List<dynamic>? ?? [];
         final List<dynamic> allActivities = [];
         for (var visit in visitHistory) {
@@ -365,9 +387,9 @@ class OutletActivityProvider extends ChangeNotifier {
       }
     } catch (e) {
       _activityHistory = [];
+    } finally {
+      _isLoadingHistory = false;
+      notifyListeners();
     }
-
-    _isLoadingHistory = false;
-    notifyListeners();
   }
 }

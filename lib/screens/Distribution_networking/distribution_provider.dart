@@ -36,87 +36,91 @@ class DistributionProvider extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
-    final response = await ApiServices.getRoutes();
-    final routesData = response != null ? (response["beats"] ?? response["routes"]) : null;
+    try {
+      final response = await ApiServices.getRoutes();
+      final routesData = response != null ? (response["beats"] ?? response["routes"]) : null;
 
-    if (response != null && routesData != null) {
-      final routes = Map<String, dynamic>.from(routesData);
+      if (response != null && routesData != null) {
+        final routes = Map<String, dynamic>.from(routesData);
 
-      List<String> tempRegions = [];
-      Map<String, List<String>> tempAreasByRegion = {};
-      Map<String, List<String>> tempHqsByArea = {};
-      Map<String, List<String>> tempBeatsByHq = {};
-      Map<String, String> tempIds = {};
+        List<String> tempRegions = [];
+        Map<String, List<String>> tempAreasByRegion = {};
+        Map<String, List<String>> tempHqsByArea = {};
+        Map<String, List<String>> tempBeatsByHq = {};
+        Map<String, String> tempIds = {};
 
-      for (var item in routes.values) {
-        final region = item["REGION"]?.toString() ?? item["STATE"]?.toString() ?? "Region 1";
-        final area = item["CLUSTER"]?.toString() ?? item["AREA"]?.toString() ?? item["CITY"]?.toString() ?? "Area 1";
-        final hq = item["TERRITORY"]?.toString() ?? item["HQ"]?.toString() ?? (item["CITY"] != null ? "${item["CITY"]} HQ" : "HQ 1");
-        final beat = item["BEAT"]?.toString() ?? item["ROUTE"]?.toString() ?? "Beat 1";
-        final routeId = item["BEAT_ID"]?.toString() ?? item["ROUTE_ID"]?.toString();
+        for (var item in routes.values) {
+          final region = item["REGION"]?.toString() ?? item["STATE"]?.toString() ?? "Region 1";
+          final area = item["CLUSTER"]?.toString() ?? item["AREA"]?.toString() ?? item["CITY"]?.toString() ?? "Area 1";
+          final hq = item["TERRITORY"]?.toString() ?? item["HQ"]?.toString() ?? (item["CITY"] != null ? "${item["CITY"]} HQ" : "HQ 1");
+          final beat = item["BEAT"]?.toString() ?? item["ROUTE"]?.toString() ?? "Beat 1";
+          final routeId = item["BEAT_ID"]?.toString() ?? item["ROUTE_ID"]?.toString();
 
-        if (!tempRegions.contains(region)) {
-          tempRegions.add(region);
+          if (!tempRegions.contains(region)) {
+            tempRegions.add(region);
+          }
+
+          if (!tempAreasByRegion.containsKey(region)) {
+            tempAreasByRegion[region] = [];
+          }
+          if (!tempAreasByRegion[region]!.contains(area)) {
+            tempAreasByRegion[region]!.add(area);
+          }
+
+          final regionAreaKey = "$region-$area";
+          if (!tempHqsByArea.containsKey(regionAreaKey)) {
+            tempHqsByArea[regionAreaKey] = [];
+          }
+          if (!tempHqsByArea[regionAreaKey]!.contains(hq)) {
+            tempHqsByArea[regionAreaKey]!.add(hq);
+          }
+
+          final regionAreaHqKey = "$region-$area-$hq";
+          if (!tempBeatsByHq.containsKey(regionAreaHqKey)) {
+            tempBeatsByHq[regionAreaHqKey] = [];
+          }
+          if (!tempBeatsByHq[regionAreaHqKey]!.contains(beat)) {
+            tempBeatsByHq[regionAreaHqKey]!.add(beat);
+          }
+          
+          if (routeId != null) {
+            tempIds["$region-$area-$hq-$beat"] = routeId;
+          }
         }
 
-        if (!tempAreasByRegion.containsKey(region)) {
-          tempAreasByRegion[region] = [];
-        }
-        if (!tempAreasByRegion[region]!.contains(area)) {
-          tempAreasByRegion[region]!.add(area);
-        }
+        _regions = tempRegions;
+        _areasByRegion = tempAreasByRegion;
+        _hqsByArea = tempHqsByArea;
+        _beatsByHq = tempBeatsByHq;
+        _routeIds = tempIds;
 
-        final regionAreaKey = "$region-$area";
-        if (!tempHqsByArea.containsKey(regionAreaKey)) {
-          tempHqsByArea[regionAreaKey] = [];
-        }
-        if (!tempHqsByArea[regionAreaKey]!.contains(hq)) {
-          tempHqsByArea[regionAreaKey]!.add(hq);
-        }
-
-        final regionAreaHqKey = "$region-$area-$hq";
-        if (!tempBeatsByHq.containsKey(regionAreaHqKey)) {
-          tempBeatsByHq[regionAreaHqKey] = [];
-        }
-        if (!tempBeatsByHq[regionAreaHqKey]!.contains(beat)) {
-          tempBeatsByHq[regionAreaHqKey]!.add(beat);
-        }
-        
-        if (routeId != null) {
-          tempIds["$region-$area-$hq-$beat"] = routeId;
-        }
-      }
-
-      _regions = tempRegions;
-      _areasByRegion = tempAreasByRegion;
-      _hqsByArea = tempHqsByArea;
-      _beatsByHq = tempBeatsByHq;
-      _routeIds = tempIds;
-
-      if (_regions.isNotEmpty) {
-        _selectedRegion = _regions.first;
-        final areasForRegion = _areasByRegion[_selectedRegion] ?? [];
-        if (areasForRegion.isNotEmpty) {
-          _selectedArea = areasForRegion.first;
-          final hqsForArea = _hqsByArea["$_selectedRegion-$_selectedArea"] ?? [];
-          if (hqsForArea.isNotEmpty) {
-            _selectedHq = hqsForArea.first;
-            final beatsForHq = _beatsByHq["$_selectedRegion-$_selectedArea-$_selectedHq"] ?? [];
-            _selectedBeat = beatsForHq.isNotEmpty ? beatsForHq.first : null;
+        if (_regions.isNotEmpty) {
+          _selectedRegion = _regions.first;
+          final areasForRegion = _areasByRegion[_selectedRegion] ?? [];
+          if (areasForRegion.isNotEmpty) {
+            _selectedArea = areasForRegion.first;
+            final hqsForArea = _hqsByArea["$_selectedRegion-$_selectedArea"] ?? [];
+            if (hqsForArea.isNotEmpty) {
+              _selectedHq = hqsForArea.first;
+              final beatsForHq = _beatsByHq["$_selectedRegion-$_selectedArea-$_selectedHq"] ?? [];
+              _selectedBeat = beatsForHq.isNotEmpty ? beatsForHq.first : null;
+            } else {
+              _selectedHq = null;
+              _selectedBeat = null;
+            }
           } else {
+            _selectedArea = null;
             _selectedHq = null;
             _selectedBeat = null;
           }
-        } else {
-          _selectedArea = null;
-          _selectedHq = null;
-          _selectedBeat = null;
         }
       }
+    } catch (e) {
+      debugPrint("Error fetching routes: $e");
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
-
-    isLoading = false;
-    notifyListeners();
   }
 
   void setRegion(String region) {

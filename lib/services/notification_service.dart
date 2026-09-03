@@ -47,7 +47,7 @@ class NotificationService {
 
     if (Platform.isAndroid) {
       final android = await deviceInfo.androidInfo;
-      return android.id ?? android.model ?? "unknown_android";
+      return android.id.isNotEmpty ? android.id : (android.model.isNotEmpty ? android.model : "unknown_android");
     } else {
       final ios = await deviceInfo.iosInfo;
       return ios.identifierForVendor ?? "unknown_ios";

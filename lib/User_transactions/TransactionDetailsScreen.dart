@@ -439,7 +439,7 @@ class _TransactionDetailsScreenState
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         selectedDate = picked;
       });

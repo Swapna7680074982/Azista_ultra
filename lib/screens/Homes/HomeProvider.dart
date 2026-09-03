@@ -51,8 +51,8 @@ class HomeProvider extends ChangeNotifier {
       notifyListeners();
 
       final res = await ApiServices.getAttendanceStatus();
-      if (res != null && res["status"] == true && res["data"] != null) {
-        final todayStatus = res["data"]["attendance_status"]?["today_status"]?.toString();
+      if (res != null && (res["status"] == true || res["status"] == "success" || res["data"] != null)) {
+        final todayStatus = res["data"]?["attendance_status"]?["today_status"]?.toString();
         if (todayStatus == "CHECKED_IN") {
           appState.setOnline(true);
           await SessionManager.saveAttendanceStatus("CHECKED_IN");
@@ -136,154 +136,172 @@ class HomeProvider extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
-    final res = await ApiServices.markAttendance(type: "IN");
+    try {
+      final res = await ApiServices.markAttendance(type: "IN");
 
-    isLoading = false;
-    notifyListeners();
+      if (res != null && (res["status"] == true || res["status"] == "success")) {
+        message = res["message"];
+        await SessionManager.saveAttendanceStatus("CHECKED_IN");
+        localCheckInTime = await SessionManager.getCheckInTime();
+        notifyListeners();
+        return true;
+      }
 
-    if (res != null && res["status"] == true) {
-      message = res["message"];
-      await SessionManager.saveAttendanceStatus("CHECKED_IN");
-      localCheckInTime = await SessionManager.getCheckInTime();
+      message = res?["message"] ?? "Check-in failed";
+      return false;
+    } catch (e) {
+      message = "Check-in failed: $e";
+      return false;
+    } finally {
+      isLoading = false;
       notifyListeners();
-      return true;
     }
-
-    message = res?["message"] ?? "Check-in failed";
-    return false;
   }
 
   Future<bool> checkOut() async {
     isLoading = true;
     notifyListeners();
 
-    final res = await ApiServices.markAttendance(type: "OUT");
+    try {
+      final res = await ApiServices.markAttendance(type: "OUT");
 
+      if (res != null && (res["status"] == true || res["status"] == "success")) {
+        message = res["message"];
+        await SessionManager.saveAttendanceStatus("CHECKED_OUT");
+        localCheckInTime = null;
+        notifyListeners();
+        return true;
+      }
 
-
-    isLoading = false;
-    notifyListeners();
-
-
-    if (res != null && res["status"] == true) {
-      message = res["message"];
-      await SessionManager.saveAttendanceStatus("CHECKED_OUT");
-      localCheckInTime = null;
+      message = res?["message"] ?? "Check-out failed";
+      return false;
+    } catch (e) {
+      message = "Check-out failed: $e";
+      return false;
+    } finally {
+      isLoading = false;
       notifyListeners();
-      return true;
     }
-
-    message = res?["message"] ?? "Check-out failed";
-    return false;
   }
 
   Future<void> fetchTodayAttendance() async {
     isAttendanceLoading = true;
     notifyListeners();
 
-    final res = await ApiServices.getTodayAttendance();
+    try {
+      final res = await ApiServices.getTodayAttendance();
 
-    if (res != null && res["data"] != null) {
-      final data = res["data"];
+      if (res != null && res["data"] != null) {
+        final data = res["data"];
 
-      if (data is List) {
-
-        if (data.isEmpty) {
-          todayAttendance = null;
+        if (data is List) {
+          if (data.isEmpty) {
+            todayAttendance = null;
+          } else {
+            todayAttendance = data.first as Map<String, dynamic>;
+          }
+        } else if (data is Map<String, dynamic>) {
+          todayAttendance = data;
         } else {
-          todayAttendance = data.first as Map<String, dynamic>;
+          todayAttendance = null;
         }
-      } else if (data is Map<String, dynamic>) {
-        todayAttendance = data;
       } else {
         todayAttendance = null;
       }
-    } else {
+    } catch (e) {
       todayAttendance = null;
+    } finally {
+      isAttendanceLoading = false;
+      notifyListeners();
     }
-
-    isAttendanceLoading = false;
-    notifyListeners();
   }
 
   Future<void> fetchDailyCallSummary(int? distributorId) async {
     isSummaryLoading = true;
     notifyListeners();
 
-    final now = DateTime.now();
-    final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    try {
+      final now = DateTime.now();
+      final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
-    final res = await ApiServices.getCallsInfo(
-      date: dateStr,
-      distributorId: distributorId,
-    );
+      final res = await ApiServices.getCallsInfo(
+        date: dateStr,
+        distributorId: distributorId,
+      );
 
-    print("fetchDailyCallSummary Response: $res");
+      print("fetchDailyCallSummary Response: $res");
 
-    if (res != null) {
-      if (res["summary"] != null) {
-        dailyCallSummary = res["summary"];
-      } else if (res["data"] != null) {
-        final dataList = res["data"] as List<dynamic>? ?? [];
-        double targetCalls = 0;
-        double productiveCalls = 0;
-        for (var item in dataList) {
-          targetCalls += double.tryParse(item["target_call"]?.toString() ?? "0") ?? 0;
-          productiveCalls += double.tryParse(item["productive_call"]?.toString() ?? "0") ?? 0;
+      if (res != null) {
+        if (res["summary"] != null) {
+          dailyCallSummary = res["summary"];
+        } else if (res["data"] != null) {
+          final dataList = res["data"] as List<dynamic>? ?? [];
+          double targetCalls = 0;
+          double productiveCalls = 0;
+          for (var item in dataList) {
+            targetCalls += double.tryParse(item["target_call"]?.toString() ?? "0") ?? 0;
+            productiveCalls += double.tryParse(item["productive_call"]?.toString() ?? "0") ?? 0;
+          }
+          dailyCallSummary = {
+            "target_calls": targetCalls,
+            "productive_calls": productiveCalls,
+          };
+        } else {
+          dailyCallSummary = null;
         }
-        dailyCallSummary = {
-          "target_calls": targetCalls,
-          "productive_calls": productiveCalls,
-        };
       } else {
         dailyCallSummary = null;
       }
-    } else {
+    } catch (e) {
       dailyCallSummary = null;
+    } finally {
+      isSummaryLoading = false;
+      notifyListeners();
     }
-
-    isSummaryLoading = false;
-    notifyListeners();
   }
 
   Future<void> fetchMonthlyCallSummary(int? distributorId) async {
     isMonthlySummaryLoading = true;
     notifyListeners();
 
-    final now = DateTime.now();
-    final monthStr = "${now.month.toString().padLeft(2, '0')}-${now.year}";
+    try {
+      final now = DateTime.now();
+      final monthStr = "${now.month.toString().padLeft(2, '0')}-${now.year}";
 
-    final res = await ApiServices.getCallsInfo(
-      month: monthStr,
-      distributorId: distributorId,
-    );
+      final res = await ApiServices.getCallsInfo(
+        month: monthStr,
+        distributorId: distributorId,
+      );
 
-    print("fetchMonthlyCallSummary Response: $res");
+      print("fetchMonthlyCallSummary Response: $res");
 
-    if (res != null) {
-      if (res["summary"] != null) {
-        monthlyCallSummary = res["summary"];
-      } else if (res["data"] != null) {
-        final dataList = res["data"] as List<dynamic>? ?? [];
-        double targetCalls = 0;
-        double productiveCalls = 0;
-        for (var item in dataList) {
-          targetCalls += double.tryParse(item["target_call"]?.toString() ?? "0") ?? 0;
-          productiveCalls += double.tryParse(item["productive_call"]?.toString() ?? "0") ?? 0;
+      if (res != null) {
+        if (res["summary"] != null) {
+          monthlyCallSummary = res["summary"];
+        } else if (res["data"] != null) {
+          final dataList = res["data"] as List<dynamic>? ?? [];
+          double targetCalls = 0;
+          double productiveCalls = 0;
+          for (var item in dataList) {
+            targetCalls += double.tryParse(item["target_call"]?.toString() ?? "0") ?? 0;
+            productiveCalls += double.tryParse(item["productive_call"]?.toString() ?? "0") ?? 0;
+          }
+          monthlyCallSummary = {
+            "target_calls": targetCalls,
+            "productive_calls": productiveCalls,
+          };
+        } else {
+          monthlyCallSummary = null;
         }
-        monthlyCallSummary = {
-          "target_calls": targetCalls,
-          "productive_calls": productiveCalls,
-        };
       } else {
         monthlyCallSummary = null;
       }
-    } else {
+    } catch (e) {
       monthlyCallSummary = null;
+    } finally {
+      isMonthlySummaryLoading = false;
+      notifyListeners();
     }
-
-    isMonthlySummaryLoading = false;
-    notifyListeners();
   }
 
   Future<void> fetchDashboardCounts({int? distributorId}) async {
@@ -306,7 +324,7 @@ class HomeProvider extends ChangeNotifier {
         month: month,
         year: year,
       );
-      if (res != null && res["status"] == true) {
+      if (res != null && (res["status"] == true || res["status"] == "success" || res["data"] != null)) {
         final List members = res["data"] ?? [];
         var memberData = members.firstWhere(
           (m) => m["user_id"]?.toString() == userIdStr,
@@ -331,10 +349,10 @@ class HomeProvider extends ChangeNotifier {
       }
     } catch (e) {
       dashboardCounts = null;
+    } finally {
+      isCountsLoading = false;
+      notifyListeners();
     }
-
-    isCountsLoading = false;
-    notifyListeners();
   }
 
   void setCountsFilter(String filter, {DateTimeRange? range, int? distributorId}) {
@@ -351,16 +369,17 @@ class HomeProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final res = await ApiServices.getTargets();
-      if (res != null && res["status"] == true) {
+      if (res != null && (res["status"] == true || res["status"] == "success" || res["data"] != null)) {
         targetsData = res["data"];
       } else {
         targetsData = null;
       }
     } catch (e) {
       targetsData = null;
+    } finally {
+      isTargetsLoading = false;
+      notifyListeners();
     }
-    isTargetsLoading = false;
-    notifyListeners();
   }
 
   void reset() {

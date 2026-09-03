@@ -66,7 +66,7 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     if (!mounted) return;
     try {
       final userOutletsRes = await ApiServices.getUserOutlets();
-      if (userOutletsRes != null && userOutletsRes["status"] == true) {
+      if (userOutletsRes != null && (userOutletsRes["status"] == true || userOutletsRes["status"] == "success" || userOutletsRes["data"] != null)) {
         final list = userOutletsRes["data"] as List<dynamic>? ?? [];
         for (var o in list) {
           final id = o['outlet_id']?.toString();
@@ -82,7 +82,7 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
         month: selectedDate.month,
         year: selectedDate.year,
       );
-      if (summaryRes != null && summaryRes["status"] == true) {
+      if (summaryRes != null && (summaryRes["status"] == true || summaryRes["status"] == "success" || summaryRes["data"] != null)) {
         final List members = summaryRes["data"] ?? [];
         for (var member in members) {
           final userId = int.tryParse(member['user_id']?.toString() ?? '');
@@ -93,7 +93,7 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
               month: selectedDate.month,
               year: selectedDate.year,
             );
-            if (outletsRes != null && outletsRes["status"] == true) {
+            if (outletsRes != null && (outletsRes["status"] == true || outletsRes["status"] == "success" || outletsRes["data"] != null)) {
               final list = outletsRes["data"] as List<dynamic>? ?? [];
               for (var o in list) {
                 final id = o['outlet_id']?.toString();
@@ -175,7 +175,7 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
       lastDate: DateTime(2100),
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         selectedDate = picked;
       });

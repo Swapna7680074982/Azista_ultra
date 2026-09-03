@@ -43,13 +43,14 @@ class _OutletsScreenState extends State<OutletsScreen> {
   }
 
   Future<void> _checkServerCheckInStatus(List<Outlet> outlets) async {
-    if (_checkedInOutletId != null) return;
+    if (_checkedInOutletId != null || outlets.isEmpty) return;
     try {
-      final futures = outlets.map((outlet) async {
+      final candidates = outlets.take(5);
+      final futures = candidates.map((outlet) async {
         final currentId = int.tryParse(outlet.id);
         if (currentId == null) return null;
         final history = await ApiServices.getOutletHistory(outletId: currentId);
-        if (history != null && history['status'] == true) {
+        if (history != null && (history['status'] == true || history['status'] == 'success')) {
           final List visits = history['visit_history'] ?? [];
           final activeVisit = visits.firstWhere(
             (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
@@ -103,7 +104,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
     if (id != null) {
       try {
         final history = await ApiServices.getOutletHistory(outletId: id);
-        if (history != null && history['status'] == true) {
+        if (history != null && (history['status'] == true || history['status'] == 'success' || history['visit_history'] != null)) {
           final List visits = history['visit_history'] ?? [];
           final activeVisit = visits.firstWhere(
             (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',

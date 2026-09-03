@@ -25,11 +25,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late MainTabProvider _tabProvider;
+  MainTabProvider? _tabProvider;
   String _selectedSummaryType = "Monthly";
 
   void _onTabChanged() {
-    if (_tabProvider.currentIndex == 0) {
+    if (_tabProvider?.currentIndex == 0) {
       _refreshData();
     }
   }
@@ -38,11 +38,20 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     final homeProvider = Provider.of<HomeProvider>(context, listen: false);
     final appState = Provider.of<AppStateProvider>(context, listen: false);
-    homeProvider.fetchTodayAttendance();
-    homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
-    homeProvider.fetchMonthlyCallSummary(appState.selectedDistributorId);
-    homeProvider.fetchDashboardCounts(distributorId: appState.selectedDistributorId);
-    homeProvider.fetchTargets();
+
+    // Batch 1: Attendance & Targets (2 parallel calls)
+    await Future.wait([
+      homeProvider.fetchTodayAttendance(),
+      homeProvider.fetchTargets(),
+    ]);
+
+    if (!mounted) return;
+    // Batch 2: Calls Info & Dashboard Counts (3 parallel calls)
+    await Future.wait([
+      homeProvider.fetchDailyCallSummary(appState.selectedDistributorId),
+      homeProvider.fetchMonthlyCallSummary(appState.selectedDistributorId),
+      homeProvider.fetchDashboardCounts(distributorId: appState.selectedDistributorId),
+    ]);
   }
 
   @override
@@ -57,23 +66,33 @@ class _HomeScreenState extends State<HomeScreen> {
       await homeProvider.loadDistributors(appState);
       await homeProvider.initializeAttendance(appState);
 
-      homeProvider.fetchTodayAttendance();
-      homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
-      homeProvider.fetchMonthlyCallSummary(appState.selectedDistributorId);
-      homeProvider.fetchDashboardCounts(distributorId: appState.selectedDistributorId);
-      homeProvider.fetchTargets();
+      if (!mounted) return;
+      // Batch 1: Attendance & Targets (2 parallel calls)
+      await Future.wait([
+        homeProvider.fetchTodayAttendance(),
+        homeProvider.fetchTargets(),
+      ]);
+
+      if (!mounted) return;
+      // Batch 2: Calls Info & Dashboard Counts (3 parallel calls)
+      await Future.wait([
+        homeProvider.fetchDailyCallSummary(appState.selectedDistributorId),
+        homeProvider.fetchMonthlyCallSummary(appState.selectedDistributorId),
+        homeProvider.fetchDashboardCounts(distributorId: appState.selectedDistributorId),
+      ]);
 
       final role = await SessionManager.getUserRole();
+      if (!mounted) return;
       appState.setUserRole(role);
 
       _tabProvider = Provider.of<MainTabProvider>(context, listen: false);
-      _tabProvider.addListener(_onTabChanged);
+      _tabProvider?.addListener(_onTabChanged);
     });
   }
 
   @override
   void dispose() {
-    _tabProvider.removeListener(_onTabChanged);
+    _tabProvider?.removeListener(_onTabChanged);
     super.dispose();
   }
 

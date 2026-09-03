@@ -31,8 +31,11 @@ class _SplashScreenState extends State<SplashScreen> {
     final token = await SessionManager.getToken();
     final isExpired = await SessionManager.isSessionExpired();
 
+    if (!mounted) return;
+
     if (token != null && !isExpired) {
       final role = await SessionManager.getUserRole();
+      if (!mounted) return;
       final normalizedRole = role.toLowerCase().trim();
       if (normalizedRole == "rm") {
         Navigator.pushReplacement(
@@ -51,9 +54,9 @@ class _SplashScreenState extends State<SplashScreen> {
         );
       }
     } else {
-       Navigator.pushReplacement(
+      Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) =>  LoginScreen()),
+        MaterialPageRoute(builder: (_) => LoginScreen()),
       );
     }
   }

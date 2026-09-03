@@ -64,7 +64,7 @@ class _TeamMemberDetailScreenState extends State<TeamMemberDetailScreen> {
 
       if (mounted) {
         setState(() {
-          if (summaryRes != null && summaryRes["status"] == true) {
+          if (summaryRes != null && (summaryRes["status"] == true || summaryRes["status"] == "success" || summaryRes["data"] != null)) {
             final List members = summaryRes["data"] ?? [];
             final memberData = members.firstWhere(
               (m) => m["user_id"]?.toString() == widget.userId.toString(),
@@ -79,7 +79,7 @@ class _TeamMemberDetailScreenState extends State<TeamMemberDetailScreen> {
               };
             }
           }
-          if (outletsRes != null && outletsRes["status"] == true) {
+          if (outletsRes != null && (outletsRes["status"] == true || outletsRes["status"] == "success" || outletsRes["data"] != null)) {
             _outlets = outletsRes["data"] as List<dynamic>? ?? [];
           }
           _isLoading = false;

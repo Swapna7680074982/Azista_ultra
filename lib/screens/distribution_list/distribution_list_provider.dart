@@ -93,79 +93,105 @@ class DistributionListProvider extends ChangeNotifier {
     _isLoadingDistributors = true;
     notifyListeners();
 
-    final response = await ApiServices.getDistributors();
-    if (response != null && response['status'] == true) {
-      _distributors = response['data'] ?? [];
-      if (_selectedDistributor != null) {
-        final existingId = _selectedDistributor['distributor_id']?.toString();
-        final match = _distributors.firstWhere(
-          (d) => d['distributor_id']?.toString() == existingId,
-          orElse: () => null,
-        );
-        if (match != null) {
-          _selectedDistributor = match;
-        } else {
-          _selectedDistributor = _distributors.isNotEmpty ? _distributors.first : null;
+    try {
+      final response = await ApiServices.getDistributors();
+      if (response != null && (response['status'] == true || response['status'] == "success" || response['data'] != null)) {
+        _distributors = response['data'] ?? [];
+        if (_selectedDistributor != null) {
+          final existingId = _selectedDistributor['distributor_id']?.toString();
+          final match = _distributors.firstWhere(
+            (d) => d['distributor_id']?.toString() == existingId,
+            orElse: () => null,
+          );
+          if (match != null) {
+            _selectedDistributor = match;
+          } else {
+            _selectedDistributor = _distributors.isNotEmpty ? _distributors.first : null;
+          }
+        } else if (_distributors.isNotEmpty) {
+          _selectedDistributor = _distributors.first;
         }
-      } else if (_distributors.isNotEmpty) {
-        _selectedDistributor = _distributors.first;
+      } else {
+        _distributors = [];
+        _selectedDistributor = null;
       }
-    } else {
+    } catch (e) {
       _distributors = [];
       _selectedDistributor = null;
+    } finally {
+      _isLoadingDistributors = false;
+      notifyListeners();
     }
-
-    _isLoadingDistributors = false;
-    notifyListeners();
   }
 
   Future<bool> createDistributor(Map<String, dynamic> payload) async {
-    final response = await ApiServices.createDistributor(payload: payload);
-    if (response != null && response['status'] == true) {
-      await fetchDistributorsList();
-      return true;
+    try {
+      final response = await ApiServices.createDistributor(payload: payload);
+      if (response != null && (response['status'] == true || response['status'] == "success")) {
+        await fetchDistributorsList();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
     }
-    return false;
   }
 
   Future<void> fetchDistributorStock(int distributorId) async {
     _isLoadingStock = true;
     notifyListeners();
 
-    // Map month name to number
-    final monthMap = {
-      "January": 1, "February": 2, "March": 3, "April": 4, "May": 5, "June": 6,
-      "July": 7, "August": 8, "September": 9, "October": 10, "November": 11, "December": 12
-    };
-    final monthNum = monthMap[_selectedMonth] ?? DateTime.now().month;
-    final year = _selectedYear;
-    final lastDay = DateTime(year, monthNum + 1, 0).day;
-    final fromDate = "$year-${monthNum.toString().padLeft(2, '0')}-01";
-    final toDate = "$year-${monthNum.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}";
+    try {
+      // Map month name to number
+      final monthMap = {
+        "January": 1, "February": 2, "March": 3, "April": 4, "May": 5, "June": 6,
+        "July": 7, "August": 8, "September": 9, "October": 10, "November": 11, "December": 12
+      };
+      final monthNum = monthMap[_selectedMonth] ?? DateTime.now().month;
+      final year = _selectedYear;
+      final lastDay = DateTime(year, monthNum + 1, 0).day;
+      final fromDate = "$year-${monthNum.toString().padLeft(2, '0')}-01";
+      final toDate = "$year-${monthNum.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}";
 
-    final payload = {
-      "distributor_id": distributorId,
-      "from_date": fromDate,
-      "to_date": toDate,
-      "limit": 50,
-      "offset": 0
-    };
+      final payload = {
+        "distributor_id": distributorId,
+        "from_date": fromDate,
+        "to_date": toDate,
+        "limit": 50,
+        "offset": 0
+      };
 
-    final response = await ApiServices.getDistributorStockHistory(payload: payload);
-    _submissions.clear();
+      final response = await ApiServices.getDistributorStockHistory(payload: payload);
+      _submissions.clear();
 
-    if (response != null && response['status'] == "success") {
-      final data = response['data'] as List<dynamic>? ?? [];
-      for (var record in data) {
-        final createdAt = record['created_at']?.toString() ?? "";
-        final recordYear = record['year']?.toString() ?? record['stock_year']?.toString();
-        final recordMonth = record['month']?.toString() ?? record['stock_month']?.toString();
-        final items = record['items'] as List<dynamic>? ?? [];
-        if (createdAt.isNotEmpty) {
-          final datePart = createdAt.split(' ')[0];
-          try {
-            final parsedDate = DateTime.parse(datePart);
-            if (parsedDate.year == year && parsedDate.month == monthNum) {
+      if (response != null && (response['status'] == "success" || response['status'] == true || response['data'] != null)) {
+        final data = response['data'] as List<dynamic>? ?? [];
+        for (var record in data) {
+          final createdAt = record['created_at']?.toString() ?? "";
+          final recordYear = record['year']?.toString() ?? record['stock_year']?.toString();
+          final recordMonth = record['month']?.toString() ?? record['stock_month']?.toString();
+          final items = record['items'] as List<dynamic>? ?? [];
+          if (createdAt.isNotEmpty) {
+            final datePart = createdAt.split(' ')[0];
+            try {
+              final parsedDate = DateTime.parse(datePart);
+              if (parsedDate.year == year && parsedDate.month == monthNum) {
+                if (!_submissions.containsKey(datePart)) {
+                  _submissions[datePart] = [];
+                }
+                for (var item in items) {
+                  _submissions[datePart]!.add({
+                    "product_id": item['product_id'],
+                    "product_name": item['product_name'] ?? 'Unknown Product',
+                    "sku_name": item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'Unknown SKU',
+                    "qty": item['quantity']?.toString() ?? "0",
+                    "distributor_name": record['distributor_name'] ?? "",
+                    "stock_year": recordYear ?? parsedDate.year.toString(),
+                    "stock_month": recordMonth ?? parsedDate.month.toString(),
+                  });
+                }
+              }
+            } catch (_) {
               if (!_submissions.containsKey(datePart)) {
                 _submissions[datePart] = [];
               }
@@ -176,33 +202,20 @@ class DistributionListProvider extends ChangeNotifier {
                   "sku_name": item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'Unknown SKU',
                   "qty": item['quantity']?.toString() ?? "0",
                   "distributor_name": record['distributor_name'] ?? "",
-                  "stock_year": recordYear ?? parsedDate.year.toString(),
-                  "stock_month": recordMonth ?? parsedDate.month.toString(),
+                  "stock_year": recordYear ?? year.toString(),
+                  "stock_month": recordMonth ?? monthNum.toString(),
                 });
               }
-            }
-          } catch (_) {
-            if (!_submissions.containsKey(datePart)) {
-              _submissions[datePart] = [];
-            }
-            for (var item in items) {
-              _submissions[datePart]!.add({
-                "product_id": item['product_id'],
-                "product_name": item['product_name'] ?? 'Unknown Product',
-                "sku_name": item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'Unknown SKU',
-                "qty": item['quantity']?.toString() ?? "0",
-                "distributor_name": record['distributor_name'] ?? "",
-                "stock_year": recordYear ?? year.toString(),
-                "stock_month": recordMonth ?? monthNum.toString(),
-              });
             }
           }
         }
       }
+    } catch (e) {
+      _submissions.clear();
+    } finally {
+      _isLoadingStock = false;
+      notifyListeners();
     }
-
-    _isLoadingStock = false;
-    notifyListeners();
   }
 
   // DistributorStockScreen State
@@ -220,14 +233,18 @@ class DistributionListProvider extends ChangeNotifier {
     _isLoadingProducts = true;
     notifyListeners();
 
-    final response = await ApiServices.getProductsWithSkus();
-    if (response != null && response['status'] == true) {
-      _productsWithSkus = response['data'] ?? [];
-      _stockQuantities.clear();
+    try {
+      final response = await ApiServices.getProductsWithSkus();
+      if (response != null && (response['status'] == true || response['status'] == "success" || response['data'] != null)) {
+        _productsWithSkus = response['data'] ?? [];
+        _stockQuantities.clear();
+      }
+    } catch (e) {
+      _productsWithSkus = [];
+    } finally {
+      _isLoadingProducts = false;
+      notifyListeners();
     }
-
-    _isLoadingProducts = false;
-    notifyListeners();
   }
 
   void updateStockQuantity(int productId, int skuId, String value) {
