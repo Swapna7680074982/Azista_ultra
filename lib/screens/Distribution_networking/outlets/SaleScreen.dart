@@ -69,7 +69,7 @@ class _SaleBodyState extends State<SaleBody> {
                         if (!context.mounted) return;
                         LoadingDialog.hide(context);
 
-                        if (result != null && result['status'] == true) {
+                        if (result != null && (result['status'] == true || result['status'] == 'success')) {
                           SuccessDialog.show(context, message: "Sale Submitted Successfully!");
                           provider.fetchProductsWithSkus();
                         } else {

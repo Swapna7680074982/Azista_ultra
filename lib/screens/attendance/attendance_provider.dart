@@ -77,10 +77,10 @@ class AttendanceProvider extends ChangeNotifier {
       }
     } catch (e) {
       _list = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   String _formatDate(DateTime dt) {

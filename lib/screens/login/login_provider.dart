@@ -95,7 +95,7 @@ class LoginProvider extends ChangeNotifier {
         confirmPassword: confirmPassword,
       );
 
-      if (response != null && response["status"] == true) {
+      if (response != null && (response["status"] == true || response["status"] == "success")) {
         await SessionManager.clearSession();
 
         isLoading = false;

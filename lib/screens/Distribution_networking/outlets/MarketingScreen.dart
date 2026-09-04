@@ -125,11 +125,12 @@ class _MarketingBodyState extends State<MarketingBody>
     final resolvedVisitId = widget.visitId ?? await SessionManager.getOutletCheckInVisitId();
 
     if (resolvedVisitId == null) {
-      setState(() => _isSubmitting = false);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No active visit session found. Please check in first.")),
-      );
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No active visit session found. Please check in first.")),
+        );
+      }
       return;
     }
 
@@ -142,6 +143,7 @@ class _MarketingBodyState extends State<MarketingBody>
       skuId: selectedSkuId,
     );
 
+    if (!mounted) return;
     setState(() => _isSubmitting = false);
 
     if (response['status'] == true) {

@@ -78,8 +78,11 @@ class AmProvider extends ChangeNotifier {
   Future<void> _fetchData() async {
     _isLoading = true;
     notifyListeners();
-    await Future.delayed(const Duration(milliseconds: 500));
-    _isLoading = false;
-    notifyListeners();
+    try {
+      await Future.delayed(const Duration(milliseconds: 500));
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 }

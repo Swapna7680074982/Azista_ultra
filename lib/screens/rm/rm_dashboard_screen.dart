@@ -36,15 +36,13 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppStateProvider>(context);
     final homeProvider = Provider.of<HomeProvider>(context);
-    final hasValidDistributor = appState.selectedDistributor != null &&
-        homeProvider.distributors.any((d) => d["distributor_name"] == appState.selectedDistributor);
 
     return Scaffold(
       body: Column(
         children: [
           // Header
           Container(
-            height: MediaQuery.of(context).size.height * 0.4,
+            height: MediaQuery.of(context).size.height * 0.3,
             width: double.infinity,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -117,7 +115,7 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                                       await homeProvider.fetchTodayAttendance();
                                     }
                                   }
-                                  if (homeProvider.message != null) {
+                                  if (mounted && homeProvider.message != null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text(homeProvider.message!)),
                                     );

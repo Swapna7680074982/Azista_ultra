@@ -14,6 +14,22 @@ import 'navigation_service.dart';
 
 
 class ApiServices {
+  static bool isSuccess(dynamic data) {
+    if (data == null) return false;
+    if (data is Map) {
+      final status = data["status"];
+      return status == true ||
+          status == "true" ||
+          status == "success" ||
+          status == "SUCCESS" ||
+          status == 1 ||
+          status == "1" ||
+          status == "ok" ||
+          status == "OK";
+    }
+    return false;
+  }
+
   static final Dio _dio = Dio(
     BaseOptions(
       connectTimeout: const Duration(seconds: 50),
@@ -114,6 +130,52 @@ class ApiServices {
             }
           }
         }
+
+        // Automatic retry for transient server concurrency / 502 / network / FormatException errors
+        final retryCount = (e.requestOptions.extra['retry_count'] as int?) ?? 0;
+        final shouldRetry = !isLogin && !isRefresh && !isLogout && retryCount < 2 &&
+            (e.response?.statusCode == 502 ||
+             e.response?.statusCode == 503 ||
+             e.response?.statusCode == 504 ||
+             e.type == DioExceptionType.unknown ||
+             e.type == DioExceptionType.connectionError ||
+             e.type == DioExceptionType.connectionTimeout ||
+             e.error is FormatException ||
+             e.message?.contains("FormatException") == true);
+
+        if (shouldRetry) {
+          final nextRetry = retryCount + 1;
+          AppLogger.warning("Retrying API ${e.requestOptions.path} (attempt $nextRetry of 2) after short delay...");
+          await Future.delayed(Duration(milliseconds: 350 * nextRetry));
+
+          try {
+            final token = await SessionManager.getToken();
+            final opts = e.requestOptions;
+            if (token != null && token.isNotEmpty) {
+              opts.headers["Authorization"] = "Bearer $token";
+            }
+            opts.extra['retry_count'] = nextRetry;
+
+            final cloneReq = await _dio.request(
+              opts.path,
+              data: opts.data,
+              queryParameters: opts.queryParameters,
+              options: Options(
+                method: opts.method,
+                headers: opts.headers,
+                contentType: opts.contentType,
+                extra: opts.extra,
+              ),
+            );
+            return handler.resolve(cloneReq);
+          } catch (retryErr) {
+            if (retryErr is DioException) {
+              return handler.next(retryErr);
+            }
+            return handler.next(e);
+          }
+        }
+
         return handler.next(e);
       },
     ),
@@ -204,7 +266,7 @@ class ApiServices {
 
       AppLogger.info("Refresh Token response: ${response.data}");
 
-      if (response.statusCode == 200 && response.data["status"] == true) {
+      if (response.statusCode == 200 && (isSuccess(response.data) || response.data["status"] == true)) {
         final newAccessToken = response.data["access_token"];
         if (newAccessToken != null) {
           await SessionManager.saveSession(
@@ -339,7 +401,7 @@ class ApiServices {
       AppLogger.info("Logout response: ${response.data}");
 
       if (response.statusCode == 200 &&
-          response.data["status"] == true) {
+          (isSuccess(response.data) || response.data["status"] == true)) {
         AppLogger.success("Logout successful");
         return true;
       }
@@ -390,7 +452,7 @@ class ApiServices {
 
       AppLogger.info("Change Password response: ${response.data}");
 
-      if (response.statusCode == 200 && response.data["status"] == true) {
+      if (response.statusCode == 200 && (isSuccess(response.data) || response.data["status"] == true)) {
         return response.data;
       }
 
@@ -427,7 +489,7 @@ class ApiServices {
 
       AppLogger.info("Get Routes response: ${response.statusCode} - ${response.data}");
 
-      if (response.statusCode == 200 && response.data["status"] == true) {
+      if (response.statusCode == 200 && (isSuccess(response.data) || response.data["status"] == true || response.data["beats"] != null || response.data["routes"] != null || response.data["data"] != null)) {
         return response.data;
       }
       
@@ -600,7 +662,7 @@ class ApiServices {
       );
 
       if (response.statusCode == 200 &&
-          response.data["status"] == true) {
+          (isSuccess(response.data) || response.data["status"] == true || response.data["data"] != null)) {
         return response.data;
       }
 
@@ -639,7 +701,7 @@ class ApiServices {
       AppLogger.info("Attendance response: ${response.data}");
 
       if (response.statusCode == 200 &&
-          response.data["status"] == true) {
+          (isSuccess(response.data) || response.data["status"] == true || response.data["data"] != null)) {
         return List<Map<String, dynamic>>.from(response.data["data"]);
       }
 
@@ -704,7 +766,7 @@ class ApiServices {
         ),
       );
 
-      if (response.statusCode == 200 && response.data["status"] == true) {
+      if (response.statusCode == 200 && (isSuccess(response.data) || response.data["status"] == true || response.data["data"] != null)) {
         final data = response.data["data"];
         if (data is List && data.isNotEmpty) {
           AppLogger.info("getUserOutlets first outlet sample: ${data.first}");
@@ -751,7 +813,7 @@ class ApiServices {
 
       print("API FULL RESPONSE: ${response.data}");
 
-      if (response.statusCode == 200 && response.data["status"] == true) {
+      if (response.statusCode == 200 && (isSuccess(response.data) || response.data["status"] == true || response.data["data"] != null)) {
         return response.data;
       }
       return null;
@@ -775,7 +837,7 @@ class ApiServices {
         ),
       );
 
-      if (response.statusCode == 200 && response.data["status"] == true) {
+      if (response.statusCode == 200 && (isSuccess(response.data) || response.data["status"] == true || response.data["data"] != null)) {
         return response.data;
       }
       return null;
@@ -843,7 +905,7 @@ class ApiServices {
         ),
       );
 
-      if (response.statusCode == 200 && response.data["status"] == true) {
+      if (response.statusCode == 200 && (isSuccess(response.data) || response.data["status"] == true || response.data["data"] != null)) {
         return response.data;
       }
       return null;
@@ -867,7 +929,7 @@ class ApiServices {
         ),
       );
 
-      if (response.statusCode == 200 && response.data["status"] == "success") {
+      if (response.statusCode == 200 && (isSuccess(response.data) || response.data["data"] != null)) {
         return response.data;
       }
       return null;
@@ -926,7 +988,7 @@ class ApiServices {
       AppLogger.info("Generate POB response status: ${response.statusCode}");
       AppLogger.info("Generate POB response data: ${response.data}");
 
-      if (response.statusCode == 200 && response.data["status"] == "success") {
+      if (response.statusCode == 200 && isSuccess(response.data)) {
         return response.data;
       }
       return null;
@@ -959,7 +1021,7 @@ class ApiServices {
       );
 
       print("Supply POB API Response: ${response.data}");
-      if (response.statusCode == 200 && response.data["status"] == "success") {
+      if (response.statusCode == 200 && isSuccess(response.data)) {
         return response.data;
       }
       return null;
@@ -988,7 +1050,7 @@ class ApiServices {
       );
 
       print("POB History API Response: ${response.data}");
-      if (response.statusCode == 200 && response.data["status"] == "success") {
+      if (response.statusCode == 200 && (isSuccess(response.data) || (response.data is Map && response.data["data"] != null))) {
         return response.data;
       }
       return null;
@@ -1016,7 +1078,7 @@ class ApiServices {
         ),
       );
 
-      if (response.statusCode == 200 && response.data["status"] == "success") {
+      if (response.statusCode == 200 && isSuccess(response.data)) {
         return response.data;
       }
       return null;
@@ -1044,7 +1106,7 @@ class ApiServices {
         ),
       );
 
-      if (response.statusCode == 200 && response.data["status"] == "success") {
+      if (response.statusCode == 200 && (isSuccess(response.data) || (response.data is Map && response.data["data"] != null))) {
         return response.data;
       }
       return null;
@@ -1073,7 +1135,7 @@ class ApiServices {
       );
       AppLogger.info("Get Support Team response: ${response.statusCode} - ${response.data}");
 
-      if (response.statusCode == 200 && response.data["status"] == "success") {
+      if (response.statusCode == 200 && (isSuccess(response.data) || (response.data is Map && response.data["data"] != null))) {
         return response.data;
       }
       return null;
@@ -1118,7 +1180,9 @@ class ApiServices {
       print("Get Calls Info API Endpoint: ${AppUrls.callsInfo} | Response: ${response.data}");
 
       AppLogger.info("Get Calls Info response status: ${response.statusCode}");
-      if (response.statusCode == 200 && response.data["status"] == "success") {
+      if (response.statusCode == 200 &&
+          (isSuccess(response.data) ||
+              (response.data is Map && (response.data["summary"] != null || response.data["data"] != null)))) {
         return response.data;
       }
       AppLogger.warning("Get Calls Info unexpected response: ${response.data}");
@@ -1178,7 +1242,7 @@ class ApiServices {
       );
 
       AppLogger.info("Get Outlet Categories response: ${response.statusCode}");
-      if (response.statusCode == 200 && response.data["status"] == true) {
+      if (response.statusCode == 200 && (isSuccess(response.data) || response.data["status"] == true || response.data["data"] != null || response.data["categories"] != null)) {
         return response.data;
       }
       return null;
@@ -1769,7 +1833,7 @@ class ApiServices {
       );
 
       print("Create Distributor API Response: ${response.data}");
-      if (response.statusCode == 200 && response.data["status"] == true) {
+      if (response.statusCode == 200 && (isSuccess(response.data) || response.data["status"] == true)) {
         return response.data;
       }
       return null;
@@ -1794,7 +1858,7 @@ class ApiServices {
       );
 
       print("Get Distributors API Response: ${response.data}");
-      if (response.statusCode == 200 && response.data["status"] == true) {
+      if (response.statusCode == 200 && (isSuccess(response.data) || response.data["status"] == true || response.data["data"] != null)) {
         return response.data;
       }
       return null;
@@ -1824,7 +1888,7 @@ class ApiServices {
       );
 
       print("Distributor Stock Insert API Response: ${response.data}");
-      if (response.statusCode == 200 && response.data["status"] == "success") {
+      if (response.statusCode == 200 && isSuccess(response.data)) {
         return response.data;
       }
       return null;
@@ -1853,7 +1917,7 @@ class ApiServices {
       );
 
       print("Distributor Stock History API Response: ${response.data}");
-      if (response.statusCode == 200 && response.data["status"] == "success") {
+      if (response.statusCode == 200 && (isSuccess(response.data) || (response.data is Map && response.data["data"] != null))) {
         return response.data;
       }
       return null;
@@ -1880,7 +1944,7 @@ class ApiServices {
       );
 
       print("Get Targets API Response: ${response.data}");
-      if (response.statusCode == 200 && response.data["status"] == true) {
+      if (response.statusCode == 200 && (isSuccess(response.data) || (response.data is Map && response.data["data"] != null))) {
         return response.data;
       }
       return null;

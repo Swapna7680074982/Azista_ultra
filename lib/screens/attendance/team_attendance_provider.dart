@@ -69,10 +69,10 @@ class TeamAttendanceProvider extends ChangeNotifier {
       AppLogger.error("Error fetching team attendance", e);
       _allAttendance = [];
       _filteredAttendance = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   void setRoleFilter(String role) {

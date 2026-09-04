@@ -234,7 +234,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
           final response = await ApiServices.supplyPob(payload: payload);
           if (mounted) {
-            if (response != null && response['status'] == 'success') {
+            if (response != null && (response['status'] == 'success' || response['status'] == true)) {
               final statusMsg = response['pob_status'] == 'supplied' ? 'Fully Supplied' : 'Partially Supplied';
               SuccessDialog.show(
                 context,

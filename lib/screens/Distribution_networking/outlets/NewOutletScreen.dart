@@ -75,7 +75,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
   bool _isFetchingAddress = false;
 
   Future<void> _autoFetchAddress(double lat, double lng) async {
-    if (_isFetchingAddress) return;
+    if (_isFetchingAddress || !mounted) return;
     setState(() => _isFetchingAddress = true);
     try {
       final dio = Dio(
@@ -94,6 +94,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
           },
         ),
       );
+      if (!mounted) return;
       if (response.statusCode == 200 && response.data != null) {
         final displayName = response.data["display_name"]?.toString();
         if (displayName != null) {
@@ -105,7 +106,9 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
     } catch (e) {
       debugPrint("Address fetch error: $e");
     } finally {
-      setState(() => _isFetchingAddress = false);
+      if (mounted) {
+        setState(() => _isFetchingAddress = false);
+      }
     }
   }
 
@@ -228,7 +231,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
       }
     }
 
-    if (isSubmitting) return;
+    if (!mounted || isSubmitting) return;
 
     setState(() => isSubmitting = true);
 
@@ -264,6 +267,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
 
     final res = await ApiServices.registerOutlet(payload: payload);
 
+    if (!mounted) return;
     setState(() => isSubmitting = false);
 
     final message = res?["message"]?.toString() ?? "Registration failed";
@@ -271,7 +275,9 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
 
     if (status) {
       SuccessDialog.show(context, message: message, onDismiss: () {
-        Navigator.pop(context, true);
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -636,7 +642,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
             context: context,
             initialTime: TimeOfDay.now(),
           );
-          if (picked != null) {
+          if (picked != null && mounted) {
             setState(() {
               if (isOpening) {
                 openingTime = picked;

@@ -71,7 +71,7 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
 
       if (mounted) {
         setState(() {
-          if (res != null && res["status"] == true) {
+          if (res != null && (res["status"] == true || res["status"] == "success" || res["data"] != null)) {
             _pobHistory = res["data"] as List<dynamic>? ?? [];
           } else {
             _pobError = "Failed to load POB history";
@@ -105,7 +105,7 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
 
       if (mounted) {
         setState(() {
-          if (res != null && res["status"] == true) {
+          if (res != null && (res["status"] == true || res["status"] == "success" || res["visit_history"] != null)) {
             _visitHistory = res["visit_history"] as List<dynamic>? ?? [];
           } else {
             _visitError = "Failed to load visit history";
@@ -132,7 +132,7 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
       lastDate: DateTime(2100),
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       final oldMonth = selectedDate.month;
       final oldYear = selectedDate.year;
       setState(() {

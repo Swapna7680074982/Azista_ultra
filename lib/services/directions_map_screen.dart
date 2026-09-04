@@ -34,17 +34,26 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
   }
 
   Future<void> _getCurrentLocation() async {
-    LocationPermission permission = await Geolocator.requestPermission();
+    try {
+      final permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        return;
+      }
 
-    Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
 
-    setState(() {
-      currentLatLng = LatLng(position.latitude, position.longitude);
-    });
-
-    _moveCamera();
+      if (mounted) {
+        setState(() {
+          currentLatLng = LatLng(position.latitude, position.longitude);
+        });
+        _moveCamera();
+      }
+    } catch (e) {
+      debugPrint("Error fetching current location in map: $e");
+    }
   }
 
   void _moveCamera() {
@@ -151,7 +160,7 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
               circleId: const CircleId("accuracy"),
               center: currentLatLng!,
               radius: 50,
-              fillColor: Colors.blue.withOpacity(0.2),
+              fillColor: Colors.blue.withValues(alpha: 0.2),
               strokeColor: Colors.blue,
               strokeWidth: 1,
             ),

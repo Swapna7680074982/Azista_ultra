@@ -26,11 +26,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUserInfo() async {
-    final info = await SessionManager.getUserInfo();
-    setState(() {
-      userInfo = info;
-      isLoading = false;
-    });
+    try {
+      final info = await SessionManager.getUserInfo();
+      if (mounted) {
+        setState(() {
+          userInfo = info;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading user info: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
   @override
