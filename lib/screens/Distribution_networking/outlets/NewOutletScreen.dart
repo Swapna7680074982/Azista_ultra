@@ -8,6 +8,8 @@ import '../../../constants/app_colors.dart';
 import '../../../services/api_services.dart';
 import '../../../services/location_service.dart';
 import 'package:provider/provider.dart';
+import '../../../permissions/AppStateProvider.dart';
+import '../../../permissions/SessionManager.dart';
 import 'outlet_provider.dart';
 import '../../../utilities/common_widgets.dart';
 
@@ -232,7 +234,22 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
 
     setState(() => isSubmitting = true);
 
+    int distId = widget.routeId;
+    try {
+      final appState = Provider.of<AppStateProvider>(context, listen: false);
+      if (appState.selectedDistributorId != null) {
+        distId = appState.selectedDistributorId!;
+      } else {
+        final dists = await SessionManager.getDistributors();
+        if (dists.isNotEmpty) {
+          distId = int.tryParse(dists.first["distributor_id"]?.toString() ?? '') ?? widget.routeId;
+        }
+      }
+    } catch (_) {}
+
     final payload = {
+      "route_id": widget.routeId,
+      "distributor_id": distId,
       "beat_id": widget.routeId,
       "outlet_category": int.tryParse(selectedCategory!.categoryId) ?? 0,
       "outlet_name": nameController.text.trim(),

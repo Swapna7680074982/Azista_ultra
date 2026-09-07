@@ -52,6 +52,8 @@ class SessionManager {
   static const _attendanceKey = "attendance_status";
   static const _checkInTimeKey = "check_in_time";
 
+  static const _attendanceIdKey = "last_attendance_id";
+
   static Future<void> saveAttendanceStatus(String? status) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_attendanceKey, status ?? "");
@@ -59,7 +61,22 @@ class SessionManager {
       await prefs.setString(_checkInTimeKey, DateTime.now().toIso8601String());
     } else if (status == "CHECKED_OUT") {
       await prefs.remove(_checkInTimeKey);
+      await prefs.remove(_attendanceIdKey);
     }
+  }
+
+  static Future<void> saveAttendanceId(String? id) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (id != null && id.isNotEmpty) {
+      await prefs.setString(_attendanceIdKey, id);
+    } else {
+      await prefs.remove(_attendanceIdKey);
+    }
+  }
+
+  static Future<String?> getAttendanceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_attendanceIdKey);
   }
 
   static Future<String?> getAttendanceStatus() async {

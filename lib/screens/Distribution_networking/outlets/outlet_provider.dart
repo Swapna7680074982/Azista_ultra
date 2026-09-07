@@ -40,13 +40,13 @@ class Outlet {
         ?? '';
 
     return Outlet(
-      id: json['outlet_id'].toString(),
-      name: json['outlet_name']?.toString() ?? 'Unknown',
-      owner: (json['owner_name'] ?? json['owner'] ?? json['contact_person'] ?? json['contact_name'])?.toString() ?? 'Unknown',
-      phone: (json['mobile'] ?? json['phone'] ?? json['mobile_number'] ?? json['contact_number'])?.toString() ?? '',
+      id: (json['outlet_id'] ?? json['id'] ?? '').toString(),
+      name: (json['outlet_name'] ?? json['name'] ?? 'Unknown').toString(),
+      owner: (json['owner_name'] ?? json['owner'] ?? json['contact_person'] ?? json['contact_name'] ?? 'Unknown').toString(),
+      phone: (json['mobile'] ?? json['phone'] ?? json['mobile_number'] ?? json['contact_number'] ?? '').toString(),
       type: type,
-      latitude: double.tryParse(json['location']?['latitude']?.toString() ?? '0') ?? 0.0,
-      longitude: double.tryParse(json['location']?['longitude']?.toString() ?? '0') ?? 0.0,
+      latitude: double.tryParse(json['location']?['latitude']?.toString() ?? json['latitude']?.toString() ?? '0') ?? 0.0,
+      longitude: double.tryParse(json['location']?['longitude']?.toString() ?? json['longitude']?.toString() ?? '0') ?? 0.0,
       status: json['status']?.toString() ?? 'ACTIVE',
       address: json['address']?.toString() ?? '',
       area: json['area']?.toString() ?? '',

@@ -102,27 +102,27 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                                   activeTrackColor: Colors.green.withValues(alpha: 0.35),
                                   inactiveThumbColor: AppColors.white,
                                   inactiveTrackColor: AppColors.white.withValues(alpha: 0.4),
-                                  onChanged: (val) async {
-                                  bool success = false;
-                                  if (val) {
-                                    success = await homeProvider.checkIn();
-                                    if (success) {
-                                      appState.setOnline(true);
-                                      await homeProvider.fetchTodayAttendance();
-                                    }
-                                  } else {
-                                    success = await homeProvider.checkOut();
-                                    if (success) {
-                                      appState.setOnline(false);
-                                      await homeProvider.fetchTodayAttendance();
-                                    }
-                                  }
-                                  if (homeProvider.message != null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(homeProvider.message!)),
-                                    );
-                                  }
-                                },
+                                   onChanged: (val) async {
+                                   bool success = false;
+                                   if (val) {
+                                     success = await homeProvider.handleCheckInWithPhotoIfNeeded(context);
+                                     if (success) {
+                                       appState.setOnline(true);
+                                       await homeProvider.fetchTodayAttendance();
+                                     }
+                                   } else {
+                                     success = await homeProvider.checkOut();
+                                     if (success) {
+                                       appState.setOnline(false);
+                                       await homeProvider.fetchTodayAttendance();
+                                     }
+                                   }
+                                   if (homeProvider.message != null && context.mounted) {
+                                     ScaffoldMessenger.of(context).showSnackBar(
+                                       SnackBar(content: Text(homeProvider.message!)),
+                                     );
+                                   }
+                                 },
                               ),
                             ),
                     ],

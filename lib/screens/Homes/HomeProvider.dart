@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../permissions/AppStateProvider.dart';
 import '../../permissions/SessionManager.dart';
@@ -45,7 +47,17 @@ class HomeProvider extends ChangeNotifier {
       final res = await ApiServices.getAttendanceStatus();
       if (res != null && res["status"] == true && res["data"] != null) {
         final todayStatus = res["data"]["attendance_status"]?["today_status"]?.toString();
-        if (todayStatus == "CHECKED_IN") {
+        final lastSession = res["data"]["attendance_status"]?["last_session"];
+        final hasNoCheckOut = lastSession == null ||
+            lastSession["check_out"] == null ||
+            lastSession["check_out"].toString().trim().isEmpty;
+        final bool isCurrentlyCheckedIn = todayStatus == "CHECKED_IN" && hasNoCheckOut;
+
+        if (isCurrentlyCheckedIn && lastSession != null) {
+          final attId = lastSession["attendance_id"]?.toString();
+          if (attId != null && attId.isNotEmpty) {
+            await SessionManager.saveAttendanceId(attId);
+          }
           appState.setOnline(true);
           await SessionManager.saveAttendanceStatus("CHECKED_IN");
           localCheckInTime = await SessionManager.getCheckInTime();
@@ -54,6 +66,7 @@ class HomeProvider extends ChangeNotifier {
         } else {
           appState.setOnline(false);
           await SessionManager.saveAttendanceStatus("CHECKED_OUT");
+          await SessionManager.saveAttendanceId(null);
           localCheckInTime = null;
           notifyListeners();
         }
@@ -67,6 +80,7 @@ class HomeProvider extends ChangeNotifier {
           await checkAutoCheckout(appState);
         } else {
           appState.setOnline(false);
+          await SessionManager.saveAttendanceId(null);
           localCheckInTime = null;
           notifyListeners();
         }
@@ -79,6 +93,7 @@ class HomeProvider extends ChangeNotifier {
         notifyListeners();
       } else {
         appState.setOnline(false);
+        await SessionManager.saveAttendanceId(null);
         localCheckInTime = null;
         notifyListeners();
       }
@@ -124,25 +139,121 @@ class HomeProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> checkIn() async {
+  Future<Map<String, dynamic>> checkIn({File? photo}) async {
     isLoading = true;
     notifyListeners();
 
-    final res = await ApiServices.markAttendance(type: "IN");
+    final res = await ApiServices.markAttendance(type: "IN", photo: photo);
 
     isLoading = false;
     notifyListeners();
 
     if (res != null && res["status"] == true) {
-      message = res["message"];
+      message = res["message"] ?? "Check-in successful";
+      String? attId = res["attendance_id"]?.toString() ??
+          res["data"]?["attendance_id"]?.toString() ??
+          res["data"]?["attendance_status"]?["last_session"]?["attendance_id"]?.toString();
+
+      if (attId == null || attId.isEmpty) {
+        try {
+          final statusRes = await ApiServices.getAttendanceStatus();
+          attId = statusRes?["data"]?["attendance_status"]?["last_session"]?["attendance_id"]?.toString();
+        } catch (_) {}
+      }
+
+      if (attId != null && attId.isNotEmpty) {
+        await SessionManager.saveAttendanceId(attId);
+      }
       await SessionManager.saveAttendanceStatus("CHECKED_IN");
       localCheckInTime = await SessionManager.getCheckInTime();
       notifyListeners();
+      return {"success": true, "message": message};
+    }
+
+    // If check-in failed, check if the server already has an active check-in
+    try {
+      final statusRes = await ApiServices.getAttendanceStatus();
+      final todayStatus = statusRes?["data"]?["attendance_status"]?["today_status"]?.toString();
+      final lastSession = statusRes?["data"]?["attendance_status"]?["last_session"];
+      final hasNoCheckOut = lastSession == null ||
+          lastSession["check_out"] == null ||
+          lastSession["check_out"].toString().trim().isEmpty;
+      if (todayStatus == "CHECKED_IN" && hasNoCheckOut) {
+        final attId = lastSession?["attendance_id"]?.toString();
+        if (attId != null && attId.isNotEmpty) {
+          await SessionManager.saveAttendanceId(attId);
+        }
+        await SessionManager.saveAttendanceStatus("CHECKED_IN");
+        localCheckInTime = await SessionManager.getCheckInTime();
+        message = "Checked in successfully";
+        notifyListeners();
+        return {"success": true, "message": message};
+      }
+    } catch (_) {}
+
+    final isPhotoRequired = res != null &&
+        (res["photo_required"] == true ||
+         res["message"]?.toString().toLowerCase().contains("photo") == true ||
+         res["message"]?.toString().toLowerCase().contains("check-in failed") == true ||
+         res["status_code"] == 500);
+
+    message = res?["message"] ?? "Check-in failed";
+    notifyListeners();
+    return {
+      "success": false,
+      "photo_required": isPhotoRequired,
+      "message": message,
+    };
+  }
+
+  Future<bool> handleCheckInWithPhotoIfNeeded(BuildContext context) async {
+    final hasNoSessionsToday = todayAttendance == null ||
+        todayAttendance?["sessions"] == null ||
+        (todayAttendance?["sessions"] is List && (todayAttendance!["sessions"] as List).isEmpty);
+
+    if (hasNoSessionsToday) {
+      return await _capturePhotoAndCheckIn(context);
+    }
+
+    final res = await checkIn();
+    if (res["success"] == true) {
       return true;
     }
 
-    message = res?["message"] ?? "Check-in failed";
+    if (res["photo_required"] == true) {
+      if (!context.mounted) return false;
+      return await _capturePhotoAndCheckIn(context);
+    }
+
     return false;
+  }
+
+  Future<bool> _capturePhotoAndCheckIn(BuildContext context) async {
+    if (!context.mounted) return false;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Opening camera: Photo required for check-in"),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.camera,
+      preferredCameraDevice: CameraDevice.front,
+      imageQuality: 70,
+    );
+
+    if (picked == null) {
+      message = "Check-in cancelled: Photo is required";
+      notifyListeners();
+      return false;
+    }
+
+    final photoFile = File(picked.path);
+    final photoRes = await checkIn(photo: photoFile);
+    return photoRes["success"] == true;
   }
 
   Future<bool> checkOut() async {
@@ -151,21 +262,40 @@ class HomeProvider extends ChangeNotifier {
 
     final res = await ApiServices.markAttendance(type: "OUT");
 
-
-
     isLoading = false;
     notifyListeners();
 
+    final isAlreadyCheckedOut = res != null &&
+        (res["message"]?.toString().toLowerCase().contains("no active check-in") == true ||
+         res["message"]?.toString().toLowerCase().contains("already checked out") == true);
 
-    if (res != null && res["status"] == true) {
-      message = res["message"];
+    if (res != null && (res["status"] == true || isAlreadyCheckedOut)) {
+      message = res["status"] == true
+          ? (res["message"] ?? "Checked out successfully")
+          : "Already checked out";
       await SessionManager.saveAttendanceStatus("CHECKED_OUT");
+      await SessionManager.saveAttendanceId(null);
       localCheckInTime = null;
       notifyListeners();
       return true;
     }
 
+    // If check-out failed, verify if user is already checked out on server
+    try {
+      final statusRes = await ApiServices.getAttendanceStatus();
+      final todayStatus = statusRes?["data"]?["attendance_status"]?["today_status"]?.toString();
+      if (todayStatus == "CHECKED_OUT" || todayStatus == "NOT_CHECKED_IN") {
+        await SessionManager.saveAttendanceStatus("CHECKED_OUT");
+        await SessionManager.saveAttendanceId(null);
+        localCheckInTime = null;
+        message = "Checked out successfully";
+        notifyListeners();
+        return true;
+      }
+    } catch (_) {}
+
     message = res?["message"] ?? "Check-out failed";
+    notifyListeners();
     return false;
   }
 
@@ -179,7 +309,6 @@ class HomeProvider extends ChangeNotifier {
       final data = res["data"];
 
       if (data is List) {
-
         if (data.isEmpty) {
           todayAttendance = null;
         } else {
@@ -187,6 +316,17 @@ class HomeProvider extends ChangeNotifier {
         }
       } else if (data is Map<String, dynamic>) {
         todayAttendance = data;
+        final sessions = data["sessions"] as List<dynamic>?;
+        if (sessions != null && sessions.isNotEmpty) {
+          final last = sessions.last;
+          final hasNoCheckOut = last is Map &&
+              (last["check_out"] == null || last["check_out"].toString().trim().isEmpty);
+          if (last is Map && last["attendance_id"] != null && hasNoCheckOut) {
+            await SessionManager.saveAttendanceId(last["attendance_id"].toString());
+          } else {
+            await SessionManager.saveAttendanceId(null);
+          }
+        }
       } else {
         todayAttendance = null;
       }

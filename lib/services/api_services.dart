@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:http_parser/http_parser.dart';
 
 import '../constants/api_urls.dart';
 import '../permissions/SessionManager.dart';
@@ -13,6 +14,42 @@ import 'navigation_service.dart';
 
 
 class ApiServices {
+  static dynamic _safeParseJson(dynamic rawData) {
+    if (rawData == null) return null;
+    if (rawData is Map || rawData is List) return rawData;
+    if (rawData is String) {
+      String text = rawData.trim();
+      if (text.isEmpty) return null;
+      if (text.startsWith('\uFEFF')) {
+        text = text.substring(1).trim();
+      }
+      try {
+        return jsonDecode(text);
+      } catch (_) {
+        final firstBrace = text.indexOf('{');
+        final firstBracket = text.indexOf('[');
+        int start = -1;
+        int end = -1;
+        if (firstBrace != -1 && (firstBracket == -1 || firstBrace < firstBracket)) {
+          start = firstBrace;
+          end = text.lastIndexOf('}');
+        } else if (firstBracket != -1) {
+          start = firstBracket;
+          end = text.lastIndexOf(']');
+        }
+        if (start != -1 && end != -1 && end >= start) {
+          final jsonSub = text.substring(start, end + 1);
+          try {
+            return jsonDecode(jsonSub);
+          } catch (e) {
+            AppLogger.error("Failed to parse extracted JSON substring", e);
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   static final Dio _dio = Dio(
     BaseOptions(
       connectTimeout: const Duration(seconds: 50),
@@ -27,11 +64,13 @@ class ApiServices {
         final isRefresh = path.contains('/user/refresh_token');
         final isLogout = path.contains('/user/logout');
 
+        final parsedData = _safeParseJson(response.data);
+
         if (!isLogin && !isRefresh && !isLogout &&
             (response.statusCode == 401 ||
-                (response.data is Map &&
-                    (response.data["message"]?.toString().contains("Token expired") == true ||
-                     response.data["message"]?.toString().contains("Token revoked") == true)))) {
+                (parsedData is Map &&
+                    (parsedData["message"]?.toString().contains("Token expired") == true ||
+                     parsedData["message"]?.toString().contains("Token revoked") == true)))) {
           final token = await SessionManager.getToken();
           final refreshTokenStr = await SessionManager.getRefreshToken();
           if (token == null || refreshTokenStr == null || token.isEmpty || refreshTokenStr.isEmpty) {
@@ -53,6 +92,7 @@ class ApiServices {
                   method: opts.method,
                   headers: opts.headers,
                   contentType: opts.contentType,
+                  responseType: opts.responseType,
                 ),
               );
               return handler.resolve(cloneReq);
@@ -74,11 +114,13 @@ class ApiServices {
         final isRefresh = path.contains('/user/refresh_token');
         final isLogout = path.contains('/user/logout');
 
+        final parsedData = _safeParseJson(e.response?.data);
+
         if (!isLogin && !isRefresh && !isLogout &&
             (e.response?.statusCode == 401 ||
-                (e.response?.data is Map &&
-                    (e.response?.data["message"]?.toString().contains("Token expired") == true ||
-                     e.response?.data["message"]?.toString().contains("Token revoked") == true)))) {
+                (parsedData is Map &&
+                    (parsedData["message"]?.toString().contains("Token expired") == true ||
+                     parsedData["message"]?.toString().contains("Token revoked") == true)))) {
           final token = await SessionManager.getToken();
           final refreshTokenStr = await SessionManager.getRefreshToken();
           if (token == null || refreshTokenStr == null || token.isEmpty || refreshTokenStr.isEmpty) {
@@ -100,6 +142,7 @@ class ApiServices {
                   method: opts.method,
                   headers: opts.headers,
                   contentType: opts.contentType,
+                  responseType: opts.responseType,
                 ),
               );
               return handler.resolve(cloneReq);
@@ -199,12 +242,16 @@ class ApiServices {
       final response = await dio.post(
         AppUrls.refreshToken,
         data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+        ),
       );
 
-      AppLogger.info("Refresh Token response: ${response.data}");
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Refresh Token response: $parsed");
 
-      if (response.statusCode == 200 && response.data["status"] == true) {
-        final newAccessToken = response.data["access_token"];
+      if (response.statusCode == 200 && parsed is Map && parsed["status"] == true) {
+        final newAccessToken = parsed["access_token"];
         if (newAccessToken != null) {
           await SessionManager.saveSession(
             token: newAccessToken,
@@ -261,22 +308,26 @@ class ApiServices {
       final response = await _dio.post(
         AppUrls.login,
         data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+        ),
       );
 
-      AppLogger.info("Login response: ${response.data}");
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Login response: $parsed");
 
-      if (response.statusCode == 200) {
-        return response.data;
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
       }
 
       AppLogger.warning("Login failed: ${response.data}");
-      return response.data;
+      return null;
     } catch (e) {
       AppLogger.error("Login error", e);
       String message = "Login failed";
       if (e is DioException) {
         if (e.response != null) {
-          final data = e.response?.data;
+          final data = _safeParseJson(e.response?.data);
           if (data is Map && data.containsKey("message")) {
             message = data["message"]?.toString() ?? "Login failed";
           } else {
@@ -324,6 +375,7 @@ class ApiServices {
         AppUrls.logout,
         data: payload,
         options: Options(
+          responseType: ResponseType.plain,
           headers: {
             "Authorization": "Bearer $accessToken",
           },
@@ -331,10 +383,12 @@ class ApiServices {
         ),
       );
 
-      AppLogger.info("Logout response: ${response.data}");
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Logout response: $parsed");
 
       if (response.statusCode == 200 &&
-          response.data["status"] == true) {
+          parsed is Map &&
+          parsed["status"] == true) {
         AppLogger.success("Logout successful");
         return true;
       }
@@ -378,19 +432,25 @@ class ApiServices {
         AppUrls.changePassword,
         data: payload,
         options: Options(
+          responseType: ResponseType.plain,
           headers: {
             "Authorization": "Bearer $token",
           },
         ),
       );
 
-      AppLogger.info("Change Password response: ${response.data}");
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Change Password response: $parsed");
 
-      if (response.statusCode == 200 && response.data["status"] == true) {
-        return response.data;
+      if (response.statusCode == 200 && parsed is Map && parsed["status"] == true) {
+        return Map<String, dynamic>.from(parsed);
       }
 
-      return response.data;
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+
+      return null;
     } catch (e) {
       AppLogger.error("Change Password error", e);
       return null;
@@ -414,17 +474,19 @@ class ApiServices {
       final response = await _dio.get(
         AppUrls.routes,
         options: Options(
+          responseType: ResponseType.plain,
           headers: {
             "Authorization": "Bearer $token",
           },
-          validateStatus: (status) => status! < 500,
+          validateStatus: (status) => status != null && status < 600,
         ),
       );
 
-      AppLogger.info("Get Routes response: ${response.statusCode} - ${response.data}");
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Routes response: ${response.statusCode} - $parsed");
 
-      if (response.statusCode == 200 && response.data["status"] == true) {
-        return response.data;
+      if (response.statusCode == 200 && parsed is Map && parsed["status"] == true) {
+        return Map<String, dynamic>.from(parsed);
       }
       
       if (response.statusCode == 404) {
@@ -445,12 +507,127 @@ class ApiServices {
 
   static Future<Map<String, dynamic>?> markAttendance({
     required String type,
+    File? photo,
+    double? latitude,
+    double? longitude,
   }) async {
-    AppLogger.warning("API markAttendance bypassed (API Removed)");
-    return {
-      "status": true,
-      "message": "Bypassed (API Removed)",
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for markAttendance");
+        return null;
+      }
+
+      final deviceId = NotificationService.instance.deviceId ?? "device_001";
+
+      List<String> coords;
+      if (latitude != null && longitude != null && latitude != 0.0) {
+        coords = [latitude.toString(), longitude.toString()];
+      } else {
+        coords = await LocationService.getCoordinates(
+          requestPermission: true,
+          throwOnError: false,
+        );
+      }
+
+      final isCheckout = type.trim().toUpperCase() == "OUT";
+      String? attendanceId;
+      if (isCheckout) {
+        attendanceId = await SessionManager.getAttendanceId();
+        if (attendanceId == null || attendanceId.isEmpty) {
+          try {
+            final statusRes = await getAttendanceStatus();
+            final todayStatus = statusRes?["data"]?["attendance_status"]?["today_status"]?.toString();
+            final lastSession = statusRes?["data"]?["attendance_status"]?["last_session"];
+            final hasNoCheckOut = lastSession == null ||
+                lastSession["check_out"] == null ||
+                lastSession["check_out"].toString().trim().isEmpty;
+            final hasActiveSession = todayStatus == "CHECKED_IN" && hasNoCheckOut;
+            if (hasActiveSession && lastSession != null) {
+              final fetchedId = lastSession["attendance_id"]?.toString();
+              if (fetchedId != null && fetchedId.isNotEmpty) {
+                attendanceId = fetchedId;
+                await SessionManager.saveAttendanceId(fetchedId);
+              }
+            }
+          } catch (_) {}
+        }
+      }
+
+      AppLogger.info("Mark Attendance API called: type=$type, lat=${coords[0]}, lng=${coords[1]}");
+
+      final nowStr = _formatDateTime();
+      final Map<String, dynamic> formMap = {
+        "type": type.toUpperCase(),
+        "meta.deviceId": deviceId,
+        "meta.latitude": coords[0],
+        "meta.longitude": coords[1],
+        "meta.deviceTS": nowStr,
+        "deviceId": deviceId,
+        "latitude": coords[0],
+        "longitude": coords[1],
+      };
+
+      if (photo != null) {
+        final fileName = photo.path.split(Platform.pathSeparator).last;
+        final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : 'jpg';
+        final mimeSubtype = (ext == 'png') ? 'png' : 'jpeg';
+
+        formMap["photo"] = await MultipartFile.fromFile(
+          photo.path,
+          filename: fileName,
+          contentType: MediaType('image', mimeSubtype),
+        );
+        formMap["Photo"] = await MultipartFile.fromFile(
+          photo.path,
+          filename: fileName,
+          contentType: MediaType('image', mimeSubtype),
+        );
+      }
+
+      final formData = FormData.fromMap(formMap);
+
+      final response = await _dio.post(
+        AppUrls.markAttendance,
+        data: formData,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Mark Attendance response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        final map = Map<String, dynamic>.from(parsed);
+        if (map["status"] == true) {
+          if (isCheckout) {
+            await SessionManager.saveAttendanceStatus("CHECKED_OUT");
+            await SessionManager.saveAttendanceId(null);
+          } else {
+            await SessionManager.saveAttendanceStatus("CHECKED_IN");
+            final attId = map["attendance_id"]?.toString() ??
+                map["data"]?["attendance_id"]?.toString() ??
+                map["data"]?["attendance_status"]?["last_session"]?["attendance_id"]?.toString();
+            if (attId != null && attId.isNotEmpty) {
+              await SessionManager.saveAttendanceId(attId);
+            }
+          }
+        } else if (isCheckout && map["message"]?.toString().toLowerCase().contains("no active check-in") == true) {
+          await SessionManager.saveAttendanceStatus("CHECKED_OUT");
+          await SessionManager.saveAttendanceId(null);
+        }
+        return map;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Mark Attendance error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> outletCheckIn({
@@ -482,41 +659,164 @@ class ApiServices {
   }
 
   static Future<Map<String, dynamic>?> getTodayAttendance() async {
-    AppLogger.warning("API getTodayAttendance bypassed (API Removed)");
-    return {
-      "status": true,
-      "attendance_status": {
-        "today_status": "NOT_CHECKED_IN",
-        "last_session": null
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getTodayAttendance");
+        return null;
       }
-    };
+
+      AppLogger.info("Get Today Attendance API called: ${AppUrls.getTodayAttendance}");
+
+      final response = await _dio.get(
+        AppUrls.getTodayAttendance,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Today Attendance response: ${response.statusCode} - $parsed");
+
+      if (response.statusCode == 200 && parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Today Attendance error", e);
+      return null;
+    }
   }
 
   static Future<List<Map<String, dynamic>>?> getAttendanceRange({
     required String fromDate,
     required String toDate,
   }) async {
-    AppLogger.warning("API getAttendanceRange bypassed (API Removed)");
-    return [];
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getAttendanceRange");
+        return null;
+      }
+
+      final payload = {
+        "from_date": fromDate,
+        "to_date": toDate,
+      };
+
+      AppLogger.info("Get Attendance Range API called: ${AppUrls.getAttendanceRange}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.getAttendanceRange,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Attendance Range response: ${response.statusCode} - $parsed");
+
+      if (response.statusCode == 200 && parsed is Map && parsed["status"] == true) {
+        final rawData = parsed["data"];
+        if (rawData is List) {
+          return rawData.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        }
+        return [];
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Attendance Range error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> registerOutlet({
     required Map<String, dynamic> payload,
   }) async {
-    AppLogger.warning("API registerOutlet bypassed (API Removed)");
-    return {
-      "status": true,
-      "message": "Bypassed (API Removed)",
-      "outlet_id": 9999,
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for registerOutlet");
+        return null;
+      }
+
+      AppLogger.info("Register Outlet API called: ${AppUrls.outletRegistration}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.outletRegistration,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Register Outlet response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Register Outlet error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getUserOutlets({int? routeId}) async {
-    AppLogger.warning("API getUserOutlets bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getUserOutlets");
+        return null;
+      }
+
+      final payload = <String, dynamic>{};
+      if (routeId != null) {
+        payload["route_id"] = routeId.toString();
+      }
+
+      AppLogger.info("Get User Outlets API called: ${AppUrls.getUserOutlets}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.getUserOutlets,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get User Outlets response: ${response.statusCode} - $parsed");
+
+      if (response.statusCode == 200 && parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get User Outlets error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getNearbyOutlets({
@@ -525,19 +825,82 @@ class ApiServices {
     int radius = 5,
     int? routeId,
   }) async {
-    AppLogger.warning("API getNearbyOutlets bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getNearbyOutlets");
+        return null;
+      }
+
+      final payload = <String, dynamic>{
+        "latitude": latitude,
+        "longitude": longitude,
+        "radius": radius,
+      };
+      if (routeId != null) {
+        payload["route_id"] = routeId;
+      }
+
+      AppLogger.info("Get Nearby Outlets API called: ${AppUrls.getNearbyOutlets}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.getNearbyOutlets,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Nearby Outlets response: ${response.statusCode} - $parsed");
+
+      if (response.statusCode == 200 && parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Nearby Outlets error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getProductsWithSkus() async {
-    AppLogger.warning("API getProductsWithSkus bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getProductsWithSkus");
+        return null;
+      }
+
+      AppLogger.info("Get Products With SKUs API called: ${AppUrls.getProductsWithSkus}");
+
+      final response = await _dio.get(
+        AppUrls.getProductsWithSkus,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Products With SKUs response: ${response.statusCode} - $parsed");
+
+      if (response.statusCode == 200 && parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Products With SKUs error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> insertDistributorStock({
@@ -562,11 +925,37 @@ class ApiServices {
   }
 
   static Future<Map<String, dynamic>?> getModules() async {
-    AppLogger.warning("API getModules bypassed (API Removed)");
-    return {
-      "status": "success",
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getModules");
+        return null;
+      }
+
+      AppLogger.info("Get Modules API called: ${AppUrls.getModules}");
+
+      final response = await _dio.get(
+        AppUrls.getModules,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Modules response: ${response.statusCode} - $parsed");
+
+      if (response.statusCode == 200 && parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Modules error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> generatePob({
@@ -652,11 +1041,38 @@ class ApiServices {
   }
 
   static Future<Map<String, dynamic>?> getOutletCategories() async {
-    AppLogger.warning("API getOutletCategories bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getOutletCategories");
+        return null;
+      }
+
+      AppLogger.info("Get Outlet Categories API called: ${AppUrls.outletCategories}");
+
+      final response = await _dio.post(
+        AppUrls.outletCategories,
+        data: {},
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Outlet Categories response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Outlet Categories error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> addExpense({
@@ -711,16 +1127,54 @@ class ApiServices {
   }
 
   static Future<Map<String, dynamic>?> getAttendanceStatus() async {
-    AppLogger.warning("API getAttendanceStatus bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": {
-        "attendance_status": {
-          "today_status": "NOT_CHECKED_IN",
-          "last_session": null
-        }
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getAttendanceStatus");
+        return null;
       }
-    };
+
+      AppLogger.info("Get Attendance Status API called: ${AppUrls.getAttendanceStatus}");
+
+      final response = await _dio.get(
+        AppUrls.getAttendanceStatus,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Attendance Status response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        final map = Map<String, dynamic>.from(parsed);
+        if (map["status"] == true && map["data"] != null) {
+          final todayStatus = map["data"]["attendance_status"]?["today_status"]?.toString();
+          final lastSession = map["data"]["attendance_status"]?["last_session"];
+          final hasNoCheckOut = lastSession == null ||
+              lastSession["check_out"] == null ||
+              lastSession["check_out"].toString().trim().isEmpty;
+          final bool isCurrentlyCheckedIn = todayStatus == "CHECKED_IN" && hasNoCheckOut;
+          if (isCurrentlyCheckedIn && lastSession != null) {
+            final attId = lastSession["attendance_id"]?.toString();
+            if (attId != null && attId.isNotEmpty) {
+              await SessionManager.saveAttendanceId(attId);
+            }
+          } else {
+            await SessionManager.saveAttendanceId(null);
+          }
+        }
+        return map;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Attendance Status error", e);
+      return null;
+    }
   }
 
   static List<Map<String, dynamic>> parsePhpPrintR(String text) {
@@ -827,15 +1281,18 @@ class ApiServices {
       final response = await _dio.get(
         AppUrls.getDistributors,
         options: Options(
+          responseType: ResponseType.plain,
           headers: {
             "Authorization": "Bearer $token",
           },
+          validateStatus: (status) => status != null && status < 600,
         ),
       );
 
-      print("Get Distributors API Response: ${response.data}");
-      if (response.statusCode == 200 && response.data["status"] == true) {
-        final rawDistributors = response.data["distributors"];
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Distributors API Response: ${response.statusCode} - $parsed");
+      if (response.statusCode == 200 && parsed is Map && parsed["status"] == true) {
+        final rawDistributors = parsed["distributors"];
         final List<Map<String, dynamic>> distList = [];
         if (rawDistributors is Map) {
           rawDistributors.forEach((key, val) {
@@ -854,7 +1311,7 @@ class ApiServices {
 
         return {
           "status": true,
-          "message": response.data["message"],
+          "message": parsed["message"],
           "data": distList,
         };
       }

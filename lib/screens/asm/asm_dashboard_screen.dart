@@ -105,7 +105,7 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                                 onChanged: (val) async {
                                   bool success = false;
                                   if (val) {
-                                    success = await homeProvider.checkIn();
+                                    success = await homeProvider.handleCheckInWithPhotoIfNeeded(context);
                                     if (success) {
                                       appState.setOnline(true);
                                       await homeProvider.fetchTodayAttendance();
@@ -117,7 +117,7 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                                       await homeProvider.fetchTodayAttendance();
                                     }
                                   }
-                                  if (homeProvider.message != null) {
+                                  if (homeProvider.message != null && context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text(homeProvider.message!)),
                                     );

@@ -121,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     bool success = false;
 
                     if (val) {
-                      success = await homeProvider.checkIn();
+                      success = await homeProvider.handleCheckInWithPhotoIfNeeded(context);
 
                       if (success) {
                         appState.setOnline(true);
@@ -138,9 +138,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       }
                     }
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(homeProvider.message ?? "")),
-                    );
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(homeProvider.message ?? "")),
+                      );
+                    }
                   },
                   activeThumbColor: Colors.green,
                   activeTrackColor: Colors.green.withValues(
@@ -656,8 +658,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                 }
 
-                // Add elapsed time for the single latest active session only
-                if (latestActiveSession != null) {
+                // Add elapsed time for the active session only when online
+                if (appState.isOnline && latestActiveSession != null) {
                   final sCheckIn = latestActiveSession["check_in"];
                   checkIn = sCheckIn;
                   hasActiveSession = true;

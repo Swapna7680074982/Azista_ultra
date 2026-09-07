@@ -57,8 +57,24 @@ class LoginProvider extends ChangeNotifier {
             await SessionManager.saveUserDetails(name, role, userInfo: userInfo);
           }
 
-          final attendanceStatus = (data["attendance_status"] ?? response["attendance_status"])?["today_status"];
+          final attStatusObj = (data["attendance_status"] ?? response["attendance_status"]);
+          final attendanceStatus = attStatusObj?["today_status"]?.toString();
           await SessionManager.saveAttendanceStatus(attendanceStatus);
+
+          final lastSession = attStatusObj?["last_session"];
+          final hasNoCheckOut = lastSession == null ||
+              lastSession["check_out"] == null ||
+              lastSession["check_out"].toString().trim().isEmpty;
+          final bool isCurrentlyCheckedIn = attendanceStatus == "CHECKED_IN" && hasNoCheckOut;
+
+          if (isCurrentlyCheckedIn && lastSession != null) {
+            final attId = lastSession["attendance_id"]?.toString();
+            if (attId != null && attId.isNotEmpty) {
+              await SessionManager.saveAttendanceId(attId);
+            }
+          } else {
+            await SessionManager.saveAttendanceId(null);
+          }
 
           isLoading = false;
           notifyListeners();

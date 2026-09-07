@@ -2,15 +2,17 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 class LocationService {
+  static List<String> _cachedCoordinates = ["17.4297436", "78.3806493"];
+
   static Future<List<String>> getCoordinates({
     bool requestPermission = true,
-    bool throwOnError = true,
+    bool throwOnError = false,
   }) async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         if (throwOnError) throw Exception("Location services disabled");
-        return ["0.0", "0.0"];
+        return _cachedCoordinates;
       }
 
       LocationPermission permission = await Geolocator.checkPermission();
@@ -21,30 +23,37 @@ class LocationService {
 
       if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
         if (throwOnError) throw Exception("Location permission denied");
-        return ["0.0", "0.0"];
+        return _cachedCoordinates;
       }
 
       final lastPosition = await Geolocator.getLastKnownPosition();
-      if (lastPosition != null) {
-        return [
+      if (lastPosition != null && lastPosition.latitude != 0.0) {
+        _cachedCoordinates = [
           lastPosition.latitude.toString(),
           lastPosition.longitude.toString(),
         ];
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 5),
-      );
+      try {
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 6),
+        );
 
-      return [
-        position.latitude.toString(),
-        position.longitude.toString(),
-      ];
+        if (position.latitude != 0.0) {
+          _cachedCoordinates = [
+            position.latitude.toString(),
+            position.longitude.toString(),
+          ];
+          return _cachedCoordinates;
+        }
+      } catch (_) {}
+
+      return _cachedCoordinates;
     } catch (e) {
       debugPrint("Error getting coordinates: $e");
       if (throwOnError) rethrow;
-      return ["0.0", "0.0"];
+      return _cachedCoordinates;
     }
   }
 }
