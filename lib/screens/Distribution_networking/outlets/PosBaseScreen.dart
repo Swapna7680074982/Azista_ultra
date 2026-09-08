@@ -57,10 +57,9 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       final history = await ApiServices.getOutletHistory(outletId: currentOutletId);
       if (history != null && history['status'] == true) {
         final List visits = history['visit_history'] ?? [];
-        final activeVisit = visits.firstWhere(
+        final activeVisit = visits.where(
           (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
-          orElse: () => null,
-        );
+        ).firstOrNull;
 
         if (activeVisit != null) {
           final visitId = int.tryParse(activeVisit['visit_id']?.toString() ?? "") ?? 0;

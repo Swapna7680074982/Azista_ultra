@@ -440,10 +440,9 @@ class HomeProvider extends ChangeNotifier {
       );
       if (res != null && res["status"] == true) {
         final List members = res["data"] ?? [];
-        var memberData = members.firstWhere(
+        var memberData = members.where(
           (m) => m["user_id"]?.toString() == userIdStr,
-          orElse: () => null,
-        );
+        ).firstOrNull;
         if (memberData == null && members.length == 1) {
           memberData = members.first;
         }

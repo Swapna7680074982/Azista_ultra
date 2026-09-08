@@ -51,10 +51,9 @@ class _OutletsScreenState extends State<OutletsScreen> {
         final history = await ApiServices.getOutletHistory(outletId: currentId);
         if (history != null && history['status'] == true) {
           final List visits = history['visit_history'] ?? [];
-          final activeVisit = visits.firstWhere(
+          final activeVisit = visits.where(
             (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
-            orElse: () => null,
-          );
+          ).firstOrNull;
           if (activeVisit != null) {
             return {
               'outlet_id': currentId,
@@ -67,7 +66,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
       }).toList();
 
       final results = await Future.wait(futures);
-      final activeCheckIn = results.firstWhere((r) => r != null, orElse: () => null);
+      final activeCheckIn = results.where((r) => r != null).firstOrNull;
 
       if (activeCheckIn != null && mounted) {
         final outletId = activeCheckIn['outlet_id'] as int;
@@ -105,10 +104,9 @@ class _OutletsScreenState extends State<OutletsScreen> {
         final history = await ApiServices.getOutletHistory(outletId: id);
         if (history != null && history['status'] == true) {
           final List visits = history['visit_history'] ?? [];
-          final activeVisit = visits.firstWhere(
+          final activeVisit = visits.where(
             (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
-            orElse: () => null,
-          );
+          ).firstOrNull;
 
           if (activeVisit != null) {
             final checkinTime = activeVisit['checkin_time']?.toString();

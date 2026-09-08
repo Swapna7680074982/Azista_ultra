@@ -288,10 +288,10 @@ class _MarketingBodyState extends State<MarketingBody>
                       }).toList(),
                       onChanged: (val) {
                         if (val != null) {
-                          final product = provider.productsWithSkus.firstWhere((p) => p['product_id'] == val);
+                          final product = provider.productsWithSkus.where((p) => p['product_id'] == val).firstOrNull;
                           setState(() {
                             selectedProductId = val;
-                            selectedProductName = product['product_name']?.toString() ?? 'Unknown';
+                            selectedProductName = product?['product_name']?.toString() ?? 'Unknown';
                             selectedSkuId = null;
                             selectedSkuName = null;
                           });
@@ -321,8 +321,8 @@ class _MarketingBodyState extends State<MarketingBody>
                       isExpanded: true,
                       hint: const Text("Select SKU"),
                       items: (() {
-                        final product = provider.productsWithSkus.firstWhere((p) => p['product_id'] == selectedProductId);
-                        final skus = product['skus'] as List<dynamic>? ?? [];
+                        final product = provider.productsWithSkus.where((p) => p['product_id'] == selectedProductId).firstOrNull;
+                        final skus = product?['skus'] as List<dynamic>? ?? [];
                         return skus.map((sku) {
                           final sId = sku['sku_id'] as int;
                           final sName = sku['sku_displayname']?.toString() ?? 'Unknown';
@@ -334,12 +334,12 @@ class _MarketingBodyState extends State<MarketingBody>
                       })(),
                       onChanged: (val) {
                         if (val != null) {
-                          final product = provider.productsWithSkus.firstWhere((p) => p['product_id'] == selectedProductId);
-                          final skus = product['skus'] as List<dynamic>? ?? [];
-                          final sku = skus.firstWhere((s) => s['sku_id'] == val);
+                          final product = provider.productsWithSkus.where((p) => p['product_id'] == selectedProductId).firstOrNull;
+                          final skus = product?['skus'] as List<dynamic>? ?? [];
+                          final sku = skus.where((s) => s['sku_id'] == val).firstOrNull;
                           setState(() {
                             selectedSkuId = val;
-                            selectedSkuName = sku['sku_displayname']?.toString() ?? 'Unknown';
+                            selectedSkuName = sku?['sku_displayname']?.toString() ?? 'Unknown';
                           });
                         }
                       },

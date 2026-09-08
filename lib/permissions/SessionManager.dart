@@ -161,6 +161,25 @@ class SessionManager {
     return timeStr != null ? DateTime.parse(timeStr) : null;
   }
 
+  static const _productsWithSkusKey = "products_with_skus";
+
+  static Future<void> saveProductsWithSkus(List products) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_productsWithSkusKey, jsonEncode(products));
+  }
+
+  static Future<List<dynamic>> getCachedProductsWithSkus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getString(_productsWithSkusKey);
+    if (data != null && data.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(data);
+        if (decoded is List) return decoded;
+      } catch (_) {}
+    }
+    return [];
+  }
+
   static Future<void> saveDistributors(List distributors) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_distributorsKey, jsonEncode(distributors));

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 
+import '../../../permissions/SessionManager.dart';
 import '../../../services/api_services.dart';
 
 class OutletActivityProvider extends ChangeNotifier {
@@ -72,15 +73,34 @@ class OutletActivityProvider extends ChangeNotifier {
       return;
     }
 
+    if (_productsWithSkus.isEmpty) {
+      final cached = await SessionManager.getCachedProductsWithSkus();
+      if (cached.isNotEmpty) {
+        _productsWithSkus = cached;
+        notifyListeners();
+      }
+    }
+
     _isLoadingProducts = true;
     notifyListeners();
 
     final response = await ApiServices.getProductsWithSkus();
     if (response != null && response['status'] == true) {
-      _productsWithSkus = response['data'] ?? [];
+      final rawData = response['data'];
+      if (rawData is List && rawData.isNotEmpty) {
+        _productsWithSkus = List<dynamic>.from(rawData);
+        await SessionManager.saveProductsWithSkus(_productsWithSkus);
+      } else if (rawData is List) {
+        _productsWithSkus = List<dynamic>.from(rawData);
+      }
       _stockQuantities.clear();
       _saleQuantities.clear();
       _samplingQuantities.clear();
+    } else if (_productsWithSkus.isEmpty) {
+      final cached = await SessionManager.getCachedProductsWithSkus();
+      if (cached.isNotEmpty) {
+        _productsWithSkus = cached;
+      }
     }
 
     _isLoadingProducts = false;

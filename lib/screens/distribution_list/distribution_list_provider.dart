@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../permissions/SessionManager.dart';
 import '../../services/api_services.dart';
 
 class DistributionListProvider extends ChangeNotifier {
@@ -98,10 +99,9 @@ class DistributionListProvider extends ChangeNotifier {
       _distributors = response['data'] ?? [];
       if (_selectedDistributor != null) {
         final existingId = _selectedDistributor['distributor_id']?.toString();
-        final match = _distributors.firstWhere(
+        final match = _distributors.where(
           (d) => d['distributor_id']?.toString() == existingId,
-          orElse: () => null,
-        );
+        ).firstOrNull;
         if (match != null) {
           _selectedDistributor = match;
         } else {
@@ -216,14 +216,33 @@ class DistributionListProvider extends ChangeNotifier {
   final Map<String, int> _stockQuantities = {};
   Map<String, int> get stockQuantities => _stockQuantities;
 
-  Future<void> fetchProductsWithSkus() async {
+  Future<void> fetchProductsWithSkus({bool forceRefresh = false}) async {
+    if (_productsWithSkus.isEmpty) {
+      final cached = await SessionManager.getCachedProductsWithSkus();
+      if (cached.isNotEmpty) {
+        _productsWithSkus = cached;
+        notifyListeners();
+      }
+    }
+
     _isLoadingProducts = true;
     notifyListeners();
 
     final response = await ApiServices.getProductsWithSkus();
     if (response != null && response['status'] == true) {
-      _productsWithSkus = response['data'] ?? [];
+      final rawData = response['data'];
+      if (rawData is List && rawData.isNotEmpty) {
+        _productsWithSkus = List<dynamic>.from(rawData);
+        await SessionManager.saveProductsWithSkus(_productsWithSkus);
+      } else if (rawData is List) {
+        _productsWithSkus = List<dynamic>.from(rawData);
+      }
       _stockQuantities.clear();
+    } else if (_productsWithSkus.isEmpty) {
+      final cached = await SessionManager.getCachedProductsWithSkus();
+      if (cached.isNotEmpty) {
+        _productsWithSkus = cached;
+      }
     }
 
     _isLoadingProducts = false;

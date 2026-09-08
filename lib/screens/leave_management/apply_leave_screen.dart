@@ -53,13 +53,9 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
           builder: (context, provider, child) {
             LeaveBalance? selectedBalance;
             if (_selectedLeaveType != null) {
-              try {
-                selectedBalance = provider.leaveBalances.firstWhere(
-                  (b) => b.type == _selectedLeaveType,
-                );
-              } catch (e) {
-                // Ignore if not found
-              }
+              selectedBalance = provider.leaveBalances
+                  .where((b) => b.type == _selectedLeaveType)
+                  .firstOrNull;
             }
 
             return Column(
@@ -201,9 +197,14 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
 
                     final provider = context.read<LeaveProvider>();
 
-                    final balance = provider.leaveBalances.firstWhere(
-                      (b) => b.type == _selectedLeaveType,
-                    );
+                    final balance = provider.leaveBalances
+                        .where((b) => b.type == _selectedLeaveType)
+                        .firstOrNull;
+
+                    if (balance == null) {
+                      _showError("Selected leave balance not found");
+                      return;
+                    }
 
                     if (_fromDateController.text.isEmpty ||
                         _toDateController.text.isEmpty ||

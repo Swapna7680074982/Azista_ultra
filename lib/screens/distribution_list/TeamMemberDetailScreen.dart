@@ -66,10 +66,9 @@ class _TeamMemberDetailScreenState extends State<TeamMemberDetailScreen> {
         setState(() {
           if (summaryRes != null && summaryRes["status"] == true) {
             final List members = summaryRes["data"] ?? [];
-            final memberData = members.firstWhere(
+            final memberData = members.where(
               (m) => m["user_id"]?.toString() == widget.userId.toString(),
-              orElse: () => null,
-            );
+            ).firstOrNull;
             if (memberData != null) {
               _dashboardCounts = {
                 "new_outlets": memberData["new_outlets"],
