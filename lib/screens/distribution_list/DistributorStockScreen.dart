@@ -74,7 +74,7 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
             ],
           ),
           body: provider.isLoadingProducts || provider.isLoadingDistributors
-              ? const Center(child: CircularProgressIndicator())
+              ? const LogoProgressIndicator()
               : ListView(
                   padding: const EdgeInsets.all(10),
                   children: [

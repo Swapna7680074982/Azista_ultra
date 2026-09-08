@@ -221,7 +221,7 @@ class _MarketingBodyState extends State<MarketingBody>
               if (provider.isLoadingActivityTypes)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 10),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: LogoProgressIndicator(size: 40),
                 )
               else
                 Container(
@@ -457,7 +457,7 @@ class _MarketingBodyState extends State<MarketingBody>
 
               // Submit Button
               _isSubmitting
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const LogoProgressIndicator(size: 45, message: "Submitting activity...")
                   : SizedBox(
                       width: double.infinity,
                       height: 45,
@@ -522,7 +522,7 @@ class _MarketingBodyState extends State<MarketingBody>
     return Consumer<OutletActivityProvider>(
       builder: (context, provider, _) {
         if (provider.isLoadingHistory) {
-          return const Center(child: CircularProgressIndicator());
+          return const LogoProgressIndicator();
         }
 
         if (provider.activityHistory.isEmpty) {

@@ -11,6 +11,7 @@ import '../../utilities/wavy_app_bar.dart';
 import '../../permissions/SessionManager.dart';
 import '../../utilities/date_formatter.dart';
 import '../../services/api_services.dart';
+import '../../utilities/common_widgets.dart';
 
 class NearMeScreen extends StatefulWidget {
   const NearMeScreen({super.key});
@@ -406,7 +407,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
 
           Expanded(
             child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const LogoProgressIndicator()
                 : provider.nearbyOutlets.isEmpty
                     ? const Center(child: Text("No nearby outlets found"))
                     : ListView.builder(

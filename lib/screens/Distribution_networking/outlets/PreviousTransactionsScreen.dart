@@ -7,6 +7,7 @@ import '../../../permissions/AppStateProvider.dart';
 import 'ProductListScreen.dart';
 import 'SuppliedProductListScreen.dart';
 import '../../../utilities/date_formatter.dart';
+import '../../../utilities/common_widgets.dart';
 
 class StockSalePosScreen extends StatefulWidget {
   final int outletId;
@@ -171,7 +172,7 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
       future: ApiServices.getPobHistory(payload: payload),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const LogoProgressIndicator();
         }
         if (!snapshot.hasData || snapshot.data?['status'] != 'success') {
           return const Center(child: Text("No POB History"));
@@ -272,7 +273,7 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
       future: ApiServices.getPosHistory(payload: payload),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const LogoProgressIndicator();
         }
         if (!snapshot.hasData || snapshot.data?['status'] != 'success') {
           return Center(child: Text("No ${posType.toUpperCase()} History"));

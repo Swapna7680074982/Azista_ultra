@@ -4,6 +4,7 @@ import '../../../constants/app_colors.dart';
 import '../../../permissions/AppStateProvider.dart';
 import 'distribution_list_provider.dart';
 import '../../../utilities/date_formatter.dart';
+import '../../../utilities/common_widgets.dart';
 
 class StockOnHandScreen extends StatefulWidget {
   const StockOnHandScreen({super.key});
@@ -67,7 +68,7 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
       ),
 
       body: provider.isLoadingStock
-          ? const Center(child: CircularProgressIndicator())
+          ? const LogoProgressIndicator()
           : Padding(
         padding: const EdgeInsets.all(12),
         child: Column(

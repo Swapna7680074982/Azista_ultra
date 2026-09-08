@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../User_transactions/UserTransactionScreen.dart';
 import '../../constants/app_colors.dart';
 import '../../utilities/wavy_app_bar.dart';
+import '../../utilities/common_widgets.dart';
 import '../../permissions/AccessValidator.dart';
 import '../../permissions/AppStateProvider.dart';
 import '../../profile.dart';
@@ -271,11 +272,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Consumer<HomeProvider>(
                         builder: (context, provider, _) {
                           if (provider.isSummaryLoading || provider.isMonthlySummaryLoading) {
-                            return const Center(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(vertical: 20),
-                                child: CircularProgressIndicator(),
-                              ),
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20),
+                              child: LogoProgressIndicator(size: 45),
                             );
                           }
 
@@ -494,9 +493,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               if (provider.isCountsLoading)
                                 const SizedBox(
                                   height: 120,
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
+                                  child: LogoProgressIndicator(size: 45),
                                 )
                               else if (provider.dashboardCounts == null)
                                 const SizedBox(
@@ -588,7 +585,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Consumer<HomeProvider>(
               builder: (context, provider, _) {
                 if (provider.isAttendanceLoading) {
-                  return const CircularProgressIndicator();
+                  return const LogoProgressIndicator(size: 40);
                 }
 
                 if (provider.todayAttendance == null) {

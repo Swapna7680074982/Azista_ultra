@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../utilities/wavy_app_bar.dart';
+import '../../utilities/common_widgets.dart';
 import 'attendance_provider.dart';
 
 
@@ -37,7 +38,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
           Expanded(
             child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const LogoProgressIndicator()
                 : provider.list.isEmpty
                 ? const Center(child: Text("No attendance found"))
                 : ListView(

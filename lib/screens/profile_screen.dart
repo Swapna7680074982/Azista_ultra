@@ -7,6 +7,7 @@ import 'Homes/HomeProvider.dart';
 import '../../services/api_services.dart';
 import 'login/login_screen.dart';
 import 'Homes/change_password.dart';
+import '../utilities/common_widgets.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -80,7 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LogoProgressIndicator()
           : SingleChildScrollView(
               child: Column(
                 children: [

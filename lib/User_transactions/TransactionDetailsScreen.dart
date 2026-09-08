@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../constants/app_colors.dart';
 import '../utilities/wavy_app_bar.dart';
+import '../utilities/common_widgets.dart';
 import 'SaleItem.dart';
 import '../services/api_services.dart';
 import '../permissions/AppStateProvider.dart';
@@ -152,7 +153,7 @@ class _TransactionDetailsScreenState
       future: ApiServices.getPobHistory(payload: payload),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const LogoProgressIndicator();
         }
         if (!snapshot.hasData || snapshot.data?['status'] != 'success') {
           return const Center(child: Text("No POB History"));
@@ -253,7 +254,7 @@ class _TransactionDetailsScreenState
       future: ApiServices.getPosHistory(payload: payload),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const LogoProgressIndicator();
         }
         if (!snapshot.hasData || snapshot.data?['status'] != 'success') {
           return Center(child: Text("No ${posType.toUpperCase()} History"));

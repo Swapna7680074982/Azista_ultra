@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../services/call_service.dart';
 import '../../services/api_services.dart';
+import '../../utilities/common_widgets.dart';
 
 class SupportScreen extends StatelessWidget {
   const SupportScreen({super.key});
@@ -12,7 +13,7 @@ class SupportScreen extends StatelessWidget {
       future: ApiServices.getSupportTeam(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(body: LogoProgressIndicator());
         }
 
         final data = snapshot.data?['data'] as List<dynamic>? ?? [];

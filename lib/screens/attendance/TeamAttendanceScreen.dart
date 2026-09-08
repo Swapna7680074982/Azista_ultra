@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
 import '../../utilities/wavy_app_bar.dart';
+import '../../utilities/common_widgets.dart';
 import '../../permissions/AppStateProvider.dart';
 import '../../permissions/SessionManager.dart';
 import '../../utilities/date_formatter.dart';
@@ -49,7 +50,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
               _buildFilterSection(appState, provider),
               Expanded(
                 child: provider.isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const LogoProgressIndicator()
                     : provider.attendanceList.isEmpty
                         ? _buildEmptyState()
                         : ListView.builder(

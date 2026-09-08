@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../constants/app_colors.dart';
 import '../utilities/wavy_app_bar.dart';
+import '../utilities/common_widgets.dart';
 import '../screens/Homes/main_tab_provider.dart';
 import 'SaleItem.dart';
 import 'TransactionDetailsScreen.dart';
@@ -71,7 +72,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
                 future: _dataFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const LogoProgressIndicator();
                   }
                   if (snapshot.hasError || !snapshot.hasData) {
                     return const Center(child: Text("No Data Found"));

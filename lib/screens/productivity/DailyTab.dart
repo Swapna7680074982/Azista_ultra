@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'productivity_provider.dart';
 import '../../permissions/AppStateProvider.dart';
+import '../../utilities/common_widgets.dart';
 
 class DailyTab extends StatefulWidget {
   const DailyTab({super.key});
@@ -30,7 +31,7 @@ class _DailyTabState extends State<DailyTab> {
     return Consumer<ProductivityProvider>(
       builder: (context, provider, child) {
         return provider.isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const LogoProgressIndicator()
             : Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(

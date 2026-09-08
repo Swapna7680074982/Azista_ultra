@@ -5,6 +5,7 @@ import 'productivity_provider.dart';
 import '../../constants/app_colors.dart';
 import '../../permissions/AppStateProvider.dart';
 import '../../utilities/date_formatter.dart';
+import '../../utilities/common_widgets.dart';
 
 class MonthlyTab extends StatefulWidget {
   const MonthlyTab({super.key});
@@ -34,7 +35,7 @@ class _MonthlyTabState extends State<MonthlyTab> {
     return Consumer<ProductivityProvider>(
       builder: (context, provider, child) {
         return provider.isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const LogoProgressIndicator()
             : Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(

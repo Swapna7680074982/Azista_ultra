@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../utilities/wavy_app_bar.dart';
+import '../../utilities/common_widgets.dart';
 import 'asm_provider.dart';
 
 class SoAttendanceScreen extends StatelessWidget {
@@ -88,7 +89,7 @@ class SoAttendanceScreen extends StatelessWidget {
 
               if (amProvider.isLoading)
                 const Expanded(
-                  child: Center(child: CircularProgressIndicator()),
+                  child: LogoProgressIndicator(),
                 )
               else
                 Expanded(

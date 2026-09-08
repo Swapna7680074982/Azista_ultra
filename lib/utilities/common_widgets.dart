@@ -123,33 +123,69 @@ class ProductCard extends StatelessWidget {
 
 class LogoProgressIndicator extends StatelessWidget {
   final double size;
-  const LogoProgressIndicator({super.key, this.size = 60});
+  final String? message;
+  final TextStyle? messageStyle;
+
+  const LogoProgressIndicator({
+    super.key,
+    this.size = 60,
+    this.message = "Please wait, loading...",
+    this.messageStyle,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox(
-            width: size,
-            height: size,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-            ),
+    final indicator = Stack(
+      alignment: Alignment.center,
+      children: [
+        SizedBox(
+          width: size,
+          height: size,
+          child: CircularProgressIndicator(
+            strokeWidth: 3,
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
           ),
-          Image.asset(
-            ImageConstants.appLogo,
-            width: size * 0.55,
-            height: size * 0.55,
-            errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-          ),
-        ],
-      ),
+        ),
+        Image.asset(
+          ImageConstants.appLogo,
+          width: size * 0.55,
+          height: size * 0.55,
+          errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+        ),
+      ],
     );
+
+    if (message != null && message!.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            indicator,
+            const SizedBox(height: 14),
+            Text(
+              message!,
+              textAlign: TextAlign.center,
+              style: messageStyle ??
+                  TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                    letterSpacing: 0.3,
+                  ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Center(child: indicator);
   }
 }
+
+typedef AppLoadingWidget = LogoProgressIndicator;
+typedef InbuiltLoadingWidget = LogoProgressIndicator;
 
 class LoadingDialog {
   static void show(BuildContext context, {String message = "Please wait..."}) {
@@ -179,7 +215,7 @@ class LoadingDialog {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    LogoProgressIndicator(size: 70),
+                    const LogoProgressIndicator(size: 70, message: null),
                     const SizedBox(height: 20),
                     Text(
                       message,

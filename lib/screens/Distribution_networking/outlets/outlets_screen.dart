@@ -10,6 +10,7 @@ import 'PosBaseScreen.dart';
 import 'outlet_provider.dart';
 import '../../../utilities/date_formatter.dart';
 import '../../../services/api_services.dart';
+import '../../../utilities/common_widgets.dart';
 
 class OutletsScreen extends StatefulWidget {
   final int routeId;
@@ -439,7 +440,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
 
           Expanded(
             child: provider.isLoading 
-                ? const Center(child: CircularProgressIndicator()) 
+                ? const LogoProgressIndicator() 
                 : provider.outlets.isEmpty 
                     ? const Center(child: Text("No outlets found")) 
                     : ListView.builder(
