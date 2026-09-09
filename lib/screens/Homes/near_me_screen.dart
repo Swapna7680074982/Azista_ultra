@@ -129,10 +129,6 @@ class _NearMeScreenState extends State<NearMeScreen> {
                   const Text("CURRENT GPS POSITION:", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
                   const SizedBox(height: 2),
                   Text("$_userLat, $_userLng", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
-                  const SizedBox(height: 6),
-                  const Text("PREVIOUS REGISTERED:", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                  const SizedBox(height: 2),
-                  Text("${outlet.latitude}, ${outlet.longitude}", style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
                 ],
               ),
             ),
@@ -170,6 +166,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
     if (!mounted) return;
 
     if (res != null && (res["status"] == "success" || res["status_code"] == 200 || res["status_code"] == 201)) {
+      context.read<OutletProvider>().markGeoRequestPending(outletIdInt, requestData: res);
       final reqId = res["request_id"] ?? "";
       final msg = res["message"] ?? "Geo update request raised successfully";
       showDialog(
@@ -229,6 +226,11 @@ class _NearMeScreenState extends State<NearMeScreen> {
   }
 
   void _showBlockedOutletDialog(Outlet outlet, double? distance) {
+    final outletIdInt = int.tryParse(outlet.id) ?? 0;
+    final outletProvider = context.read<OutletProvider>();
+    final isGeoPending = outletProvider.hasPendingGeoRequest(outletIdInt);
+    final pendingReq = outletProvider.getPendingGeoRequest(outletIdInt);
+
     showDialog(
       context: context,
       builder: (ctx) {
@@ -263,19 +265,44 @@ class _NearMeScreenState extends State<NearMeScreen> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.blue.shade200),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.blue, size: 18),
-                    SizedBox(width: 8),
+                    const Icon(Icons.info_outline, color: Colors.blue, size: 18),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        "To place an order remotely without check-in, choose Tele POB, or raise a Geo Request to update coordinates.",
-                        style: TextStyle(fontSize: 12, color: Colors.black87),
+                        isGeoPending
+                            ? "To place an order remotely without check-in, choose Tele POB."
+                            : "To place an order remotely without check-in, choose Tele POB, or raise a Geo Request to update coordinates.",
+                        style: const TextStyle(fontSize: 12, color: Colors.black87),
                       ),
                     ),
                   ],
                 ),
               ),
+              if (isGeoPending) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.hourglass_top, color: Colors.orange.shade800, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "A Geo Request${pendingReq?['request_id'] != null ? ' (#${pendingReq!['request_id']})' : ''} is currently PENDING review by your manager. Another request cannot be submitted until reviewed.",
+                          style: TextStyle(fontSize: 12, color: Colors.orange.shade900, height: 1.3),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
           actions: [
@@ -309,19 +336,39 @@ class _NearMeScreenState extends State<NearMeScreen> {
                 }
               },
             ),
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.orange.shade800,
-                side: BorderSide(color: Colors.orange.shade400),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            if (isGeoPending)
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.orange.shade900,
+                  side: BorderSide(color: Colors.orange.shade400),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.hourglass_top, size: 16),
+                label: const Text("GEO REQ PENDING", style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MyGeoRequestsScreen(outletId: outletIdInt, initialStatus: "pending"),
+                    ),
+                  );
+                },
+              )
+            else
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.orange.shade800,
+                  side: BorderSide(color: Colors.orange.shade400),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.edit_location_alt, size: 16),
+                label: const Text("RAISE GEO REQ", style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _raiseGeoRequestForOutlet(outlet);
+                },
               ),
-              icon: const Icon(Icons.edit_location_alt, size: 16),
-              label: const Text("RAISE GEO REQ", style: TextStyle(fontWeight: FontWeight.bold)),
-              onPressed: () {
-                Navigator.pop(ctx);
-                _raiseGeoRequestForOutlet(outlet);
-              },
-            ),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue.shade700,

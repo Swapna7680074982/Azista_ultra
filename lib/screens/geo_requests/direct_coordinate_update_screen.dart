@@ -408,8 +408,6 @@ class _DirectCoordinateUpdateScreenState extends State<DirectCoordinateUpdateScr
 
   Widget _buildPreviewCard(Map<String, dynamic> preview) {
     final outletName = preview["outlet_name"]?.toString() ?? "Outlet #${preview["outlet_id"]}";
-    final prevLat = preview["previous_latitude"]?.toString() ?? "-";
-    final prevLng = preview["previous_longitude"]?.toString() ?? "-";
     final newLat = preview["new_latitude"]?.toString() ?? "-";
     final newLng = preview["new_longitude"]?.toString() ?? "-";
     final distanceKm = preview["distance_km"]?.toString() ?? "-";
@@ -440,29 +438,12 @@ class _DirectCoordinateUpdateScreenState extends State<DirectCoordinateUpdateScr
               ),
             ],
           ),
-          const Divider(height: 16, thickness: 1),
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("PREVIOUS COORDINATES", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                    const SizedBox(height: 2),
-                    Text("$prevLat, $prevLng", style: const TextStyle(fontSize: 12, color: Colors.black87)),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("NEW COORDINATES", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                    const SizedBox(height: 2),
-                    Text("$newLat, $newLng", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87)),
-                  ],
-                ),
-              ),
+              const Text("NEW COORDINATES", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+              const SizedBox(height: 2),
+              Text("$newLat, $newLng", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87)),
             ],
           ),
           const SizedBox(height: 10),

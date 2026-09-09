@@ -117,6 +117,44 @@ class OutletProvider extends ChangeNotifier {
 
   List<OutletCategory> get categories => _categories;
 
+  // Pending Geo Requests by Outlet ID
+  final Map<int, Map<String, dynamic>> _pendingGeoRequestsByOutlet = {};
+  Map<int, Map<String, dynamic>> get pendingGeoRequestsByOutlet => _pendingGeoRequestsByOutlet;
+
+  bool hasPendingGeoRequest(int outletId) => _pendingGeoRequestsByOutlet.containsKey(outletId);
+  Map<String, dynamic>? getPendingGeoRequest(int outletId) => _pendingGeoRequestsByOutlet[outletId];
+
+  void markGeoRequestPending(int outletId, {Map<String, dynamic>? requestData}) {
+    _pendingGeoRequestsByOutlet[outletId] = requestData ?? {
+      "status": "pending",
+      "outlet_id": outletId.toString(),
+    };
+    notifyListeners();
+  }
+
+  void removePendingGeoRequest(int outletId) {
+    _pendingGeoRequestsByOutlet.remove(outletId);
+    notifyListeners();
+  }
+
+  Future<void> fetchPendingGeoRequests() async {
+    try {
+      final res = await ApiServices.getMyOutletGeoRequests(status: "pending");
+      if (res != null && res["data"] is List) {
+        _pendingGeoRequestsByOutlet.clear();
+        for (var item in res["data"]) {
+          final oId = int.tryParse(item["outlet_id"]?.toString() ?? "");
+          if (oId != null) {
+            _pendingGeoRequestsByOutlet[oId] = Map<String, dynamic>.from(item);
+          }
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Error fetching pending geo requests: $e");
+    }
+  }
+
   void updateSearch(String value) {
     _searchQuery = value.toLowerCase();
     notifyListeners();
@@ -156,6 +194,9 @@ class OutletProvider extends ChangeNotifier {
 
     isLoading = false;
     notifyListeners();
+
+    // Sync pending geo requests in background
+    fetchPendingGeoRequests();
   }
 
   Future<void> fetchNearbyOutlets(double latitude, double longitude, {int radius = 10, int? routeId}) async {
@@ -164,6 +205,7 @@ class OutletProvider extends ChangeNotifier {
     await _fetchNearbyOutletsInternal(latitude, longitude, radius: radius, routeId: routeId);
     isLoading = false;
     notifyListeners();
+    fetchPendingGeoRequests();
   }
 
   Future<void> _fetchNearbyOutletsInternal(double latitude, double longitude, {int radius = 10, int? routeId}) async {

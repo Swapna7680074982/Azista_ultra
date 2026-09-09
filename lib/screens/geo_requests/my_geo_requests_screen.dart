@@ -258,8 +258,6 @@ class _MyGeoRequestsScreenState extends State<MyGeoRequestsScreen> {
     final outletName = req["outlet_name"]?.toString() ?? "Outlet #${req["outlet_id"] ?? ""}";
     final outletId = req["outlet_id"]?.toString() ?? "-";
     final createdAt = req["created_at"]?.toString() ?? "";
-    final prevLat = req["previous_latitude"]?.toString();
-    final prevLng = req["previous_longitude"]?.toString();
     final reqLat = req["requested_latitude"]?.toString();
     final reqLng = req["requested_longitude"]?.toString();
     final distanceKm = req["computed_distance_km"] ?? req["distance_km"];
@@ -390,22 +388,6 @@ class _MyGeoRequestsScreenState extends State<MyGeoRequestsScreen> {
                   ),
               ],
             ),
-
-            if (prevLat != null && prevLng != null) ...[
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Text(
-                    "PREVIOUS: ",
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
-                  ),
-                  Text(
-                    "$prevLat, $prevLng",
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
-                  ),
-                ],
-              ),
-            ],
 
             const SizedBox(height: 8),
 

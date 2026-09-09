@@ -415,8 +415,6 @@ class _OutletGeoRequestsScreenState extends State<OutletGeoRequestsScreen> {
     final routeId = req["route_id"]?.toString();
     final requestedBy = req["requested_by"]?.toString() ?? "-";
     final createdAt = req["created_at"]?.toString() ?? "";
-    final prevLat = req["previous_latitude"]?.toString();
-    final prevLng = req["previous_longitude"]?.toString();
     final reqLat = req["requested_latitude"]?.toString();
     final reqLng = req["requested_longitude"]?.toString();
     final distanceKm = req["computed_distance_km"] ?? req["distance_km"];
@@ -505,42 +503,24 @@ class _OutletGeoRequestsScreenState extends State<OutletGeoRequestsScreen> {
 
             const Divider(height: 18, thickness: 1),
 
-            // Coordinates comparison
-            Row(
+            // Requested Location
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "PREVIOUS REGISTERED",
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        (prevLat != null && prevLng != null) ? "$prevLat, $prevLng" : "Not Set",
-                        style: TextStyle(fontSize: 11, color: Colors.grey.shade800),
-                      ),
-                    ],
-                  ),
+                const Text(
+                  "REQUESTED LOCATION",
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "REQUESTED LOCATION",
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        "$reqLat, $reqLng",
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
-                      ),
-                    ],
-                  ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(Icons.my_location, size: 14, color: Colors.blue.shade700),
+                    const SizedBox(width: 4),
+                    Text(
+                      "$reqLat, $reqLng",
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                    ),
+                  ],
                 ),
               ],
             ),
