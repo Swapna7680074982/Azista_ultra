@@ -503,10 +503,10 @@ class _PobBodyState extends State<PobBody> {
     );
   }
 
-  Widget _buildSkuRow(int productId, dynamic sku, OutletActivityProvider provider) {
+  Widget _buildSkuRow(dynamic productId, dynamic sku, OutletActivityProvider provider) {
     final skuName = sku['sku_displayname'] ?? sku['sku_name'] ?? 'Unknown SKU';
     final skuId = sku['sku_id'];
-    final currentQty = provider.stockQuantities["${productId}_$skuId"]?.toString() ?? "";
+    final currentQty = provider.pobQuantities["${productId}_$skuId"]?.toString() ?? "";
     final dsaQty = provider.distributorStock["${productId}_$skuId"] ?? 0;
 
     return Padding(
@@ -546,7 +546,7 @@ class _PobBodyState extends State<PobBody> {
               isRed: true,
               initialValue: currentQty,
               onChanged: (val) {
-                provider.updateStockQuantity(productId, skuId, val);
+                provider.updatePobQuantity(productId, skuId, val);
               },
             ),
           ),

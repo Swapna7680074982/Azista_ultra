@@ -770,7 +770,6 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
           return GestureDetector(
             onTap: () {
               if (selectedTab != index) {
-                Provider.of<OutletActivityProvider>(context, listen: false).clearQuantities();
                 setState(() {
                   selectedTab = index;
                   _buildTabViews();

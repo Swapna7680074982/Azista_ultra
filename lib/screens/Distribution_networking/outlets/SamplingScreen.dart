@@ -110,7 +110,7 @@ class _SamplingBodyState extends State<SamplingBody> {
     );
   }
 
-  Widget _buildSkuRow(int productId, dynamic sku, OutletActivityProvider provider) {
+  Widget _buildSkuRow(dynamic productId, dynamic sku, OutletActivityProvider provider) {
     final skuName = sku['sku_displayname'] ?? 'Unknown SKU';
     final skuId = sku['sku_id'];
     final currentQty = provider.samplingQuantities["${productId}_$skuId"]?.toString() ?? "";

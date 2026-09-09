@@ -26,6 +26,9 @@ class OutletActivityProvider extends ChangeNotifier {
   final Map<String, int> _samplingQuantities = {};
   Map<String, int> get samplingQuantities => _samplingQuantities;
 
+  final Map<String, int> _pobQuantities = {};
+  Map<String, int> get pobQuantities => _pobQuantities;
+
   bool _isLoadingDistributorStock = false;
   bool get isLoadingDistributorStock => _isLoadingDistributorStock;
 
@@ -73,10 +76,6 @@ class OutletActivityProvider extends ChangeNotifier {
 
   Future<void> fetchProductsWithSkus({bool forceRefresh = false}) async {
     if (_productsWithSkus.isNotEmpty && !forceRefresh) {
-      _stockQuantities.clear();
-      _saleQuantities.clear();
-      _samplingQuantities.clear();
-      notifyListeners();
       return;
     }
 
@@ -100,9 +99,6 @@ class OutletActivityProvider extends ChangeNotifier {
       } else if (rawData is List) {
         _productsWithSkus = List<dynamic>.from(rawData);
       }
-      _stockQuantities.clear();
-      _saleQuantities.clear();
-      _samplingQuantities.clear();
     } else if (_productsWithSkus.isEmpty) {
       final cached = await SessionManager.getCachedProductsWithSkus();
       if (cached.isNotEmpty) {
@@ -118,25 +114,28 @@ class OutletActivityProvider extends ChangeNotifier {
     _stockQuantities.clear();
     _saleQuantities.clear();
     _samplingQuantities.clear();
+    _pobQuantities.clear();
     notifyListeners();
   }
 
-  void updateStockQuantity(int productId, int skuId, String value) {
+  void updateStockQuantity(dynamic productId, dynamic skuId, String value) {
     int qty = int.tryParse(value) ?? 0;
     _stockQuantities["${productId}_$skuId"] = qty;
-    notifyListeners();
   }
 
-  void updateSaleQuantity(int productId, int skuId, String value) {
+  void updateSaleQuantity(dynamic productId, dynamic skuId, String value) {
     int qty = int.tryParse(value) ?? 0;
     _saleQuantities["${productId}_$skuId"] = qty;
-    notifyListeners();
   }
 
-  void updateSamplingQuantity(int productId, int skuId, String value) {
+  void updateSamplingQuantity(dynamic productId, dynamic skuId, String value) {
     int qty = int.tryParse(value) ?? 0;
     _samplingQuantities["${productId}_$skuId"] = qty;
-    notifyListeners();
+  }
+
+  void updatePobQuantity(dynamic productId, dynamic skuId, String value) {
+    int qty = int.tryParse(value) ?? 0;
+    _pobQuantities["${productId}_$skuId"] = qty;
   }
 
   Future<Map<String, dynamic>?> submitPosTransaction(String posType, int outletId, {int? distributorId}) async {
@@ -154,14 +153,16 @@ class OutletActivityProvider extends ChangeNotifier {
     targetMap.forEach((key, quantity) {
       if (quantity > 0) {
         final parts = key.split('_');
-        final productId = int.parse(parts[0]);
-        final skuId = int.parse(parts[1]);
+        final productId = int.tryParse(parts[0]) ?? 0;
+        final skuId = int.tryParse(parts[1]) ?? 0;
         
-        items.add({
-          "product_id": productId,
-          "sku_id": skuId,
-          "quantity": quantity,
-        });
+        if (productId > 0 && skuId > 0) {
+          items.add({
+            "product_id": productId,
+            "sku_id": skuId,
+            "quantity": quantity,
+          });
+        }
       }
     });
 
@@ -197,17 +198,19 @@ class OutletActivityProvider extends ChangeNotifier {
   Future<bool> submitPob(int outletId, {int? distributorId, File? imageFile, String remarks = "", String pobType = "regular"}) async {
     List<Map<String, dynamic>> items = [];
 
-    _stockQuantities.forEach((key, quantity) {
+    _pobQuantities.forEach((key, quantity) {
       if (quantity > 0) {
         final parts = key.split('_');
-        final productId = int.parse(parts[0]);
-        final skuId = int.parse(parts[1]);
+        final productId = int.tryParse(parts[0]) ?? 0;
+        final skuId = int.tryParse(parts[1]) ?? 0;
         
-        items.add({
-          "product_id": productId,
-          "sku_id": skuId,
-          "quantity": quantity,
-        });
+        if (productId > 0 && skuId > 0) {
+          items.add({
+            "product_id": productId,
+            "sku_id": skuId,
+            "quantity": quantity,
+          });
+        }
       }
     });
 
@@ -233,7 +236,7 @@ class OutletActivityProvider extends ChangeNotifier {
     );
     
     if (response != null && (response['status'] == "success" || response['status'] == true || response['status_code'] == 200 || response['status_code'] == 201)) {
-      _stockQuantities.clear();
+      _pobQuantities.clear();
       notifyListeners();
       return true;
     }
