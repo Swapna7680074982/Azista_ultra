@@ -22,8 +22,13 @@ import '../../../utilities/date_formatter.dart';
 
 class PosBaseScreen extends StatefulWidget {
   final Outlet outlet;
+  final bool isTelePob;
 
-  const PosBaseScreen({super.key, required this.outlet});
+  const PosBaseScreen({
+    super.key,
+    required this.outlet,
+    this.isTelePob = false,
+  });
 
   @override
   State<PosBaseScreen> createState() => _PosBaseScreenState();
@@ -101,6 +106,15 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   }
 
   Future<void> _checkLocation() async {
+    if (widget.isTelePob) {
+      if (mounted) {
+        setState(() {
+          isLocationValid = true;
+          _buildTabViews();
+        });
+      }
+      return;
+    }
     if (mounted) {
       setState(() {
         isLocationValid = null;
@@ -304,11 +318,25 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   }
 
   Widget _getModuleBody(String moduleCode, int currentTab) {
-    if (isLocationValid == false) {
+    if (isLocationValid == false && !widget.isTelePob) {
       return RestrictedModuleView(
         key: ValueKey("restricted_${moduleCode}_$currentTab"),
         locationError: locationError,
         onRetry: _checkLocation,
+        onTelePob: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PobScreen(
+                outletId: int.tryParse(widget.outlet.id) ?? 0,
+                outletName: widget.outlet.name,
+                outletLat: widget.outlet.latitude,
+                outletLng: widget.outlet.longitude,
+                isTelePob: true,
+              ),
+            ),
+          );
+        },
       );
     }
     final key = ValueKey("${moduleCode}_$currentTab");
@@ -323,6 +351,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
           outletId: int.tryParse(widget.outlet.id) ?? 0,
           outletLat: widget.outlet.latitude,
           outletLng: widget.outlet.longitude,
+          isTelePob: widget.isTelePob,
         );
       case "BRD":
         return BrandingBody(key: key);
@@ -891,11 +920,13 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
 class RestrictedModuleView extends StatelessWidget {
   final String locationError;
   final VoidCallback onRetry;
+  final VoidCallback? onTelePob;
   
   const RestrictedModuleView({
     super.key, 
     required this.locationError,
     required this.onRetry,
+    this.onTelePob,
   });
 
   @override
@@ -974,7 +1005,7 @@ class RestrictedModuleView extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 height: 45,
@@ -998,6 +1029,32 @@ class RestrictedModuleView extends StatelessWidget {
                   onPressed: onRetry,
                 ),
               ),
+              if (onTelePob != null) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 45,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.phone_in_talk, color: Colors.white, size: 18),
+                    label: const Text(
+                      "SUBMIT TELE POB",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade700,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 1.5,
+                    ),
+                    onPressed: onTelePob,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

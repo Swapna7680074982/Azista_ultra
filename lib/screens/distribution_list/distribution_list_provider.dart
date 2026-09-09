@@ -105,10 +105,10 @@ class DistributionListProvider extends ChangeNotifier {
         if (match != null) {
           _selectedDistributor = match;
         } else {
-          _selectedDistributor = _distributors.isNotEmpty ? _distributors.first : null;
+          _selectedDistributor = null;
         }
-      } else if (_distributors.isNotEmpty) {
-        _selectedDistributor = _distributors.first;
+      } else {
+        _selectedDistributor = null;
       }
     } else {
       _distributors = [];
@@ -154,7 +154,7 @@ class DistributionListProvider extends ChangeNotifier {
     final response = await ApiServices.getDistributorStockHistory(payload: payload);
     _submissions.clear();
 
-    if (response != null && response['status'] == "success") {
+    if (response != null && (response['status'] == "success" || response['status'] == true || response['status_code'] == 200)) {
       final data = response['data'] as List<dynamic>? ?? [];
       for (var record in data) {
         final createdAt = record['created_at']?.toString() ?? "";
@@ -166,32 +166,40 @@ class DistributionListProvider extends ChangeNotifier {
           try {
             final parsedDate = DateTime.parse(datePart);
             if (parsedDate.year == year && parsedDate.month == monthNum) {
-              if (!_submissions.containsKey(datePart)) {
-                _submissions[datePart] = [];
+              if (!_submissions.containsKey(createdAt)) {
+                _submissions[createdAt] = [];
               }
               for (var item in items) {
-                _submissions[datePart]!.add({
+                _submissions[createdAt]!.add({
                   "product_id": item['product_id'],
                   "product_name": item['product_name'] ?? 'Unknown Product',
                   "sku_name": item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'Unknown SKU',
                   "qty": item['quantity']?.toString() ?? "0",
+                  "available_qty": item['available_quantity']?.toString() ?? item['quantity']?.toString() ?? "0",
+                  "price": item['price']?.toString() ?? "0.0",
+                  "subtotal": item['subtotal']?.toString() ?? "0.0",
                   "distributor_name": record['distributor_name'] ?? "",
+                  "created_at": createdAt,
                   "stock_year": recordYear ?? parsedDate.year.toString(),
                   "stock_month": recordMonth ?? parsedDate.month.toString(),
                 });
               }
             }
           } catch (_) {
-            if (!_submissions.containsKey(datePart)) {
-              _submissions[datePart] = [];
+            if (!_submissions.containsKey(createdAt)) {
+              _submissions[createdAt] = [];
             }
             for (var item in items) {
-              _submissions[datePart]!.add({
+              _submissions[createdAt]!.add({
                 "product_id": item['product_id'],
                 "product_name": item['product_name'] ?? 'Unknown Product',
                 "sku_name": item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'Unknown SKU',
                 "qty": item['quantity']?.toString() ?? "0",
+                "available_qty": item['available_quantity']?.toString() ?? item['quantity']?.toString() ?? "0",
+                "price": item['price']?.toString() ?? "0.0",
+                "subtotal": item['subtotal']?.toString() ?? "0.0",
                 "distributor_name": record['distributor_name'] ?? "",
+                "created_at": createdAt,
                 "stock_year": recordYear ?? year.toString(),
                 "stock_month": recordMonth ?? monthNum.toString(),
               });
@@ -288,15 +296,11 @@ class DistributionListProvider extends ChangeNotifier {
 
     final payload = {
       "distributor_id": distId,
-      "month": DateTime.now().month,
-      "year": DateTime.now().year,
       "items": items,
     };
 
-    print("SUBMITTING DISTRIBUTOR STOCK DATA PAYLOAD: $payload");
     final response = await ApiServices.distributorStockInsert(payload: payload);
-    
-    if (response != null && response['status'] == "success") {
+    if (response != null && (response['status'] == "success" || response['status'] == true || response['status_code'] == 201 || response['status_code'] == 200 || response['dsm_id'] != null)) {
       _stockQuantities.clear();
       notifyListeners();
       return true;

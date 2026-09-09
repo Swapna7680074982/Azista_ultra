@@ -14,14 +14,13 @@ class ProductivityProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchCallsInfo({String? date, String? month, int? distributorId}) async {
+  Future<void> fetchCallsInfo({String? date, String? month}) async {
     isLoading = true;
     notifyListeners();
 
     final res = await ApiServices.getCallsInfo(
       date: date,
       month: month,
-      distributorId: distributorId,
     );
 
     if (res != null) {

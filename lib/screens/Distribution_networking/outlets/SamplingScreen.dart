@@ -18,8 +18,10 @@ class _SamplingBodyState extends State<SamplingBody> {
   void initState() {
     super.initState();
     Future.microtask(() {
-      Provider.of<OutletActivityProvider>(context, listen: false)
-          .fetchProductsWithSkus();
+      if (mounted) {
+        Provider.of<OutletActivityProvider>(context, listen: false)
+            .fetchProductsWithSkus();
+      }
     });
   }
 

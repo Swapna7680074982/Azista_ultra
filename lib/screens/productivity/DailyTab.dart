@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'productivity_provider.dart';
-import '../../permissions/AppStateProvider.dart';
 import '../../utilities/common_widgets.dart';
 
 class DailyTab extends StatefulWidget {
@@ -18,11 +17,11 @@ class _DailyTabState extends State<DailyTab> {
     Future.microtask(() {
       final now = DateTime.now();
       final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-      final appState = Provider.of<AppStateProvider>(context, listen: false);
-      Provider.of<ProductivityProvider>(context, listen: false).fetchCallsInfo(
-        date: dateStr,
-        distributorId: appState.selectedDistributorId,
-      );
+      if (mounted) {
+        Provider.of<ProductivityProvider>(context, listen: false).fetchCallsInfo(
+          date: dateStr,
+        );
+      }
     });
   }
 

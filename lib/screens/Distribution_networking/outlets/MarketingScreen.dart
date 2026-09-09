@@ -69,8 +69,10 @@ class _MarketingBodyState extends State<MarketingBody>
 
   Future<void> _loadHistory() async {
     try {
-      Provider.of<OutletActivityProvider>(context, listen: false)
-          .fetchOutletHistory(widget.outletId);
+      if (mounted) {
+        Provider.of<OutletActivityProvider>(context, listen: false)
+            .fetchOutletHistory(widget.outletId);
+      }
     } catch (e) {
       debugPrint("Error loading history: $e");
     }

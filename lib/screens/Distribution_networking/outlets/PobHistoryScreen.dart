@@ -27,9 +27,11 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
   void initState() {
     super.initState();
     Future.microtask(() {
-      final appState = Provider.of<AppStateProvider>(context, listen: false);
-      Provider.of<OutletActivityProvider>(context, listen: false)
-          .fetchPobHistory(widget.outletId, distributorId: appState.selectedDistributorId);
+      if (mounted) {
+        final appState = Provider.of<AppStateProvider>(context, listen: false);
+        Provider.of<OutletActivityProvider>(context, listen: false)
+            .fetchPobHistory(widget.outletId, distributorId: appState.selectedDistributorId);
+      }
     });
   }
 
@@ -153,6 +155,374 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
     );
   }
 
+  int selectedTab = 0; // 0: ALL, 1: PENDING, 2: SUPPLIED
+  String selectedTypeFilter = "ALL"; // "ALL", "REGULAR", "TELE"
+
+  bool _isTelePob(dynamic pob) {
+    if (pob is! Map) return false;
+
+    final pobType = pob['pob_type']?.toString().toLowerCase() ?? '';
+    if (pobType.contains('tele')) return true;
+
+    final type = pob['type']?.toString().toLowerCase() ?? '';
+    if (type.contains('tele')) return true;
+
+    final orderType = pob['order_type']?.toString().toLowerCase() ?? '';
+    if (orderType.contains('tele')) return true;
+
+    if (pob['is_tele'] == true || pob['is_tele'] == 1 || pob['is_tele'] == '1' || pob['is_tele'] == 'true') return true;
+    if (pob['is_tele_pob'] == true || pob['is_tele_pob'] == 1 || pob['is_tele_pob'] == '1' || pob['is_tele_pob'] == 'true') return true;
+
+    final pobNumber = pob['pob_number']?.toString().toUpperCase() ?? '';
+    if (pobNumber.contains('TELE')) return true;
+
+    final remarks = pob['remarks']?.toString().toLowerCase() ?? '';
+    if (remarks.contains('tele')) return true;
+
+    return false;
+  }
+
+  Widget _buildPobTypeBadge(dynamic pob) {
+    final isTele = _isTelePob(pob);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: isTele ? Colors.purple.shade50 : Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(
+          color: isTele ? Colors.purple.shade300 : Colors.blue.shade300,
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isTele ? Icons.phone_in_talk : Icons.storefront,
+            size: 11,
+            color: isTele ? Colors.purple.shade700 : Colors.blue.shade700,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isTele ? "TELE POB" : "REGULAR POB",
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: isTele ? Colors.purple.shade800 : Colors.blue.shade800,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    final s = status.toLowerCase();
+    Color bg = Colors.orange.shade50;
+    Color border = Colors.orange.shade200;
+    Color text = Colors.orange.shade800;
+    String label = "PENDING";
+
+    if (s == 'supplied' || s == 'completed') {
+      bg = Colors.green.shade50;
+      border = Colors.green.shade200;
+      text = Colors.green.shade800;
+      label = "SUPPLIED";
+    } else if (s == 'partial') {
+      bg = Colors.blue.shade50;
+      border = Colors.blue.shade200;
+      text = Colors.blue.shade800;
+      label = "PARTIAL";
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: border, width: 0.8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: text,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypeFilterChip(String type, String label) {
+    final isSelected = selectedTypeFilter == type;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedTypeFilter = type;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.button : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.button : Colors.grey.shade300,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : Colors.grey.shade700,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tabs() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        children: [
+          _tabItem(0, "All POBs"),
+          _tabItem(1, "Pending"),
+          _tabItem(2, "Supplied"),
+        ],
+      ),
+    );
+  }
+
+  Widget _tabItem(int index, String title) {
+    final isSelected = selectedTab == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() => selectedTab = index);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? AppColors.primary : Colors.grey.shade700,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<dynamic> _applyTypeFilter(List<dynamic> list) {
+    if (selectedTypeFilter == "ALL") return list;
+    if (selectedTypeFilter == "TELE") {
+      return list.where((pob) => _isTelePob(pob)).toList();
+    }
+    return list.where((pob) => !_isTelePob(pob)).toList();
+  }
+
+  Widget _buildPobCard(dynamic pob) {
+    final items = pob['items'] as List<dynamic>? ?? [];
+    double totalAmount = 0.0;
+    double suppliedAmount = 0.0;
+    double remainingAmount = 0.0;
+    for (var item in items) {
+      final price = double.tryParse(item['ptr_incl_gst_price']?.toString() ?? item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
+      final qty = int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
+      final suppliedQty = int.tryParse(item['supplied_qty']?.toString() ?? '0') ?? 0;
+      final remainingQty = int.tryParse(item['remaining_qty']?.toString() ?? '0') ?? 0;
+
+      totalAmount += qty * price;
+      suppliedAmount += suppliedQty * price;
+      remainingAmount += remainingQty * price;
+    }
+
+    if (totalAmount == 0.0) {
+      final fallbackAmt = pob['ptr_incl_gst_total_amount'] ?? pob['total_amount'] ?? pob['order_value'] ?? pob['total_value'] ?? 0.0;
+      totalAmount = double.tryParse(fallbackAmt.toString()) ?? 0.0;
+    }
+
+    final pobNumber = pob['pob_number']?.toString() ?? 'N/A';
+    final dateStr = pob['created_at'] ?? pob['created_on'];
+    final status = pob['status']?.toString() ?? 'pending';
+    final isSupplied = status.toLowerCase() == 'supplied' || status.toLowerCase() == 'completed';
+
+    return GestureDetector(
+      onTap: () async {
+        if (!isSupplied) {
+          final appState = Provider.of<AppStateProvider>(context, listen: false);
+          final provider = Provider.of<OutletActivityProvider>(context, listen: false);
+          final distributorId = appState.selectedDistributorId;
+          final outletId = widget.outletId;
+
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProductListScreen(pobData: pob),
+            ),
+          );
+          if (result == true) {
+            provider.fetchPobHistory(outletId, distributorId: distributorId);
+          }
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SuppliedProductListScreen(pobData: pob),
+            ),
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          "POB: $pobNumber",
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildPobTypeBadge(pob),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  "₹${totalAmount.toStringAsFixed(2)}",
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Text(
+                  "Date: ${DateFormatter.formatDateTime(dateStr)}",
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                ),
+                const Spacer(),
+                _buildStatusBadge(status),
+              ],
+            ),
+            if (!isSupplied) ...[
+              const SizedBox(height: 6),
+              const Divider(height: 1, thickness: 0.5),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Supplied: ₹${suppliedAmount.toStringAsFixed(2)}",
+                    style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    "Remaining: ₹${remainingAmount.toStringAsFixed(2)}",
+                    style: const TextStyle(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ],
+            if (pob['order_copy_url'] != null && pob['order_copy_url'].toString().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => _viewAttachment(context, pob['order_copy_url']),
+                child: Container(
+                  width: 45,
+                  height: 45,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: pob['order_copy_url'].toString().toLowerCase().endsWith('.pdf')
+                        ? const Icon(Icons.picture_as_pdf, color: Colors.red, size: 26)
+                        : Image.network(
+                            pob['order_copy_url'],
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 26),
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildList(List<dynamic> list, String emptyMessage) {
+    final filtered = _applyTypeFilter(list);
+    if (filtered.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Text(
+            emptyMessage,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+          ),
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: filtered.length,
+      itemBuilder: (context, index) {
+        return _buildPobCard(filtered[index]);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -192,30 +562,12 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
           final filteredSupplied = provider.suppliedPobs.where(_isInSelectedMonth).toList();
           final allFiltered = [...filteredPending, ...filteredSupplied];
 
-          final pobCount = allFiltered.length;
-          final visits = allFiltered.map((pob) {
-            final dtStr = pob['created_at'] ?? pob['created_on'];
-            if (dtStr == null) return '';
-            try {
-              final dt = DateTime.parse(dtStr);
-              return "${dt.year}-${dt.month}-${dt.day}";
-            } catch (e) {
-              return '';
-            }
-          }).where((element) => element.isNotEmpty).toSet().length;
-
-          final productiveCalls = pobCount;
-          final orderValue = allFiltered.fold<double>(0.0, (sum, pob) {
-            final amt = pob['ptr_incl_gst_total_amount'] ?? pob['total_amount'] ?? pob['order_value'] ?? pob['total_value'] ?? 0.0;
-            return sum + (double.tryParse(amt.toString()) ?? 0.0);
-          });
-
           return Column(
             children: [
               GestureDetector(
                 onTap: () => _selectMonth(context),
                 child: Container(
-                  margin: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.fromLTRB(12, 12, 12, 8),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -234,290 +586,33 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                   ),
                 ),
               ),
+              // Type filter chips (ALL, REGULAR, TELE)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: Row(
+                  children: [
+                    _buildTypeFilterChip("ALL", "ALL POBS"),
+                    const SizedBox(width: 8),
+                    _buildTypeFilterChip("REGULAR", "REGULAR POB"),
+                    const SizedBox(width: 8),
+                    _buildTypeFilterChip("TELE", "TELE POB"),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 6),
               _tabs(),
               const SizedBox(height: 6),
               Expanded(
                 child: selectedTab == 0
-                    ? _pendingScreen(filteredPending)
-                    : _suppliedScreen(filteredSupplied),
+                    ? _buildList(allFiltered, "No POBs found for this month")
+                    : selectedTab == 1
+                        ? _buildList(filteredPending, "No pending POBs for this month")
+                        : _buildList(filteredSupplied, "No supplied POBs for this month"),
               ),
             ],
           );
         },
       ),
-    );
-  }
-  int selectedTab = 0;
-
-  Widget _tabs() {
-    return Row(
-      children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: () {
-              setState(() => selectedTab = 0);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              color: selectedTab == 0 ? Colors.white : Colors.grey[300],
-              child: Center(
-                child: Text(
-                  "POB Pendings",
-                  style: TextStyle(
-                    color: selectedTab == 0 ? AppColors.primary : Colors.black,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: GestureDetector(
-            onTap: () {
-              setState(() => selectedTab = 1);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              color: selectedTab == 1 ? Colors.white : Colors.grey[300],
-              child: Center(
-                child: Text(
-                  "POB Supplied",
-                  style: TextStyle(
-                    color: selectedTab == 1 ? AppColors.primary : Colors.black,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _pendingScreen(List<dynamic> pendingList) {
-    if (pendingList.isEmpty) {
-      return const Center(child: Text("No pending POBs for this month"));
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.all(10),
-      itemCount: pendingList.length,
-      itemBuilder: (context, index) {
-        final pob = pendingList[index];
-        final items = pob['items'] as List<dynamic>? ?? [];
-        double totalAmount = 0.0;
-        double suppliedAmount = 0.0;
-        double remainingAmount = 0.0;
-        for (var item in items) {
-          final price = double.tryParse(item['ptr_incl_gst_price']?.toString() ?? item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
-          final qty = int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
-          final suppliedQty = int.tryParse(item['supplied_qty']?.toString() ?? '0') ?? 0;
-          final remainingQty = int.tryParse(item['remaining_qty']?.toString() ?? '0') ?? 0;
-          
-          totalAmount += qty * price;
-          suppliedAmount += suppliedQty * price;
-          remainingAmount += remainingQty * price;
-        }
-
-        return GestureDetector(
-          onTap: () async {
-            final appState = Provider.of<AppStateProvider>(context, listen: false);
-            final provider = Provider.of<OutletActivityProvider>(context, listen: false);
-            final distributorId = appState.selectedDistributorId;
-            final outletId = widget.outletId;
-
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ProductListScreen(pobData: pob),
-              ),
-            );
-            if (result == true) {
-              provider.fetchPobHistory(outletId, distributorId: distributorId);
-            }
-          },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(6),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.shade300,
-                  blurRadius: 3,
-                )
-              ],
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "POB NUMBER: ${pob['pob_number'] ?? 'N/A'}",
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "₹${totalAmount.toStringAsFixed(2)}",
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Text("Date: ${DateFormatter.formatDateTime(pob['created_at'] ?? pob['created_on'])}"),
-                      Text("Status: ${pob['status'] ?? 'N/A'}"),
-                      const SizedBox(height: 6),
-                      const Divider(height: 1, thickness: 0.5),
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Supplied: ₹${suppliedAmount.toStringAsFixed(2)}",
-                            style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.w500),
-                          ),
-                          Text(
-                            "Remaining: ₹${remainingAmount.toStringAsFixed(2)}",
-                            style: const TextStyle(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                if (pob['order_copy_url'] != null && pob['order_copy_url'].toString().isNotEmpty) ...[
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: () => _viewAttachment(context, pob['order_copy_url']),
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: pob['order_copy_url'].toString().toLowerCase().endsWith('.pdf')
-                            ? const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30)
-                            : Image.network(
-                                pob['order_copy_url'],
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 30),
-                              ),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _suppliedScreen(List<dynamic> suppliedList) {
-    if (suppliedList.isEmpty) {
-      return const Center(child: Text("No supplied POBs for this month"));
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.all(10),
-      itemCount: suppliedList.length,
-      itemBuilder: (context, index) {
-        final pob = suppliedList[index];
-        final items = pob['items'] as List<dynamic>? ?? [];
-        double totalAmount = 0.0;
-        for (var item in items) {
-          final price = double.tryParse(item['ptr_incl_gst_price']?.toString() ?? item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
-          final qty = int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
-          totalAmount += qty * price;
-        }
-
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => SuppliedProductListScreen(pobData: pob),
-              ),
-            );
-          },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(6),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.shade300,
-                  blurRadius: 3,
-                )
-              ],
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "POB NUMBER: ${pob['pob_number'] ?? 'N/A'}",
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "₹${totalAmount.toStringAsFixed(2)}",
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Text("Date: ${DateFormatter.formatDateTime(pob['created_at'] ?? pob['created_on'])}"),
-                      Text("Status: ${pob['status'] ?? 'N/A'}"),
-                    ],
-                  ),
-                ),
-                if (pob['order_copy_url'] != null && pob['order_copy_url'].toString().isNotEmpty) ...[
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: () => _viewAttachment(context, pob['order_copy_url']),
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: pob['order_copy_url'].toString().toLowerCase().endsWith('.pdf')
-                            ? const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30)
-                            : Image.network(
-                                pob['order_copy_url'],
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 30),
-                              ),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

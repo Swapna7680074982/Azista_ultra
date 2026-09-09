@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 
 class LocationService {
   static List<String> _cachedCoordinates = ["17.4297436", "78.3806493"];
+  static List<String> get cachedCoordinates => _cachedCoordinates;
 
   static Future<List<String>> getCoordinates({
     bool requestPermission = true,
@@ -37,7 +38,7 @@ class LocationService {
       try {
         final position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.medium,
-          timeLimit: const Duration(seconds: 6),
+          timeLimit: const Duration(seconds: 2),
         );
 
         if (position.latitude != 0.0) {

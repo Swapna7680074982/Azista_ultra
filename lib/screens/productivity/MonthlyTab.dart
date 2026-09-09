@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'productivity_provider.dart';
 import '../../constants/app_colors.dart';
-import '../../permissions/AppStateProvider.dart';
 import '../../utilities/date_formatter.dart';
 import '../../utilities/common_widgets.dart';
 
@@ -22,11 +21,11 @@ class _MonthlyTabState extends State<MonthlyTab> {
     super.initState();
     Future.microtask(() {
       final monthStr = "${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}";
-      final appState = Provider.of<AppStateProvider>(context, listen: false);
-      Provider.of<ProductivityProvider>(context, listen: false).fetchCallsInfo(
-        month: monthStr,
-        distributorId: appState.selectedDistributorId,
-      );
+      if (mounted) {
+        Provider.of<ProductivityProvider>(context, listen: false).fetchCallsInfo(
+          month: monthStr,
+        );
+      }
     });
   }
 
@@ -253,11 +252,11 @@ class _MonthlyTabState extends State<MonthlyTab> {
         selectedDate = picked;
       });
       final monthStr = "${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}";
-      final appState = Provider.of<AppStateProvider>(context, listen: false);
-      Provider.of<ProductivityProvider>(context, listen: false).fetchCallsInfo(
-        month: monthStr,
-        distributorId: appState.selectedDistributorId,
-      );
+      if (mounted) {
+        Provider.of<ProductivityProvider>(context, listen: false).fetchCallsInfo(
+          month: monthStr,
+        );
+      }
     }
   }
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../constants/app_colors.dart';
 import '../../permissions/AppStateProvider.dart';
 import '../../permissions/SessionManager.dart';
 import '../../services/api_services.dart';
@@ -251,7 +252,86 @@ class HomeProvider extends ChangeNotifier {
       return false;
     }
 
+    if (!context.mounted) return false;
+
     final photoFile = File(picked.path);
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.camera_alt, color: AppColors.primary),
+                    SizedBox(width: 8),
+                    Text(
+                      "Confirm Photo",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(
+                    photoFile,
+                    height: 240,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  "Do you want to submit your attendance with this photo?",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.black87),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                      child: const Text(
+                        "CANCEL",
+                        style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.button,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: () => Navigator.of(dialogContext).pop(true),
+                      child: const Text(
+                        "OK",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      message = "Check-in cancelled";
+      notifyListeners();
+      return false;
+    }
+
     final photoRes = await checkIn(photo: photoFile);
     return photoRes["success"] == true;
   }
@@ -303,178 +383,235 @@ class HomeProvider extends ChangeNotifier {
     isAttendanceLoading = true;
     notifyListeners();
 
-    final res = await ApiServices.getTodayAttendance();
+    try {
+      final res = await ApiServices.getTodayAttendance();
 
-    if (res != null && res["data"] != null) {
-      final data = res["data"];
+      if (res != null && res["data"] != null) {
+        final data = res["data"];
 
-      if (data is List) {
-        if (data.isEmpty) {
-          todayAttendance = null;
-        } else {
-          todayAttendance = data.first as Map<String, dynamic>;
-        }
-      } else if (data is Map<String, dynamic>) {
-        todayAttendance = data;
-        final sessions = data["sessions"] as List<dynamic>?;
-        if (sessions != null && sessions.isNotEmpty) {
-          final last = sessions.last;
-          final hasNoCheckOut = last is Map &&
-              (last["check_out"] == null || last["check_out"].toString().trim().isEmpty);
-          if (last is Map && last["attendance_id"] != null && hasNoCheckOut) {
-            await SessionManager.saveAttendanceId(last["attendance_id"].toString());
-          } else {
-            await SessionManager.saveAttendanceId(null);
+        if (data is List) {
+          if (data.isNotEmpty) {
+            todayAttendance = data.first as Map<String, dynamic>;
+          }
+        } else if (data is Map<String, dynamic>) {
+          todayAttendance = data;
+          final sessions = data["sessions"] as List<dynamic>?;
+          if (sessions != null && sessions.isNotEmpty) {
+            final last = sessions.last;
+            final hasNoCheckOut = last is Map &&
+                (last["check_out"] == null || last["check_out"].toString().trim().isEmpty);
+            if (last is Map && last["attendance_id"] != null && hasNoCheckOut) {
+              await SessionManager.saveAttendanceId(last["attendance_id"].toString());
+            } else {
+              await SessionManager.saveAttendanceId(null);
+            }
           }
         }
-      } else {
-        todayAttendance = null;
       }
-    } else {
-      todayAttendance = null;
+    } catch (_) {
+      // Keep existing data on error
+    } finally {
+      isAttendanceLoading = false;
+      notifyListeners();
     }
-
-    isAttendanceLoading = false;
-    notifyListeners();
   }
 
-  Future<void> fetchDailyCallSummary(int? distributorId) async {
+  Future<void> fetchDailyCallSummary() async {
     isSummaryLoading = true;
     notifyListeners();
 
-    final now = DateTime.now();
-    final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    try {
+      final now = DateTime.now();
+      final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
-    final res = await ApiServices.getCallsInfo(
-      date: dateStr,
-      distributorId: distributorId,
-    );
+      final res = await ApiServices.getCallsInfo(date: dateStr);
 
-    print("fetchDailyCallSummary Response: $res");
-
-    if (res != null) {
-      if (res["summary"] != null) {
-        dailyCallSummary = res["summary"];
-      } else if (res["data"] is List) {
-        final dataList = res["data"] as List<dynamic>;
-        double targetCalls = 0;
-        double productiveCalls = 0;
-        for (var item in dataList) {
-          targetCalls += double.tryParse(item["target_call"]?.toString() ?? "0") ?? 0;
-          productiveCalls += double.tryParse(item["productive_call"]?.toString() ?? "0") ?? 0;
+      if (res != null) {
+        if (res["summary"] is Map) {
+          dailyCallSummary = Map<String, dynamic>.from(res["summary"]);
+        } else if (res.containsKey("target_calls") || res.containsKey("productive_calls")) {
+          dailyCallSummary = {
+            "target_calls": double.tryParse(res["target_calls"]?.toString() ?? "0") ?? 0,
+            "productive_calls": double.tryParse(res["productive_calls"]?.toString() ?? "0") ?? 0,
+          };
+        } else if (res["data"] is List) {
+          final dataList = res["data"] as List<dynamic>;
+          double targetCalls = 0;
+          double productiveCalls = 0;
+          for (var item in dataList) {
+            targetCalls += double.tryParse(item["target_call"]?.toString() ?? item["target_calls"]?.toString() ?? "0") ?? 0;
+            productiveCalls += double.tryParse(item["productive_call"]?.toString() ?? item["productive_calls"]?.toString() ?? "0") ?? 0;
+          }
+          dailyCallSummary = {
+            "target_calls": targetCalls,
+            "productive_calls": productiveCalls,
+          };
+        } else if (res["data"] is Map) {
+          final dataMap = res["data"] as Map<String, dynamic>;
+          if (dataMap["summary"] is Map) {
+            dailyCallSummary = Map<String, dynamic>.from(dataMap["summary"]);
+          } else {
+            dailyCallSummary = {
+              "target_calls": double.tryParse(dataMap["target_calls"]?.toString() ?? dataMap["target_call"]?.toString() ?? "0") ?? 0,
+              "productive_calls": double.tryParse(dataMap["productive_calls"]?.toString() ?? dataMap["productive_call"]?.toString() ?? "0") ?? 0,
+            };
+          }
+        } else if (dailyCallSummary == null) {
+          dailyCallSummary = {
+            "target_calls": 0,
+            "productive_calls": 0,
+          };
         }
+      } else if (dailyCallSummary == null) {
         dailyCallSummary = {
-          "target_calls": targetCalls,
-          "productive_calls": productiveCalls,
+          "target_calls": 0,
+          "productive_calls": 0,
         };
-      } else {
-        dailyCallSummary = null;
       }
-    } else {
-      dailyCallSummary = null;
+    } catch (e) {
+      if (dailyCallSummary == null) {
+        dailyCallSummary = {
+          "target_calls": 0,
+          "productive_calls": 0,
+        };
+      }
+    } finally {
+      isSummaryLoading = false;
+      notifyListeners();
     }
-
-    isSummaryLoading = false;
-    notifyListeners();
   }
 
-  Future<void> fetchMonthlyCallSummary(int? distributorId) async {
+  Future<void> fetchMonthlyCallSummary() async {
     isMonthlySummaryLoading = true;
     notifyListeners();
 
-    final now = DateTime.now();
-    final monthStr = "${now.month.toString().padLeft(2, '0')}-${now.year}";
+    try {
+      final now = DateTime.now();
+      final monthStr = "${now.month.toString().padLeft(2, '0')}-${now.year}";
 
-    final res = await ApiServices.getCallsInfo(
-      month: monthStr,
-      distributorId: distributorId,
-    );
+      final res = await ApiServices.getCallsInfo(month: monthStr);
 
-    print("fetchMonthlyCallSummary Response: $res");
-
-    if (res != null) {
-      if (res["summary"] != null) {
-        monthlyCallSummary = res["summary"];
-      } else if (res["data"] is List) {
-        final dataList = res["data"] as List<dynamic>;
-        double targetCalls = 0;
-        double productiveCalls = 0;
-        for (var item in dataList) {
-          targetCalls += double.tryParse(item["target_call"]?.toString() ?? "0") ?? 0;
-          productiveCalls += double.tryParse(item["productive_call"]?.toString() ?? "0") ?? 0;
+      if (res != null) {
+        if (res["summary"] is Map) {
+          monthlyCallSummary = Map<String, dynamic>.from(res["summary"]);
+        } else if (res.containsKey("target_calls") || res.containsKey("productive_calls")) {
+          monthlyCallSummary = {
+            "target_calls": double.tryParse(res["target_calls"]?.toString() ?? "0") ?? 0,
+            "productive_calls": double.tryParse(res["productive_calls"]?.toString() ?? "0") ?? 0,
+          };
+        } else if (res["data"] is List) {
+          final dataList = res["data"] as List<dynamic>;
+          double targetCalls = 0;
+          double productiveCalls = 0;
+          for (var item in dataList) {
+            targetCalls += double.tryParse(item["target_call"]?.toString() ?? item["target_calls"]?.toString() ?? "0") ?? 0;
+            productiveCalls += double.tryParse(item["productive_call"]?.toString() ?? item["productive_calls"]?.toString() ?? "0") ?? 0;
+          }
+          monthlyCallSummary = {
+            "target_calls": targetCalls,
+            "productive_calls": productiveCalls,
+          };
+        } else if (res["data"] is Map) {
+          final dataMap = res["data"] as Map<String, dynamic>;
+          if (dataMap["summary"] is Map) {
+            monthlyCallSummary = Map<String, dynamic>.from(dataMap["summary"]);
+          } else {
+            monthlyCallSummary = {
+              "target_calls": double.tryParse(dataMap["target_calls"]?.toString() ?? dataMap["target_call"]?.toString() ?? "0") ?? 0,
+              "productive_calls": double.tryParse(dataMap["productive_calls"]?.toString() ?? dataMap["productive_call"]?.toString() ?? "0") ?? 0,
+            };
+          }
+        } else if (monthlyCallSummary == null) {
+          monthlyCallSummary = {
+            "target_calls": 0,
+            "productive_calls": 0,
+          };
         }
+      } else if (monthlyCallSummary == null) {
         monthlyCallSummary = {
-          "target_calls": targetCalls,
-          "productive_calls": productiveCalls,
+          "target_calls": 0,
+          "productive_calls": 0,
         };
-      } else {
-        monthlyCallSummary = null;
       }
-    } else {
-      monthlyCallSummary = null;
+    } catch (e) {
+      if (monthlyCallSummary == null) {
+        monthlyCallSummary = {
+          "target_calls": 0,
+          "productive_calls": 0,
+        };
+      }
+    } finally {
+      isMonthlySummaryLoading = false;
+      notifyListeners();
     }
-
-    isMonthlySummaryLoading = false;
-    notifyListeners();
   }
 
-  Future<void> fetchDashboardCounts({int? distributorId}) async {
+  Future<void> fetchDashboardCounts() async {
     isCountsLoading = true;
     notifyListeners();
 
-    final userInfo = await SessionManager.getUserInfo();
-    final userIdStr = userInfo?["user_id"]?.toString();
-
-    int month = DateTime.now().month;
-    int year = DateTime.now().year;
-
-    if (selectedCountsFilter == "custom" && customCountsRange != null) {
-      month = customCountsRange!.start.month;
-      year = customCountsRange!.start.year;
-    }
-
     try {
-      final res = await ApiServices.getTeamMembersSummary(
-        month: month,
-        year: year,
-      );
-      if (res != null && res["status"] == true) {
-        final List members = res["data"] ?? [];
-        var memberData = members.where(
-          (m) => m["user_id"]?.toString() == userIdStr,
-        ).firstOrNull;
-        if (memberData == null && members.length == 1) {
-          memberData = members.first;
-        }
-
-        if (memberData != null) {
-          dashboardCounts = {
-            "new_outlets": memberData["new_outlets"],
-            "outlet_visits": memberData["total_visits"],
-            "pobs_done": memberData["total_pobs"],
-            "pob_sale_value": memberData["pob_sale_value"],
-          };
-        } else {
-          dashboardCounts = null;
-        }
+      Map<String, dynamic> payload = {};
+      if (selectedCountsFilter == "today") {
+        payload = {"today": 1};
+      } else if (selectedCountsFilter == "custom" && customCountsRange != null) {
+        payload = {
+          "from_date": "${customCountsRange!.start.year}-${customCountsRange!.start.month.toString().padLeft(2, '0')}-${customCountsRange!.start.day.toString().padLeft(2, '0')}",
+          "to_date": "${customCountsRange!.end.year}-${customCountsRange!.end.month.toString().padLeft(2, '0')}-${customCountsRange!.end.day.toString().padLeft(2, '0')}",
+        };
       } else {
-        dashboardCounts = null;
+        // month wise default
+        final now = DateTime.now();
+        payload = {
+          "month": now.month,
+          "year": now.year,
+        };
+      }
+
+      final res = await ApiServices.getDashboardCounts(payload: payload);
+      if (res != null && (res["status"] == true || res["status_code"] == 200 || res["data"] != null)) {
+        if (res["data"] is Map) {
+          dashboardCounts = Map<String, dynamic>.from(res["data"]);
+        } else if (res["counts"] is Map) {
+          dashboardCounts = Map<String, dynamic>.from(res["counts"]);
+        } else if (dashboardCounts == null) {
+          dashboardCounts = {
+            "new_outlets": 0,
+            "outlet_visits": 0,
+            "pobs_done": 0,
+            "pob_sale_value": 0.0,
+          };
+        }
+      } else if (dashboardCounts == null) {
+        dashboardCounts = {
+          "new_outlets": 0,
+          "outlet_visits": 0,
+          "pobs_done": 0,
+          "pob_sale_value": 0.0,
+        };
       }
     } catch (e) {
-      dashboardCounts = null;
+      if (dashboardCounts == null) {
+        dashboardCounts = {
+          "new_outlets": 0,
+          "outlet_visits": 0,
+          "pobs_done": 0,
+          "pob_sale_value": 0.0,
+        };
+      }
+    } finally {
+      isCountsLoading = false;
+      notifyListeners();
     }
-
-    isCountsLoading = false;
-    notifyListeners();
   }
 
-  void setCountsFilter(String filter, {DateTimeRange? range, int? distributorId}) {
+  void setCountsFilter(String filter, {DateTimeRange? range}) {
     selectedCountsFilter = filter;
     if (range != null) {
       customCountsRange = range;
     }
     notifyListeners();
-    fetchDashboardCounts(distributorId: distributorId);
+    fetchDashboardCounts();
   }
 
   Future<void> fetchTargets() async {
@@ -484,14 +621,13 @@ class HomeProvider extends ChangeNotifier {
       final res = await ApiServices.getTargets();
       if (res != null && res["status"] == true) {
         targetsData = res["data"];
-      } else {
-        targetsData = null;
       }
     } catch (e) {
-      targetsData = null;
+      // Keep existing targetsData
+    } finally {
+      isTargetsLoading = false;
+      notifyListeners();
     }
-    isTargetsLoading = false;
-    notifyListeners();
   }
 
   void reset() {

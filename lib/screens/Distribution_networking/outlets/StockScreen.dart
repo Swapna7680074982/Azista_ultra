@@ -18,8 +18,10 @@ class _StockBodyState extends State<StockBody> {
   void initState() {
     super.initState();
     Future.microtask(() {
-      Provider.of<OutletActivityProvider>(context, listen: false)
-          .fetchProductsWithSkus();
+      if (mounted) {
+        Provider.of<OutletActivityProvider>(context, listen: false)
+            .fetchProductsWithSkus();
+      }
     });
   }
 

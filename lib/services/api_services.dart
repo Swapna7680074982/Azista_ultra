@@ -13,6 +13,46 @@ import '../utilities/mylogger.dart';
 import 'navigation_service.dart';
 
 
+class _ConcurrencyLimitInterceptor extends Interceptor {
+  static const int maxConcurrent = 3;
+  static int _activeCount = 0;
+  static final List<void Function()> _queue = [];
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    if (_activeCount < maxConcurrent) {
+      _activeCount++;
+      handler.next(options);
+    } else {
+      _queue.add(() {
+        _activeCount++;
+        handler.next(options);
+      });
+    }
+  }
+
+  @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    _release();
+    handler.next(response);
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    _release();
+    handler.next(err);
+  }
+
+  static void _release() {
+    _activeCount--;
+    if (_activeCount < 0) _activeCount = 0;
+    if (_queue.isNotEmpty && _activeCount < maxConcurrent) {
+      final nextRequest = _queue.removeAt(0);
+      Future.delayed(const Duration(milliseconds: 30), nextRequest);
+    }
+  }
+}
+
 class ApiServices {
   static dynamic _safeParseJson(dynamic rawData) {
     if (rawData == null) return null;
@@ -50,13 +90,71 @@ class ApiServices {
     return null;
   }
 
+  static Future<Response?> _postWithRetry(
+    String url, {
+    dynamic data,
+    Options? options,
+    int maxRetries = 2,
+  }) async {
+    for (int i = 0; i <= maxRetries; i++) {
+      try {
+        final response = await _dio.post(url, data: data, options: options);
+        final parsed = _safeParseJson(response.data);
+        if (response.statusCode == 200 && parsed != null) {
+          return response;
+        }
+        if (i < maxRetries) {
+          await Future.delayed(Duration(milliseconds: 300 * (i + 1)));
+        } else {
+          return response;
+        }
+      } catch (e) {
+        if (i < maxRetries) {
+          await Future.delayed(Duration(milliseconds: 300 * (i + 1)));
+        } else {
+          rethrow;
+        }
+      }
+    }
+    return null;
+  }
+
+  static Future<Response?> _getWithRetry(
+    String url, {
+    Options? options,
+    int maxRetries = 2,
+  }) async {
+    for (int i = 0; i <= maxRetries; i++) {
+      try {
+        final response = await _dio.get(url, options: options);
+        final parsed = _safeParseJson(response.data);
+        if (response.statusCode == 200 && parsed != null) {
+          return response;
+        }
+        if (i < maxRetries) {
+          await Future.delayed(Duration(milliseconds: 300 * (i + 1)));
+        } else {
+          return response;
+        }
+      } catch (e) {
+        if (i < maxRetries) {
+          await Future.delayed(Duration(milliseconds: 300 * (i + 1)));
+        } else {
+          rethrow;
+        }
+      }
+    }
+    return null;
+  }
+
   static final Dio _dio = Dio(
     BaseOptions(
       connectTimeout: const Duration(seconds: 50),
       receiveTimeout: const Duration(seconds: 50),
       sendTimeout: const Duration(seconds: 50),
     ),
-  )..interceptors.add(
+  )..interceptors.addAll([
+    _ConcurrencyLimitInterceptor(),
     InterceptorsWrapper(
       onResponse: (response, handler) async {
         final path = response.requestOptions.path;
@@ -159,7 +257,7 @@ class ApiServices {
         return handler.next(e);
       },
     ),
-  );
+  ]);
 
   static bool _isRedirecting = false;
 
@@ -634,15 +732,61 @@ class ApiServices {
     required int outletId,
     required double latitude,
     required double longitude,
+    int? distributorId,
     String? address,
     String? remarks,
   }) async {
-    AppLogger.warning("API outletCheckIn bypassed (API Removed)");
-    return {
-      "status": true,
-      "visit_id": 99999,
-      "message": "Bypassed (API Removed)",
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for outletCheckIn");
+        return null;
+      }
+
+      int? finalDistId = distributorId;
+      if (finalDistId == null) {
+        final savedDistributors = await SessionManager.getDistributors();
+        if (savedDistributors.isNotEmpty) {
+          finalDistId = int.tryParse(savedDistributors.first['distributor_id']?.toString() ?? '');
+        }
+      }
+
+      final payload = <String, dynamic>{
+        "outlet_id": outletId,
+        "latitude": latitude,
+        "longitude": longitude,
+        if (finalDistId != null) "distributor_id": finalDistId,
+        if (address != null && address.isNotEmpty) "address": address,
+        if (remarks != null && remarks.isNotEmpty) "remarks": remarks,
+      };
+
+      AppLogger.info("Outlet Check-In API called: ${AppUrls.outletCheckIn}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.outletCheckIn,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Outlet Check-In response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Outlet Check-In error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> outletCheckOut({
@@ -651,11 +795,47 @@ class ApiServices {
     required double longitude,
     String? address,
   }) async {
-    AppLogger.warning("API outletCheckOut bypassed (API Removed)");
-    return {
-      "status": true,
-      "message": "Bypassed (API Removed)",
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for outletCheckOut");
+        return null;
+      }
+
+      final payload = <String, dynamic>{
+        "visit_id": visitId,
+        "latitude": latitude,
+        "longitude": longitude,
+        if (address != null && address.isNotEmpty) "address": address,
+      };
+
+      AppLogger.info("Outlet Check-Out API called: ${AppUrls.outletCheckOut}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.outletCheckOut,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Outlet Check-Out response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Outlet Check-Out error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getTodayAttendance() async {
@@ -668,7 +848,7 @@ class ApiServices {
 
       AppLogger.info("Get Today Attendance API called: ${AppUrls.getTodayAttendance}");
 
-      final response = await _dio.get(
+      final response = await _getWithRetry(
         AppUrls.getTodayAttendance,
         options: Options(
           responseType: ResponseType.plain,
@@ -678,6 +858,8 @@ class ApiServices {
           validateStatus: (status) => status != null && status < 600,
         ),
       );
+
+      if (response == null) return null;
 
       final parsed = _safeParseJson(response.data);
       AppLogger.info("Get Today Attendance response: ${response.statusCode} - $parsed");
@@ -906,22 +1088,71 @@ class ApiServices {
   static Future<Map<String, dynamic>?> insertDistributorStock({
     required Map<String, dynamic> payload,
   }) async {
-    AppLogger.warning("API insertDistributorStock bypassed (API Removed)");
-    return {
-      "status": true,
-      "message": "Bypassed (API Removed)",
-    };
+    return distributorStockInsert(payload: payload);
+  }
+
+  static Future<Map<String, dynamic>?> getDistributorStocks({
+    required int distributorId,
+    String? fromDate,
+    String? toDate,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getDistributorStocks");
+        return null;
+      }
+
+      final payload = {
+        "distributor_id": distributorId,
+        if (fromDate != null) "from_date": fromDate,
+        if (toDate != null) "to_date": toDate,
+        "limit": limit,
+        "offset": offset,
+      };
+
+      AppLogger.info("Get Distributor Stocks API called: ${AppUrls.distributorStocks}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.distributorStocks,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Distributor Stocks response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Distributor Stocks error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getDistributorStock({
     required int distributorId,
     int? productId,
+    String? fromDate,
+    String? toDate,
   }) async {
-    AppLogger.warning("API getDistributorStock bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": [],
-    };
+    return getDistributorStocks(
+      distributorId: distributorId,
+      fromDate: fromDate,
+      toDate: toDate,
+    );
   }
 
   static Future<Map<String, dynamic>?> getModules() async {
@@ -963,73 +1194,318 @@ class ApiServices {
     String? distributorId,
     required String itemsJson,
     required String remarks,
+    String? pobType = "regular",
     File? orderCopy,
   }) async {
-    AppLogger.warning("API generatePob bypassed (API Removed)");
-    return {
-      "status": "success",
-      "message": "Bypassed (API Removed)",
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for generatePob");
+        return null;
+      }
+
+      AppLogger.info("Generate POB API called: ${AppUrls.generatePob}");
+
+      final isTele = (pobType?.toLowerCase() == "tele" || pobType?.toLowerCase() == "tele_pob");
+      final Map<String, dynamic> map = {
+        "outlet_id": outletId,
+        if (distributorId != null && distributorId.isNotEmpty) "distributor_id": distributorId,
+        "pob_type": isTele ? "tele" : "regular",
+        "type": isTele ? "tele" : "regular",
+        "order_type": isTele ? "tele" : "regular",
+        "is_tele": isTele ? 1 : 0,
+        "is_tele_pob": isTele ? 1 : 0,
+        "items": itemsJson,
+        "remarks": isTele && !remarks.toLowerCase().contains("tele") ? "[TELE POB] $remarks".trim() : remarks,
+      };
+
+      if (orderCopy != null && await orderCopy.exists()) {
+        final fileName = orderCopy.path.split(Platform.pathSeparator).last;
+        final extension = fileName.split('.').last.toLowerCase();
+        final mimeType = (extension == 'png')
+            ? MediaType('image', 'png')
+            : (extension == 'pdf')
+                ? MediaType('application', 'pdf')
+                : MediaType('image', 'jpeg');
+
+        map["order_copy"] = await MultipartFile.fromFile(
+          orderCopy.path,
+          filename: fileName,
+          contentType: mimeType,
+        );
+      }
+
+      final formData = FormData.fromMap(map);
+
+      final response = await _dio.post(
+        AppUrls.generatePob,
+        data: formData,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Generate POB response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Generate POB error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> supplyPob({
     required Map<String, dynamic> payload,
   }) async {
-    AppLogger.warning("API supplyPob bypassed (API Removed)");
-    return {
-      "status": "success",
-      "message": "Bypassed (API Removed)",
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for supplyPob");
+        return null;
+      }
+
+      AppLogger.info("Supply POB API called: ${AppUrls.supplyPob}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.supplyPob,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Supply POB response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Supply POB error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getPobHistory({
     required Map<String, dynamic> payload,
   }) async {
-    AppLogger.warning("API getPobHistory bypassed (API Removed)");
-    return {
-      "status": "success",
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getPobHistory");
+        return null;
+      }
+
+      AppLogger.info("Get POB History API called: ${AppUrls.pobHistory}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _postWithRetry(
+        AppUrls.pobHistory,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      if (response == null) return null;
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get POB History response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get POB History error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> submitPosTransaction({
     required Map<String, dynamic> payload,
   }) async {
-    AppLogger.warning("API submitPosTransaction bypassed (API Removed)");
-    return {
-      "status": "success",
-      "message": "Bypassed (API Removed)",
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for submitPosTransaction");
+        return null;
+      }
+
+      AppLogger.info("POS Transaction Insert API called: ${AppUrls.posTransaction}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.posTransaction,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("POS Transaction Insert response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("POS Transaction Insert error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getPosHistory({
     required Map<String, dynamic> payload,
   }) async {
-    AppLogger.warning("API getPosHistory bypassed (API Removed)");
-    return {
-      "status": "success",
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getPosHistory");
+        return null;
+      }
+
+      AppLogger.info("Get POS History API called: ${AppUrls.posHistory}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _postWithRetry(
+        AppUrls.posHistory,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      if (response == null) return null;
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get POS History response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get POS History error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getSupportTeam() async {
-    AppLogger.warning("API getSupportTeam bypassed (API Removed)");
-    return {
-      "status": "success",
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getSupportTeam");
+        return null;
+      }
+
+      AppLogger.info("Get Support Team API called: ${AppUrls.getSupportTeam}");
+
+      final response = await _dio.get(
+        AppUrls.getSupportTeam,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Support Team response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Support Team error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getCallsInfo({
     String? date,
     String? month,
-    int? distributorId,
+    Map<String, dynamic>? payload,
   }) async {
-    AppLogger.warning("API getCallsInfo bypassed (API Removed)");
-    return {
-      "status": "success",
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getCallsInfo");
+        return null;
+      }
+
+      Map<String, dynamic> body = {};
+      if (payload != null && payload.isNotEmpty) {
+        body = Map<String, dynamic>.from(payload);
+      } else if (date != null && date.isNotEmpty) {
+        body["date"] = date;
+      } else if (month != null && month.isNotEmpty) {
+        body["month"] = month;
+      }
+
+      AppLogger.info("Calls Info API called: ${AppUrls.callsInfo}");
+      AppLogger.info("Payload: ${jsonEncode(body)}");
+
+      final response = await _postWithRetry(
+        AppUrls.callsInfo,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      if (response == null) return null;
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Calls Info response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Calls Info error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getExpenses() async {
@@ -1221,46 +1697,231 @@ class ApiServices {
   }
 
   static Future<Map<String, dynamic>?> getActivityTypes() async {
-    AppLogger.warning("API getActivityTypes bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getActivityTypes");
+        return null;
+      }
+
+      AppLogger.info("Get Activity Types API called: ${AppUrls.getActivityTypes}");
+
+      final response = await _dio.get(
+        AppUrls.getActivityTypes,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Activity Types response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Activity Types error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> createOutletActivity({
-    required String visitId,
-    required String activityTypeId,
+    required dynamic visitId,
+    required dynamic activityTypeId,
     required String remarks,
-    String? productId,
-    String? skuId,
+    dynamic productId,
+    dynamic skuId,
     List<File>? attachments,
   }) async {
-    AppLogger.warning("API createOutletActivity bypassed (API Removed)");
-    return {
-      "status": true,
-      "message": "Bypassed (API Removed)",
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for createOutletActivity");
+        return null;
+      }
+
+      AppLogger.info("Create Outlet Activity API called: ${AppUrls.createOutletActivity}");
+
+      final formData = FormData();
+      formData.fields.add(MapEntry("visit_id", visitId.toString()));
+      formData.fields.add(MapEntry("activity_type_id", activityTypeId.toString()));
+      formData.fields.add(MapEntry("remarks", remarks));
+
+      if (productId != null && productId.toString().isNotEmpty) {
+        formData.fields.add(MapEntry("product_id", productId.toString()));
+      }
+      if (skuId != null && skuId.toString().isNotEmpty) {
+        formData.fields.add(MapEntry("sku_id", skuId.toString()));
+      }
+
+      if (attachments != null && attachments.isNotEmpty) {
+        for (final file in attachments) {
+          if (await file.exists()) {
+            final fileName = file.path.split(Platform.pathSeparator).last;
+            final ext = fileName.split('.').last.toLowerCase();
+            MediaType? mediaType;
+            if (ext == 'png') {
+              mediaType = MediaType('image', 'png');
+            } else if (ext == 'jpg' || ext == 'jpeg') {
+              mediaType = MediaType('image', 'jpeg');
+            } else if (ext == 'pdf') {
+              mediaType = MediaType('application', 'pdf');
+            }
+
+            formData.files.add(
+              MapEntry(
+                "attachments[]",
+                await MultipartFile.fromFile(
+                  file.path,
+                  filename: fileName,
+                  contentType: mediaType,
+                ),
+              ),
+            );
+          }
+        }
+      }
+
+      final response = await _dio.post(
+        AppUrls.createOutletActivity,
+        data: formData,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Create Outlet Activity response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Create Outlet Activity error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getOutletHistory({
     required int outletId,
+    int? today,
+    String? fromDate,
+    String? toDate,
+    int? month,
+    int? year,
   }) async {
-    AppLogger.warning("API getOutletHistory bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getOutletHistory");
+        return null;
+      }
+
+      final payload = <String, dynamic>{
+        "outlet_id": outletId,
+        if (today != null) "today": today,
+        if (fromDate != null && fromDate.isNotEmpty) "from_date": fromDate,
+        if (toDate != null && toDate.isNotEmpty) "to_date": toDate,
+        if (month != null) "month": month,
+        if (year != null) "year": year,
+      };
+
+      AppLogger.info("Get Outlet History API called: ${AppUrls.outletHistory}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.outletHistory,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Outlet History response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Outlet History error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getDashboardCounts({
-    required Map<String, dynamic> payload,
+    Map<String, dynamic>? payload,
+    String? fromDate,
+    String? toDate,
+    int? month,
+    int? year,
+    int? today,
   }) async {
-    AppLogger.warning("API getDashboardCounts bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": {},
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getDashboardCounts");
+        return null;
+      }
+
+      Map<String, dynamic> body = {};
+      if (payload != null && payload.isNotEmpty) {
+        body = Map<String, dynamic>.from(payload);
+      } else if (today != null) {
+        body["today"] = today;
+      } else if (fromDate != null && toDate != null) {
+        body["from_date"] = fromDate;
+        body["to_date"] = toDate;
+      } else if (month != null && year != null) {
+        body["month"] = month;
+        body["year"] = year;
+      }
+
+      AppLogger.info("Dashboard Counts API called: ${AppUrls.dashboardCounts}");
+      AppLogger.info("Payload: ${jsonEncode(body)}");
+
+      final response = await _postWithRetry(
+        AppUrls.dashboardCounts,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      if (response == null) return null;
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Dashboard Counts response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Dashboard Counts error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> createDistributor({
@@ -1325,29 +1986,167 @@ class ApiServices {
   static Future<Map<String, dynamic>?> distributorStockInsert({
     required Map<String, dynamic> payload,
   }) async {
-    AppLogger.warning("API distributorStockInsert bypassed (API Removed)");
-    return {
-      "status": "success",
-      "message": "Bypassed (API Removed)",
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for distributorStockInsert");
+        return null;
+      }
+
+      AppLogger.info("Distributor Stock Insert API called: ${AppUrls.distributorStockInsert}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.distributorStockInsert,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Distributor Stock Insert response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Distributor Stock Insert error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getDistributorStockHistory({
     required Map<String, dynamic> payload,
   }) async {
-    AppLogger.warning("API getDistributorStockHistory bypassed (API Removed)");
-    return {
-      "status": "success",
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getDistributorStockHistory");
+        return null;
+      }
+
+      AppLogger.info("Get Distributor Stock History API called: ${AppUrls.distributorStocks}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.distributorStocks,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Distributor Stock History response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Distributor Stock History error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getTargets() async {
-    AppLogger.warning("API getTargets bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": {},
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getTargets");
+        return null;
+      }
+
+      AppLogger.info("Get Targets API called: ${AppUrls.getTargets}");
+
+      final response = await _postWithRetry(
+        AppUrls.getTargets,
+        data: {},
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      if (response == null) return null;
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Targets response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Targets error", e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getPosSummary({
+    Map<String, dynamic>? payload,
+    String? month,
+    int? today,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getPosSummary");
+        return null;
+      }
+
+      Map<String, dynamic> body = {};
+      if (payload != null && payload.isNotEmpty) {
+        body = Map<String, dynamic>.from(payload);
+      } else if (today != null) {
+        body["today"] = today;
+      } else if (month != null && month.isNotEmpty) {
+        body["month"] = month;
+      }
+
+      AppLogger.info("POS Summary API called: ${AppUrls.posSummary}");
+      AppLogger.info("Payload: ${jsonEncode(body)}");
+
+      final response = await _dio.post(
+        AppUrls.posSummary,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("POS Summary response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("POS Summary error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getTeamMembersSummary({

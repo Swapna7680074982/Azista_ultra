@@ -207,6 +207,65 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
     }
   }
 
+  bool _isTelePob(dynamic pob) {
+    if (pob is! Map) return false;
+
+    final pobType = pob['pob_type']?.toString().toLowerCase() ?? '';
+    if (pobType.contains('tele')) return true;
+
+    final type = pob['type']?.toString().toLowerCase() ?? '';
+    if (type.contains('tele')) return true;
+
+    final orderType = pob['order_type']?.toString().toLowerCase() ?? '';
+    if (orderType.contains('tele')) return true;
+
+    if (pob['is_tele'] == true || pob['is_tele'] == 1 || pob['is_tele'] == '1' || pob['is_tele'] == 'true') return true;
+    if (pob['is_tele_pob'] == true || pob['is_tele_pob'] == 1 || pob['is_tele_pob'] == '1' || pob['is_tele_pob'] == 'true') return true;
+
+    final pobNumber = pob['pob_number']?.toString().toUpperCase() ?? '';
+    if (pobNumber.contains('TELE')) return true;
+
+    final remarks = pob['remarks']?.toString().toLowerCase() ?? '';
+    if (remarks.contains('tele')) return true;
+
+    return false;
+  }
+
+  Widget _buildPobTypeBadge(dynamic pob) {
+    final isTele = _isTelePob(pob);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: isTele ? Colors.purple.shade50 : Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(
+          color: isTele ? Colors.purple.shade300 : Colors.blue.shade300,
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isTele ? Icons.phone_in_talk : Icons.storefront,
+            size: 11,
+            color: isTele ? Colors.purple.shade700 : Colors.blue.shade700,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isTele ? "TELE POB" : "REGULAR POB",
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: isTele ? Colors.purple.shade800 : Colors.blue.shade800,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -383,9 +442,20 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        pobNum,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                pobNum,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildPobTypeBadge(pob),
+                          ],
+                        ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

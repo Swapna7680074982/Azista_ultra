@@ -39,18 +39,49 @@ class Outlet {
         ?.toString()
         ?? '';
 
+    double lat = 0.0;
+    final rawLat = json['location']?['latitude'] ??
+        json['location']?['lat'] ??
+        json['latitude'] ??
+        json['lat'] ??
+        json['outlet_latitude'];
+    if (rawLat != null) {
+      lat = double.tryParse(rawLat.toString()) ?? 0.0;
+    }
+
+    double lng = 0.0;
+    final rawLng = json['location']?['longitude'] ??
+        json['location']?['lng'] ??
+        json['longitude'] ??
+        json['lng'] ??
+        json['outlet_longitude'];
+    if (rawLng != null) {
+      lng = double.tryParse(rawLng.toString()) ?? 0.0;
+    }
+
+    if (lat == 0.0 && lng == 0.0 && json['coordinates'] is List && (json['coordinates'] as List).length >= 2) {
+      lat = double.tryParse(json['coordinates'][0].toString()) ?? 0.0;
+      lng = double.tryParse(json['coordinates'][1].toString()) ?? 0.0;
+    }
+
+    double? distKm;
+    final rawDist = json['distance_km'] ?? json['distance'] ?? json['dist_km'];
+    if (rawDist != null) {
+      distKm = double.tryParse(rawDist.toString());
+    }
+
     return Outlet(
       id: (json['outlet_id'] ?? json['id'] ?? '').toString(),
       name: (json['outlet_name'] ?? json['name'] ?? 'Unknown').toString(),
       owner: (json['owner_name'] ?? json['owner'] ?? json['contact_person'] ?? json['contact_name'] ?? 'Unknown').toString(),
       phone: (json['mobile'] ?? json['phone'] ?? json['mobile_number'] ?? json['contact_number'] ?? '').toString(),
       type: type,
-      latitude: double.tryParse(json['location']?['latitude']?.toString() ?? json['latitude']?.toString() ?? '0') ?? 0.0,
-      longitude: double.tryParse(json['location']?['longitude']?.toString() ?? json['longitude']?.toString() ?? '0') ?? 0.0,
+      latitude: lat,
+      longitude: lng,
       status: json['status']?.toString() ?? 'ACTIVE',
       address: json['address']?.toString() ?? '',
       area: json['area']?.toString() ?? '',
-      distanceKm: json['distance_km'] != null ? double.tryParse(json['distance_km'].toString()) : null,
+      distanceKm: distKm,
     );
   }
 }

@@ -45,17 +45,24 @@ class OutletActivityProvider extends ChangeNotifier {
     _isLoadingDistributorStock = true;
     notifyListeners();
 
-    final response = await ApiServices.getDistributorStock(distributorId: distributorId);
-    if (response != null && response['status'] == true) {
+    final response = await ApiServices.getDistributorStocks(distributorId: distributorId);
+    if (response != null && (response['status'] == true || response['status'] == 'success')) {
       _distributorStock.clear();
       final data = response['data'] as List<dynamic>? ?? [];
-      for (var product in data) {
-        final productId = product['product_id'];
-        final skus = product['skus'] as List<dynamic>? ?? [];
-        for (var sku in skus) {
-          final skuId = sku['sku_id'];
-          final stockQty = sku['stock_qty'] ?? 0;
-          _distributorStock["${productId}_$skuId"] = stockQty is int ? stockQty : int.tryParse(stockQty.toString()) ?? 0;
+      for (var record in data) {
+        if (record is Map) {
+          final items = record['items'] as List<dynamic>? ?? [];
+          for (var item in items) {
+            if (item is Map) {
+              final productId = item['product_id']?.toString() ?? '';
+              final skuId = item['sku_id']?.toString() ?? '';
+              final available = item['available_quantity'] ?? item['quantity'] ?? 0;
+              final qty = available is int ? available : int.tryParse(available.toString()) ?? 0;
+              if (productId.isNotEmpty && skuId.isNotEmpty) {
+                _distributorStock["${productId}_$skuId"] = (_distributorStock["${productId}_$skuId"] ?? 0) + qty;
+              }
+            }
+          }
         }
       }
     }
@@ -162,24 +169,32 @@ class OutletActivityProvider extends ChangeNotifier {
       return {"status": false, "message": "Please enter quantities"};
     }
 
+    int? finalDistributorId = distributorId;
+    if (finalDistributorId == null) {
+      final savedDistributors = await SessionManager.getDistributors();
+      if (savedDistributors.isNotEmpty) {
+        finalDistributorId = int.tryParse(savedDistributors.first['distributor_id']?.toString() ?? '');
+      }
+    }
+
     final payload = {
       "pos_type": posType,
-      if (distributorId != null) "distributor_id": distributorId,
+      "distributor_id": finalDistributorId ?? 1,
       "outlet_id": outletId,
       "items": items,
     };
 
     final response = await ApiServices.submitPosTransaction(payload: payload);
     
-    if (response != null && response['status'] == "success") {
+    if (response != null && (response['status'] == "success" || response['status'] == true || response['status_code'] == 200 || response['status_code'] == 201)) {
       targetMap.clear();
       notifyListeners();
       return {"status": true, "message": response['message'] ?? "$posType transaction success"};
     }
-    return {"status": false, "message": "Transaction failed"};
+    return {"status": false, "message": response?['message'] ?? "Transaction failed"};
   }
 
-  Future<bool> submitPob(int outletId, {int? distributorId, File? imageFile, String remarks = ""}) async {
+  Future<bool> submitPob(int outletId, {int? distributorId, File? imageFile, String remarks = "", String pobType = "regular"}) async {
     List<Map<String, dynamic>> items = [];
 
     _stockQuantities.forEach((key, quantity) {
@@ -200,15 +215,24 @@ class OutletActivityProvider extends ChangeNotifier {
       return false; 
     }
 
+    int? finalDistributorId = distributorId;
+    if (finalDistributorId == null) {
+      final savedDistributors = await SessionManager.getDistributors();
+      if (savedDistributors.isNotEmpty) {
+        finalDistributorId = int.tryParse(savedDistributors.first['distributor_id']?.toString() ?? '');
+      }
+    }
+
     final response = await ApiServices.generatePob(
       outletId: outletId.toString(),
-      distributorId: distributorId?.toString(),
+      distributorId: (finalDistributorId ?? 1).toString(),
       itemsJson: jsonEncode(items),
       remarks: remarks,
+      pobType: pobType,
       orderCopy: imageFile,
     );
     
-    if (response != null && response['status'] == "success") {
+    if (response != null && (response['status'] == "success" || response['status'] == true || response['status_code'] == 200 || response['status_code'] == 201)) {
       _stockQuantities.clear();
       notifyListeners();
       return true;

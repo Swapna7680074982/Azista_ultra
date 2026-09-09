@@ -35,6 +35,12 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setSelectedDistributor(String? distributor, [int? id]) {
+    selectedDistributor = distributor;
+    selectedDistributorId = id;
+    notifyListeners();
+  }
+
   void reset() {
     isOnline = false;
     selectedDistributor = null;

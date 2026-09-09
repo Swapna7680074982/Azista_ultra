@@ -28,22 +28,45 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late MainTabProvider _tabProvider;
   String _selectedSummaryType = "Monthly";
+  int _lastTabIndex = 0;
+  bool _isRefreshing = false;
 
   void _onTabChanged() {
-    if (_tabProvider.currentIndex == 0) {
+    if (_tabProvider.currentIndex == 0 && _lastTabIndex != 0) {
+      _lastTabIndex = 0;
+      final appState = Provider.of<AppStateProvider>(context, listen: false);
+      appState.setSelectedDistributor(null, null);
       _refreshData();
+    } else {
+      _lastTabIndex = _tabProvider.currentIndex;
     }
   }
 
   Future<void> _refreshData() async {
-    if (!mounted) return;
-    final homeProvider = Provider.of<HomeProvider>(context, listen: false);
-    final appState = Provider.of<AppStateProvider>(context, listen: false);
-    homeProvider.fetchTodayAttendance();
-    homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
-    homeProvider.fetchMonthlyCallSummary(appState.selectedDistributorId);
-    homeProvider.fetchDashboardCounts(distributorId: appState.selectedDistributorId);
-    homeProvider.fetchTargets();
+    if (!mounted || _isRefreshing) return;
+    _isRefreshing = true;
+    try {
+      final homeProvider = Provider.of<HomeProvider>(context, listen: false);
+      final appState = Provider.of<AppStateProvider>(context, listen: false);
+
+      // PRIORITY 1: Fetch Call summaries, Performance Overview & Targets FIRST
+      await Future.wait([
+        homeProvider.fetchDailyCallSummary(),
+        homeProvider.fetchMonthlyCallSummary(),
+        homeProvider.fetchDashboardCounts(),
+        homeProvider.fetchTargets(),
+      ]);
+
+      if (!mounted) return;
+
+      // PRIORITY 2: Attendance & Distributors load in the background
+      await Future.wait([
+        homeProvider.fetchTodayAttendance(),
+        homeProvider.loadDistributors(appState),
+      ]);
+    } finally {
+      _isRefreshing = false;
+    }
   }
 
   @override
@@ -55,20 +78,21 @@ class _HomeScreenState extends State<HomeScreen> {
       final homeProvider = Provider.of<HomeProvider>(context, listen: false);
       final appState = Provider.of<AppStateProvider>(context, listen: false);
 
-      await homeProvider.loadDistributors(appState);
-      await homeProvider.initializeAttendance(appState);
-
-      homeProvider.fetchTodayAttendance();
-      homeProvider.fetchDailyCallSummary(appState.selectedDistributorId);
-      homeProvider.fetchMonthlyCallSummary(appState.selectedDistributorId);
-      homeProvider.fetchDashboardCounts(distributorId: appState.selectedDistributorId);
-      homeProvider.fetchTargets();
-
-      final role = await SessionManager.getUserRole();
-      appState.setUserRole(role);
+      // Ensure no default distributor selection when opening home screen
+      appState.setSelectedDistributor(null, null);
 
       _tabProvider = Provider.of<MainTabProvider>(context, listen: false);
+      _lastTabIndex = _tabProvider.currentIndex;
       _tabProvider.addListener(_onTabChanged);
+
+      // PRIORITY 1: Fetch Call summaries & Performance Overview IMMEDIATELY on launch
+      _refreshData();
+
+      // PRIORITY 2: Initialize attendance & user role in background
+      homeProvider.initializeAttendance(appState);
+      SessionManager.getUserRole().then((role) {
+        if (mounted) appState.setUserRole(role);
+      });
     });
   }
 
@@ -168,6 +192,140 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           children: [
             const SizedBox(height: 10),
+
+            // Distributor Selection & Stock Navigation Card
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.grey.shade300, width: 1.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Consumer<HomeProvider>(
+                builder: (context, homeProvider, _) {
+                  final distributors = homeProvider.distributors;
+                  final currentSelected = appState.selectedDistributor;
+                  final isValidSelection = currentSelected != null &&
+                      distributors.any((d) => d["distributor_name"] == currentSelected);
+
+                  return Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.storefront, color: AppColors.primary, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "DISTRIBUTOR",
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                isExpanded: true,
+                                isDense: true,
+                                value: isValidSelection ? currentSelected : null,
+                                hint: const Text(
+                                  "Select Distributor",
+                                  style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500),
+                                ),
+                                icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary, size: 20),
+                                items: distributors.map((d) {
+                                  final name = d["distributor_name"]?.toString() ?? "";
+                                  return DropdownMenuItem<String>(
+                                    value: name,
+                                    child: Text(
+                                      name,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    final found = distributors.firstWhere(
+                                      (d) => d["distributor_name"] == val,
+                                      orElse: () => {},
+                                    );
+                                    final distId = int.tryParse(found["distributor_id"]?.toString() ?? "");
+                                    appState.setSelectedDistributor(val, distId);
+                                  } else {
+                                    appState.setSelectedDistributor(null, null);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.button,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 1,
+                        ),
+                        onPressed: () {
+                          if (appState.selectedDistributor == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Please select a distributor first.")),
+                            );
+                            return;
+                          }
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SecondaryStockUpdateScreen(),
+                            ),
+                          );
+                        },
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "GO",
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            SizedBox(width: 4),
+                            Icon(Icons.arrow_forward_ios, size: 12),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+
             const SizedBox(height: 10),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 12),
@@ -271,10 +429,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
                       child: Consumer<HomeProvider>(
                         builder: (context, provider, _) {
+                          final hasDistributor = appState.selectedDistributor != null;
+
                           if (provider.isSummaryLoading || provider.isMonthlySummaryLoading) {
                             return const Padding(
                               padding: EdgeInsets.symmetric(vertical: 20),
                               child: LogoProgressIndicator(size: 45),
+                            );
+                          }
+
+                          if (!hasDistributor) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 24),
+                              child: Center(
+                                child: Text(
+                                  "Please select a distributor to view call summary",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ),
                             );
                           }
 
@@ -375,26 +551,27 @@ class _HomeScreenState extends State<HomeScreen> {
                         alignment: Alignment.centerRight,
                         child: GestureDetector(
                           onTap: () {
-                            if (!appState.isOnline) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Please turn on attendance first"),
-                                  behavior: SnackBarBehavior.floating,
+                            if (AccessValidator.validate(
+                              context: context,
+                              isOnline: appState.isOnline,
+                              hasDistributor: appState.selectedDistributor != null,
+                              checkDistributor: true,
+                              isLeave: false,
+                            )) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const ProductivityScreen(),
                                 ),
                               );
-                              return;
                             }
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const ProductivityScreen(),
-                              ),
-                            );
                           },
                           child: Text(
                             "VIEW DETAILS >>",
                             style: TextStyle(
-                              color: appState.isOnline ? AppColors.primary : Colors.grey,
+                              color: (appState.isOnline && appState.selectedDistributor != null)
+                                  ? AppColors.primary
+                                  : Colors.grey,
                               fontWeight: FontWeight.w600,
                               fontSize: 12,
                               letterSpacing: 0.5,
@@ -495,13 +672,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                   height: 120,
                                   child: LogoProgressIndicator(size: 45),
                                 )
-                              else if (provider.dashboardCounts == null)
-                                const SizedBox(
-                                  height: 120,
+                              else if (appState.selectedDistributor == null)
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 24),
                                   child: Center(
                                     child: Text(
-                                      "NO DATA AVAILABLE",
-                                      style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold),
+                                      "Please select a distributor to view performance overview",
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                   ),
                                 )
@@ -712,13 +893,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: ActionBox(
                       Icons.access_time,
                       "ATTENDANCE",
-                      enabled: appState.isOnline,
+                      enabled: appState.isOnline && appState.selectedDistributor != null,
                       onTap: () {
                         if (AccessValidator.validate(
                           context: context,
                           isOnline: appState.isOnline,
                           hasDistributor: appState.selectedDistributor != null,
-                          checkDistributor: false,
+                          checkDistributor: true,
                           isLeave: false,
                         )) {
                           Navigator.push(
@@ -736,12 +917,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: ActionBox(
                       Icons.receipt,
                       "USER\nTRANSACTIONS",
-                      enabled: appState.isOnline,
+                      enabled: appState.isOnline && appState.selectedDistributor != null,
                       onTap: () {
                         if (AccessValidator.validate(
                           context: context,
                           isOnline: appState.isOnline,
                           hasDistributor: appState.selectedDistributor != null,
+                          checkDistributor: true,
                           isLeave: false,
                         )) {
                           Navigator.push(
@@ -757,63 +939,37 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: ActionBox(
-                      Icons.inventory_2_outlined,
-                      "SECONDARY\nSTOCK UPDATE",
-                      enabled: appState.isOnline,
-                      onTap: () {
-                        if (AccessValidator.validate(
-                          context: context,
-                          isOnline: appState.isOnline,
-                          hasDistributor: appState.selectedDistributor != null,
-                          checkDistributor: false,
-                          isLeave: false,
-                        )) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const SecondaryStockUpdateScreen(),
-                            ),
-                          );
-                        }
-                      },
+            if (appState.userRole == 'AM' || appState.userRole == 'RM')
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ActionBox(
+                        Icons.group,
+                        "TEAM ATTENDANCE",
+                        enabled: appState.isOnline && appState.selectedDistributor != null,
+                        onTap: () {
+                          if (AccessValidator.validate(
+                            context: context,
+                            isOnline: appState.isOnline,
+                            hasDistributor: appState.selectedDistributor != null,
+                            checkDistributor: true,
+                            isLeave: false,
+                          )) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const TeamAttendanceScreen(),
+                              ),
+                            );
+                          }
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: (appState.userRole == 'AM' || appState.userRole == 'RM')
-                        ? ActionBox(
-                            Icons.group,
-                            "TEAM\nATTENDANCE",
-                            enabled: appState.isOnline,
-                            onTap: () {
-                              if (AccessValidator.validate(
-                                context: context,
-                                isOnline: appState.isOnline,
-                                hasDistributor: appState.selectedDistributor != null,
-                                checkDistributor: false,
-                                isLeave: false,
-                              )) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const TeamAttendanceScreen(),
-                                  ),
-                                );
-                              }
-                            },
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -855,10 +1011,10 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             );
             if (picked != null) {
-              provider.setCountsFilter("custom", range: picked, distributorId: appState.selectedDistributorId);
+              provider.setCountsFilter("custom", range: picked);
             }
           } else {
-            provider.setCountsFilter(filterCode, distributorId: appState.selectedDistributorId);
+            provider.setCountsFilter(filterCode);
           }
         },
         child: Container(

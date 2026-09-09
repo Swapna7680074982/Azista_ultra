@@ -14,6 +14,8 @@ class SecondaryStockUpdateScreen extends StatefulWidget {
   State<SecondaryStockUpdateScreen> createState() => _SecondaryStockUpdateScreenState();
 }
 
+typedef DistributorStockScreen = SecondaryStockUpdateScreen;
+
 class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen> {
   @override
   void initState() {
@@ -34,7 +36,7 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
         return Scaffold(
           appBar: AppBar(
             title: const Text(
-              "SECONDARY STOCK UPDATE",
+              "DISTRIBUTOR STOCK UPDATE",
               style: TextStyle(
                 color: AppColors.white,
                 fontSize: 16,

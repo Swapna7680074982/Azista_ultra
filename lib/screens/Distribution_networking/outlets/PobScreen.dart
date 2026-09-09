@@ -2,9 +2,11 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../constants/app_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../../../permissions/SessionManager.dart';
 import 'outlet_activity_provider.dart';
 import 'PobHistoryScreen.dart';
 import '../../../permissions/AppStateProvider.dart';
@@ -17,7 +19,14 @@ class PobBody extends StatefulWidget {
   final int outletId;
   final double outletLat;
   final double outletLng;
-  const PobBody({super.key, required this.outletId, required this.outletLat, required this.outletLng});
+  final bool isTelePob;
+  const PobBody({
+    super.key,
+    required this.outletId,
+    required this.outletLat,
+    required this.outletLng,
+    this.isTelePob = false,
+  });
 
   @override
   State<PobBody> createState() => _PobBodyState();
@@ -42,66 +51,89 @@ class _PobBodyState extends State<PobBody> {
         source: source,
         imageQuality: 50,
       );
-      if (image != null) {
+      if (image != null && mounted) {
         setState(() {
           _capturedImage = image;
         });
       }
     } catch (e) {
       debugPrint("Error picking image: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error picking image: $e")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error picking image: $e")),
+        );
+      }
     }
   }
 
   @override
   void initState() {
     super.initState();
+    if (widget.isTelePob) {
+      isLocationValid = true;
+    }
     Future.microtask(() async {
-      try {
-        final coords = await LocationService.getCoordinates();
-        final currentLat = double.parse(coords[0]);
-        final currentLng = double.parse(coords[1]);
+      if (!widget.isTelePob) {
+        try {
+          final coords = await LocationService.getCoordinates();
+          final currentLat = double.parse(coords[0]);
+          final currentLng = double.parse(coords[1]);
 
-        final distance = Geolocator.distanceBetween(
-          currentLat,
-          currentLng,
-          widget.outletLat,
-          widget.outletLng,
-        );
+          final distance = Geolocator.distanceBetween(
+            currentLat,
+            currentLng,
+            widget.outletLat,
+            widget.outletLng,
+          );
 
-        if (distance > 50) {
+          if (distance > 50) {
+            if (mounted) {
+              setState(() {
+                isLocationValid = false;
+                locationError = "You are ${distance.toStringAsFixed(0)} meters away from the outlet. You must be within 50 meters to add POB.";
+              });
+            }
+            return;
+          } else {
+            if (mounted) {
+              setState(() {
+                isLocationValid = true;
+              });
+            }
+          }
+        } catch (e) {
           if (mounted) {
             setState(() {
               isLocationValid = false;
-              locationError = "You are ${distance.toStringAsFixed(0)} meters away from the outlet. You must be within 50 meters to add POB.";
+              locationError = "Failed to get your location. Please check GPS and permissions.";
             });
           }
           return;
-        } else {
-          if (mounted) {
-            setState(() {
-              isLocationValid = true;
-            });
-          }
         }
-      } catch (e) {
+      } else {
         if (mounted) {
           setState(() {
-            isLocationValid = false;
-            locationError = "Failed to get your location. Please check GPS and permissions.";
+            isLocationValid = true;
           });
         }
-        return;
       }
+
+      if (!mounted) return;
 
       final provider = Provider.of<OutletActivityProvider>(context, listen: false);
       provider.fetchProductsWithSkus();
       
       final appState = Provider.of<AppStateProvider>(context, listen: false);
-      if (appState.selectedDistributorId != null) {
-        provider.fetchDistributorStock(appState.selectedDistributorId!);
+      int? distId = appState.selectedDistributorId;
+      if (distId == null) {
+        final savedDistributors = await SessionManager.getDistributors();
+        if (!mounted) return;
+        if (savedDistributors.isNotEmpty) {
+          distId = int.tryParse(savedDistributors.first['distributor_id']?.toString() ?? '');
+        }
+      }
+      if (distId != null) {
+        provider.fetchDistributorStock(distId);
       }
     });
   }
@@ -135,9 +167,65 @@ class _PobBodyState extends State<PobBody> {
               ? const Center(child: LogoProgressIndicator())
               : Column(
                   children: [
+                    if (widget.isTelePob)
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.phone_in_talk, size: 18, color: Colors.blue.shade700),
+                            const SizedBox(width: 8),
+                            Text(
+                              "TELE POB (Telephonic Order Booking)",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    // Prefilled Non-Editable Date Field
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          const Text(
+                            "ORDER DATE: ",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          Text(
+                            DateFormat('dd-MM-yyyy').format(DateTime.now()),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     Container(
                       color: Colors.grey.shade200,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       child: Row(
                         children: [
                           Expanded(
@@ -146,10 +234,23 @@ class _PobBodyState extends State<PobBody> {
                               style: TextStyle(
                                 color: Colors.grey.shade700,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                                fontSize: 13,
                               ),
                             ),
                           ),
+                          Container(
+                            width: 65,
+                            alignment: Alignment.center,
+                            child: Text(
+                              "DSA QTY",
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Container(
                             width: 60,
                             alignment: Alignment.center,
@@ -158,7 +259,7 @@ class _PobBodyState extends State<PobBody> {
                               style: TextStyle(
                                 color: Colors.grey.shade700,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                                fontSize: 11,
                               ),
                             ),
                           ),
@@ -284,28 +385,29 @@ class _PobBodyState extends State<PobBody> {
                             height: 45,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: _capturedImage == null ? Colors.grey.shade400 : AppColors.button,
+                                  backgroundColor: (!widget.isTelePob && _capturedImage == null) ? Colors.grey.shade400 : AppColors.button,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                               ),
-                              onPressed: _capturedImage == null ? null : () async {
+                              onPressed: (!widget.isTelePob && _capturedImage == null) ? null : () async {
                                 final appState = Provider.of<AppStateProvider>(context, listen: false);
 
-                                LoadingDialog.show(context, message: "Submitting POB...");
+                                LoadingDialog.show(context, message: widget.isTelePob ? "Submitting Tele POB..." : "Submitting POB...");
 
                                 bool success = await provider.submitPob(
                                   widget.outletId,
                                   distributorId: appState.selectedDistributorId,
                                   imageFile: _capturedImage != null ? File(_capturedImage!.path) : null,
                                   remarks: remarksController.text.trim(),
+                                  pobType: widget.isTelePob ? "tele" : "regular",
                                 );
 
                                 if (!mounted) return;
                                 LoadingDialog.hide(context);
 
                                 if (success) {
-                                  SuccessDialog.show(context, message: "POB Submitted Successfully!");
+                                  SuccessDialog.show(context, message: widget.isTelePob ? "Tele POB Submitted Successfully!" : "POB Submitted Successfully!");
                                   setState(() {
                                     _capturedImage = null;
                                     remarksController.clear();
@@ -317,9 +419,9 @@ class _PobBodyState extends State<PobBody> {
                                   );
                                 }
                               },
-                              child: const Text(
-                                "SUBMIT POB",
-                                style: TextStyle(
+                              child: Text(
+                                widget.isTelePob ? "SUBMIT TELE POB" : "SUBMIT POB",
+                                style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
                                   color: Colors.white,
@@ -402,9 +504,10 @@ class _PobBodyState extends State<PobBody> {
   }
 
   Widget _buildSkuRow(int productId, dynamic sku, OutletActivityProvider provider) {
-    final skuName = sku['sku_displayname'] ?? 'Unknown SKU';
+    final skuName = sku['sku_displayname'] ?? sku['sku_name'] ?? 'Unknown SKU';
     final skuId = sku['sku_id'];
     final currentQty = provider.stockQuantities["${productId}_$skuId"]?.toString() ?? "";
+    final dsaQty = provider.distributorStock["${productId}_$skuId"] ?? 0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -416,12 +519,36 @@ class _PobBodyState extends State<PobBody> {
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             ),
           ),
-          QtyBox(
-            isRed: true,
-            initialValue: currentQty,
-            onChanged: (val) {
-              provider.updateStockQuantity(productId, skuId, val);
-            },
+          // Non-editable DSA Qty display box
+          Container(
+            width: 65,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Text(
+              "$dsaQty",
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: dsaQty > 0 ? Colors.black87 : Colors.grey.shade500,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Editable R.Qty box
+          SizedBox(
+            width: 60,
+            child: QtyBox(
+              isRed: true,
+              initialValue: currentQty,
+              onChanged: (val) {
+                provider.updateStockQuantity(productId, skuId, val);
+              },
+            ),
           ),
         ],
       ),
@@ -454,5 +581,42 @@ class CustomMaxNumberFormatter extends TextInputFormatter {
       );
     }
     return newValue;
+  }
+}
+
+class PobScreen extends StatelessWidget {
+  final int outletId;
+  final String outletName;
+  final double outletLat;
+  final double outletLng;
+  final bool isTelePob;
+
+  const PobScreen({
+    super.key,
+    required this.outletId,
+    required this.outletName,
+    required this.outletLat,
+    required this.outletLng,
+    this.isTelePob = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          isTelePob ? "TELE POB: ${outletName.toUpperCase()}" : "POB: ${outletName.toUpperCase()}",
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        backgroundColor: AppColors.primary,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: PobBody(
+        outletId: outletId,
+        outletLat: outletLat,
+        outletLng: outletLng,
+        isTelePob: isTelePob,
+      ),
+    );
   }
 }

@@ -63,16 +63,9 @@ class CustomBottomNav extends StatelessWidget {
                   return;
                 }
 
-                final outletProvider = context.read<OutletProvider>();
-                if (!outletProvider.isLoading) {
-                  final distProvider = Provider.of<DistributionProvider>(context, listen: false);
-                  final routeId = distProvider.selectedRouteId != null 
-                      ? int.tryParse(distProvider.selectedRouteId!) 
-                      : null;
-                  
-                  outletProvider.refreshNearbyOutlets(routeId: routeId);
+                if (provider.currentIndex != 2) {
+                  provider.setTab(2);
                 }
-                provider.setTab(2);
               },
               child: Column(
                 children: [
@@ -165,24 +158,12 @@ class CustomBottomNav extends StatelessWidget {
         }
 
         if (index == 0) {
-          final homeProvider = context.read<HomeProvider>();
-          if (!homeProvider.isLoading) {
-            homeProvider.loadDistributors(appState);
-            homeProvider.fetchTodayAttendance();
-          }
-        } else if (index == 3) {
-          final distProvider = context.read<DistributionProvider>();
-          if (!distProvider.isLoading) {
-            distProvider.fetchRoutes();
-          }
-        } else if (index == 4) {
-          final attProvider = context.read<AttendanceProvider>();
-          if (!attProvider.isLoading) {
-            attProvider.fetchAttendance();
-          }
+          appState.setSelectedDistributor(null, null);
         }
 
-        provider.setTab(index);
+        if (provider.currentIndex != index) {
+          provider.setTab(index);
+        }
       },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

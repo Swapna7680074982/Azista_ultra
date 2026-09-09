@@ -24,6 +24,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
 
   late Future<Map<String, Map<String, dynamic>>> _dataFuture;
   late MainTabProvider _tabProvider;
+  int _lastTabIndex = 1;
 
   @override
   void initState() {
@@ -31,6 +32,7 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
     _dataFuture = _fetchData();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _tabProvider = Provider.of<MainTabProvider>(context, listen: false);
+      _lastTabIndex = _tabProvider.currentIndex;
       _tabProvider.addListener(_onTabChanged);
     });
   }
@@ -42,8 +44,11 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
   }
 
   void _onTabChanged() {
-    if (_tabProvider.currentIndex == 1) {
+    if (_tabProvider.currentIndex == 1 && _lastTabIndex != 1) {
+      _lastTabIndex = 1;
       _reload();
+    } else {
+      _lastTabIndex = _tabProvider.currentIndex;
     }
   }
 

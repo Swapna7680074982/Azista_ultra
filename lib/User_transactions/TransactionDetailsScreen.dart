@@ -141,6 +141,102 @@ class _TransactionDetailsScreenState
     );
   }
 
+  bool _isTelePob(dynamic pob) {
+    if (pob is! Map) return false;
+
+    final pobType = pob['pob_type']?.toString().toLowerCase() ?? '';
+    if (pobType.contains('tele')) return true;
+
+    final type = pob['type']?.toString().toLowerCase() ?? '';
+    if (type.contains('tele')) return true;
+
+    final orderType = pob['order_type']?.toString().toLowerCase() ?? '';
+    if (orderType.contains('tele')) return true;
+
+    if (pob['is_tele'] == true || pob['is_tele'] == 1 || pob['is_tele'] == '1' || pob['is_tele'] == 'true') return true;
+    if (pob['is_tele_pob'] == true || pob['is_tele_pob'] == 1 || pob['is_tele_pob'] == '1' || pob['is_tele_pob'] == 'true') return true;
+
+    final pobNumber = pob['pob_number']?.toString().toUpperCase() ?? '';
+    if (pobNumber.contains('TELE')) return true;
+
+    final remarks = pob['remarks']?.toString().toLowerCase() ?? '';
+    if (remarks.contains('tele')) return true;
+
+    return false;
+  }
+
+  Widget _buildPobTypeBadge(dynamic pob) {
+    final isTele = _isTelePob(pob);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: isTele ? Colors.purple.shade50 : Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(
+          color: isTele ? Colors.purple.shade300 : Colors.blue.shade300,
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isTele ? Icons.phone_in_talk : Icons.storefront,
+            size: 11,
+            color: isTele ? Colors.purple.shade700 : Colors.blue.shade700,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isTele ? "TELE POB" : "REGULAR POB",
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: isTele ? Colors.purple.shade800 : Colors.blue.shade800,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    final s = status.toLowerCase();
+    Color bg = Colors.orange.shade50;
+    Color border = Colors.orange.shade200;
+    Color text = Colors.orange.shade800;
+    String label = "PENDING";
+
+    if (s == 'supplied' || s == 'completed') {
+      bg = Colors.green.shade50;
+      border = Colors.green.shade200;
+      text = Colors.green.shade800;
+      label = "SUPPLIED";
+    } else if (s == 'partial') {
+      bg = Colors.blue.shade50;
+      border = Colors.blue.shade200;
+      text = Colors.blue.shade800;
+      label = "PARTIAL";
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: border, width: 0.8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: text,
+        ),
+      ),
+    );
+  }
+
   Widget _pobHistoryTab() {
     final lastDay = DateTime(selectedDate.year, selectedDate.month + 1, 0).day;
     final Map<String, dynamic> payload = {
@@ -183,28 +279,79 @@ class _TransactionDetailsScreenState
             final pob = filteredData[index];
             final items = pob['items'] as List<dynamic>? ?? [];
             final date = pob['created_at'] ?? pob['created_on'];
+            final pobNumber = pob['pob_number']?.toString() ?? 'N/A';
+            final status = pob['status']?.toString() ?? 'pending';
+
+            double totalAmount = 0.0;
+            for (var item in items) {
+              final price = double.tryParse(item['ptr_incl_gst_price']?.toString() ?? item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
+              final qty = int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
+              totalAmount += qty * price;
+            }
+            if (totalAmount == 0.0) {
+              final fallbackAmt = pob['ptr_incl_gst_total_amount'] ?? pob['total_amount'] ?? pob['order_value'] ?? pob['total_value'] ?? 0.0;
+              totalAmount = double.tryParse(fallbackAmt.toString()) ?? 0.0;
+            }
             
             return GestureDetector(
-              onTap: () => _showProductPopup(context, items, title: "POB: ${pob['pob_number']}"),
+              onTap: () => _showProductPopup(context, items, title: "POB: $pobNumber"),
               child: Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(6),
-                  boxShadow: [BoxShadow(color: Colors.grey.shade300, blurRadius: 3)],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade200),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        "SUBMISSION ON ${DateFormatter.formatDateTime(date)}",
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  "POB: $pobNumber",
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildPobTypeBadge(pob),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (totalAmount > 0)
+                          Text(
+                            "₹${totalAmount.toStringAsFixed(2)}",
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text(
+                          "Date: ${DateFormatter.formatDateTime(date)}",
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                        ),
+                        const Spacer(),
+                        _buildStatusBadge(status),
+                      ],
                     ),
                     if (pob['order_copy_url'] != null && pob['order_copy_url'].toString().isNotEmpty) ...[
-                      const SizedBox(width: 10),
+                      const SizedBox(height: 8),
                       GestureDetector(
                         onTap: () => _viewAttachment(context, pob['order_copy_url']),
                         child: Container(
@@ -226,7 +373,7 @@ class _TransactionDetailsScreenState
                           ),
                         ),
                       ),
-                    ]
+                    ],
                   ],
                 ),
               ),
