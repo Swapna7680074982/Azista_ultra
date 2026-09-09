@@ -43,7 +43,11 @@ class _OutletsScreenState extends State<OutletsScreen> {
     _userLat = double.tryParse(cached[0]);
     _userLng = double.tryParse(cached[1]);
 
-    _loadInitialData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadInitialData();
+      }
+    });
   }
 
   Future<void> _loadInitialData() async {

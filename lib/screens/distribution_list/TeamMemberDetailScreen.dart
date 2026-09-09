@@ -35,7 +35,11 @@ class _TeamMemberDetailScreenState extends State<TeamMemberDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchDetails();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _fetchDetails();
+      }
+    });
   }
 
   Future<void> _fetchDetails() async {

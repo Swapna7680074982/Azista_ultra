@@ -39,9 +39,13 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
     _tabController.addListener(_handleTabChange);
-    _loadUserRoleAndId();
-    _loadOutletNames();
-    _fetchHistory();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadUserRoleAndId();
+        _loadOutletNames();
+        _fetchHistory();
+      }
+    });
   }
 
   Future<void> _loadUserRoleAndId() async {

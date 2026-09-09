@@ -49,9 +49,13 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchModules();
-    _checkLocation();
-    _loadOutletCheckInStatus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _fetchModules();
+        _checkLocation();
+        _loadOutletCheckInStatus();
+      }
+    });
   }
 
   Future<void> _loadOutletCheckInStatus() async {

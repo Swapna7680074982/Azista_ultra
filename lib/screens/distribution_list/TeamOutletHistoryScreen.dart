@@ -46,8 +46,12 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
       selectedDate = DateTime(widget.year, widget.month, 1);
     }
     _tabController = TabController(length: 2, vsync: this);
-    _fetchPobHistory();
-    _fetchVisitHistory();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _fetchPobHistory();
+        _fetchVisitHistory();
+      }
+    });
   }
 
   @override
