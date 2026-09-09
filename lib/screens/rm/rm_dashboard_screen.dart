@@ -9,6 +9,7 @@ import '../Distribution_networking/distribution_network_screen.dart';
 import '../../utilities/date_formatter.dart';
 import '../attendance/TeamAttendanceScreen.dart';
 import '../distribution_list/TeamPosHistoryScreen.dart';
+import '../distribution_list/MyTeamScreen.dart';
 import '../geo_requests/outlet_geo_requests_screen.dart';
 
 class RmDashboardScreen extends StatefulWidget {
@@ -37,8 +38,6 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppStateProvider>(context);
     final homeProvider = Provider.of<HomeProvider>(context);
-    final hasValidDistributor = appState.selectedDistributor != null &&
-        homeProvider.distributors.any((d) => d["distributor_name"] == appState.selectedDistributor);
 
     return Scaffold(
       body: Column(
@@ -179,6 +178,17 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 40),
               children: [
+                _buildMenuItem(
+                  iconPath: Icons.groups_outlined,
+                  label: "My Team",
+                  enabled: appState.isOnline,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MyTeamScreen()),
+                    );
+                  },
+                ),
                 _buildMenuItem(
                   iconPath: Icons.people_outline,
                   label: "Team Attendance",

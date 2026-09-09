@@ -5,9 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
-import '../../permissions/SessionManager.dart';
-import '../asm/asm_dashboard_screen.dart';
-import '../rm/rm_dashboard_screen.dart';
 import '../Homes/main_shell_screen.dart';
 import 'login_provider.dart';
 import '../../permissions/AppStateProvider.dart';
@@ -212,27 +209,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                           );
 
                                           if (success) {
-                                            final role = await SessionManager.getUserRole();
-                                            final normalizedRole = role.toLowerCase().trim();
-                                            if (normalizedRole == "rm") {
-                                              navigator.pushReplacement(
-                                                MaterialPageRoute(
-                                                  builder: (context) => const RmDashboardScreen(),
-                                                ),
-                                              );
-                                            } else if (normalizedRole == "asm" || normalizedRole == "am") {
-                                              navigator.pushReplacement(
-                                                MaterialPageRoute(
-                                                  builder: (context) => const AmDashboardScreen(),
-                                                ),
-                                              );
-                                            } else {
-                                              navigator.pushReplacement(
-                                                MaterialPageRoute(
-                                                  builder: (context) => const MainShellScreen(),
-                                                ),
-                                              );
-                                            }
+                                            navigator.pushReplacement(
+                                              MaterialPageRoute(
+                                                builder: (context) => const MainShellScreen(),
+                                              ),
+                                            );
                                           } else {
                                             scaffoldMessenger.showSnackBar(
                                               SnackBar(

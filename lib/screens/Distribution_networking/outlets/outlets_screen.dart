@@ -412,100 +412,24 @@ class _OutletsScreenState extends State<OutletsScreen> {
     );
   }
 
-  Future<void> _checkServerCheckInStatus(List<Outlet> outlets) async {
-    if (_checkedInOutletId != null) return;
-    try {
-      final futures = outlets.map((outlet) async {
-        final currentId = int.tryParse(outlet.id);
-        if (currentId == null) return null;
-        final history = await ApiServices.getOutletHistory(outletId: currentId);
-        if (history != null && history['status'] == true) {
-          final List visits = history['visit_history'] ?? [];
-          final activeVisit = visits.where(
-            (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
-          ).firstOrNull;
-          if (activeVisit != null) {
-            return {
-              'outlet_id': currentId,
-              'visit_id': int.tryParse(activeVisit['visit_id']?.toString() ?? "") ?? 0,
-              'checkin_time': activeVisit['checkin_time']?.toString(),
-            };
-          }
-        }
-        return null;
-      }).toList();
-
-      final results = await Future.wait(futures);
-      final activeCheckIn = results.where((r) => r != null).firstOrNull;
-
-      if (activeCheckIn != null && mounted) {
-        final outletId = activeCheckIn['outlet_id'] as int;
-        final visitId = activeCheckIn['visit_id'] as int;
-        final checkinTimeStr = activeCheckIn['checkin_time'] as String?;
-        final checkInTime = DateTime.tryParse(checkinTimeStr ?? "");
-
-        await SessionManager.saveOutletCheckIn(
-          outletId: outletId,
-          visitId: visitId,
-          checkInTime: checkInTime ?? DateTime.now(),
-        );
-
-        setState(() {
-          _checkedInOutletId = outletId;
-          _checkInTimeAndDate = checkinTimeStr;
-        });
-      }
-    } catch (e) {
-      debugPrint("Error checking server check-in status: $e");
-    }
-  }
-
   Future<void> _loadCheckInStatus() async {
-    final provider = Provider.of<OutletProvider>(context, listen: false);
     final id = await SessionManager.getOutletCheckInOutletId();
+    final checkInTime = await SessionManager.getOutletCheckInTime();
     if (mounted) {
       setState(() {
         _checkedInOutletId = id;
-      });
-    }
-
-    if (id != null) {
-      try {
-        final history = await ApiServices.getOutletHistory(outletId: id);
-        if (history != null && history['status'] == true) {
-          final List visits = history['visit_history'] ?? [];
-          final activeVisit = visits.where(
-            (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
-          ).firstOrNull;
-
-          if (activeVisit != null) {
-            final checkinTime = activeVisit['checkin_time']?.toString();
-            if (mounted) {
-              setState(() {
-                _checkInTimeAndDate = checkinTime;
-              });
-            }
-            return;
-          }
-        }
-      } catch (e) {
-        debugPrint("Error fetching check-in details: $e");
-      }
-    } else {
-      if (provider.outlets.isNotEmpty) {
-        _checkServerCheckInStatus(provider.outlets);
-      }
-    }
-
-    if (mounted) {
-      setState(() {
-        _checkInTimeAndDate = null;
+        _checkInTimeAndDate = checkInTime?.toIso8601String();
       });
     }
   }
 
   Widget outletCard(Outlet outlet, BuildContext context) {
-    final isCheckedIn = _checkedInOutletId != null && _checkedInOutletId == int.tryParse(outlet.id);
+    final provider = Provider.of<OutletProvider>(context);
+    final activeId = provider.checkedInOutletId ?? _checkedInOutletId;
+    final isCheckedIn = activeId != null && activeId == int.tryParse(outlet.id);
+    final activeTime = provider.checkedInTime != null
+        ? provider.checkedInTime!.toIso8601String()
+        : _checkInTimeAndDate;
     final distance = _getDistanceToOutlet(outlet);
     final isBlocked = distance != null && distance > 10000;
 
@@ -564,10 +488,10 @@ class _OutletsScreenState extends State<OutletsScreen> {
           ),
 
           Text("OUTLET ID: ${outlet.id}", style: const TextStyle(fontSize: 15)),
-          if (isCheckedIn && _checkInTimeAndDate != null) ...[
+          if (isCheckedIn && activeTime != null) ...[
             const SizedBox(height: 4),
             Text(
-              "CHECKED-IN: ${DateFormatter.formatDateTime(_checkInTimeAndDate)}",
+              "CHECKED-IN: ${DateFormatter.formatDateTime(activeTime)}",
               style: TextStyle(
                 color: Colors.green.shade700,
                 fontSize: 13,
@@ -580,7 +504,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
               "DISTANCE: ${distance.toStringAsFixed(0)}m ${distance > 10000 ? '(> 10km limit)' : '(Within range)'}",
               style: TextStyle(
                 color: distance > 10000 ? Colors.red.shade700 : Colors.green.shade700,
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -927,7 +851,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
                       await _loadUserLocation();
                       await provider.fetchOutlets(widget.routeId);
                       if (mounted) {
-                        _checkServerCheckInStatus(provider.outlets);
+                        await _loadCheckInStatus();
                       }
                     },
                     child: provider.outlets.isEmpty

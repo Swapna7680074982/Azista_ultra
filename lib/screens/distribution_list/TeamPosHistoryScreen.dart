@@ -24,8 +24,6 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
   String? _currentUserRole;
-  String? _currentUserId;
-
 
   final List<Map<String, String>> _tabs = [
     {"label": "POB", "code": "pob"},
@@ -51,9 +49,7 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
   Future<void> _loadUserRoleAndId() async {
     try {
       final role = await SessionManager.getUserRole();
-      final userInfo = await SessionManager.getUserInfo();
       _currentUserRole = _normalizeRole(role);
-      _currentUserId = userInfo?['user_id']?.toString();
     } catch (_) {}
   }
 
@@ -89,6 +85,10 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
       if (summaryRes != null && summaryRes["status"] == true) {
         final List members = summaryRes["data"] ?? [];
         for (var member in members) {
+          final memberRole = _normalizeRole(member['rolecode']?.toString() ?? member['role']?.toString() ?? '');
+          if (_currentUserRole == 'AM' && memberRole != 'SO') continue;
+          if (_currentUserRole == 'RM' && (memberRole == 'RM' || (memberRole != 'AM' && memberRole != 'SO'))) continue;
+
           final userId = int.tryParse(member['user_id']?.toString() ?? '');
           if (userId != null) {
             if (!mounted) return;
@@ -146,12 +146,14 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     try {
       dynamic data;
       if (type == "pob") {
-        final now = DateTime.now();
-        final res = await ApiServices.getTeamMembersSummary(
-          month: now.month,
-          year: now.year,
-        );
-        data = res != null ? res["data"] : null;
+        data = await ApiServices.getTeamPobHistory();
+        if (data == null || (data is List && data.isEmpty)) {
+          final res = await ApiServices.getTeamMembersSummary(
+            month: selectedDate.month,
+            year: selectedDate.year,
+          );
+          data = res != null ? res["data"] : null;
+        }
       } else {
         data = await ApiServices.getTeamPosHistory(posType: type);
       }
@@ -232,37 +234,49 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
 
     if (type == "pob") {
       var list = _transactions;
-      // Apply hierarchical role filter same as TeamAttendanceProvider
+      // Apply hierarchical role filter
       if (_currentUserRole != null) {
-        list = list.where((member) {
-          final memberRole = _normalizeRole(member["rolecode"]?.toString() ?? '');
-          final memberId = member['user_id']?.toString();
+        list = list.where((item) {
+          final itemRole = _normalizeRole(item["rolecode"]?.toString() ?? '');
           if (_currentUserRole == 'AM') {
-            if (memberRole == 'RM') return false;
-            if (memberRole == 'AM') return _currentUserId == null || memberId == _currentUserId;
-            return true; // SO and others
+            return itemRole == 'SO';
           } else if (_currentUserRole == 'RM') {
-            if (memberRole == 'RM') return _currentUserId == null || memberId == _currentUserId;
-            return true; // AM and SO
+            if (itemRole == 'RM') return false;
+            return itemRole == 'AM' || itemRole == 'SO';
           }
           return true;
         }).toList();
       }
       if (_searchQuery.isNotEmpty) {
-        list = list.where((member) {
-          final name = (member["fullname"]?.toString() ?? "").toLowerCase();
-          final empId = (member["employee_id"]?.toString() ?? member["user_id"]?.toString() ?? "").toLowerCase();
-          return name.contains(_searchQuery) || empId.contains(_searchQuery);
+        list = list.where((item) {
+          final name = (item["employee_name"]?.toString() ?? item["fullname"]?.toString() ?? "").toLowerCase();
+          final outlet = (item["outlet_name"]?.toString() ?? "").toLowerCase();
+          final pobNum = (item["pob_number"]?.toString() ?? "").toLowerCase();
+          final empId = (item["employee_id"]?.toString() ?? item["user_id"]?.toString() ?? "").toLowerCase();
+          return name.contains(_searchQuery) || outlet.contains(_searchQuery) || pobNum.contains(_searchQuery) || empId.contains(_searchQuery);
         }).toList();
       }
       groupedKeys = list;
     } else {
       var filtered = filteredTransactions;
+      if (_currentUserRole != null) {
+        filtered = filtered.where((tx) {
+          final itemRole = _normalizeRole(tx["rolecode"]?.toString() ?? tx["role"]?.toString() ?? 'SO');
+          if (_currentUserRole == 'AM') {
+            return itemRole == 'SO';
+          } else if (_currentUserRole == 'RM') {
+            if (itemRole == 'RM') return false;
+            return itemRole == 'AM' || itemRole == 'SO';
+          }
+          return true;
+        }).toList();
+      }
       if (_searchQuery.isNotEmpty) {
         filtered = filtered.where((tx) {
           final empName = (tx["employee_name"]?.toString() ?? "").toLowerCase();
           final empId = (tx["employee_id"]?.toString() ?? tx["user_id"]?.toString() ?? "").toLowerCase();
-          return empName.contains(_searchQuery) || empId.contains(_searchQuery);
+          final outlet = (tx["outlet_name"]?.toString() ?? "").toLowerCase();
+          return empName.contains(_searchQuery) || empId.contains(_searchQuery) || outlet.contains(_searchQuery);
         }).toList();
       }
       for (var tx in filtered) {
@@ -396,8 +410,11 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
                         itemCount: groupedKeys.length,
                         itemBuilder: (context, index) {
                           if (type == "pob") {
-                            final member = groupedKeys[index];
-                            return _buildTeamMemberCard(member);
+                            final item = groupedKeys[index];
+                            if (item is Map && (item.containsKey('pob_number') || item.containsKey('pob_id') || item.containsKey('ptr_total_amount'))) {
+                              return _buildPobTransactionCard(item);
+                            }
+                            return _buildTeamMemberCard(item);
                           } else {
                             final key = groupedKeys[index];
                             final items = grouped[key]!;
@@ -431,6 +448,157 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPobTransactionCard(dynamic pob) {
+    final pobNumber = pob["pob_number"]?.toString() ?? "POB-${pob["pob_id"] ?? ""}";
+    final outletIdStr = pob["outlet_id"]?.toString() ?? "";
+    final outletName = pob["outlet_name"]?.toString() ?? _outletNameLookup[outletIdStr] ?? "Unknown Outlet";
+    final empName = pob["employee_name"]?.toString() ?? pob["fullname"]?.toString() ?? "Unknown";
+    final empId = pob["employee_id"]?.toString() ?? pob["user_id"]?.toString() ?? "-";
+    final role = _normalizeRole(pob["rolecode"]?.toString() ?? "SO");
+    final status = (pob["status"]?.toString() ?? "supplied").toUpperCase();
+    final createdAt = pob["created_at"]?.toString() ?? "";
+    final items = (pob["items"] as List<dynamic>?) ?? [];
+    final totalAmount = pob["ptr_incl_gst_total_amount"]?.toString() ?? pob["ptr_total_amount"]?.toString() ?? "0.00";
+
+    Color roleColor;
+    if (role == "RM") {
+      roleColor = Colors.purple.shade700;
+    } else if (role == "AM") {
+      roleColor = Colors.orange.shade800;
+    } else {
+      roleColor = Colors.blue.shade700;
+    }
+
+    final isSupplied = status == "SUPPLIED";
+
+    return Card(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () => _showProductPopup(context, items, title: "${outletName.toUpperCase()} - POB DETAILS", isPob: true),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    width: 4,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: roleColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                outletName.toUpperCase(),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isSupplied ? Colors.green.shade50 : Colors.orange.shade50,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: isSupplied ? Colors.green.shade300 : Colors.orange.shade300),
+                              ),
+                              child: Text(
+                                status,
+                                style: TextStyle(
+                                  color: isSupplied ? Colors.green.shade800 : Colors.orange.shade800,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          "POB: $pobNumber",
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          "Submitted by: $empName ($role) - ID: $empId",
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: Divider(height: 1, thickness: 0.5),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.inventory_2_outlined, size: 16, color: roleColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        "${items.length} Item(s)",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    "Total: ₹$totalAmount",
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade700,
+                    ),
+                  ),
+                  if (createdAt.isNotEmpty)
+                    Text(
+                      DateFormatter.formatDateTime(createdAt),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

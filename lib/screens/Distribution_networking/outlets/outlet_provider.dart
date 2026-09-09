@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../permissions/SessionManager.dart';
 import '../../../services/api_services.dart';
 import '../../../services/location_service.dart';
 
@@ -111,6 +112,46 @@ class OutletProvider extends ChangeNotifier {
   List<Outlet> _nearbyOutlets = [];
   bool isLoading = false;
   String _searchQuery = "";
+
+  // Reactive active check-in state across NearMe & Outlets screens
+  int? _checkedInOutletId;
+  DateTime? _checkedInTime;
+  int? _checkedInVisitId;
+
+  int? get checkedInOutletId => _checkedInOutletId;
+  DateTime? get checkedInTime => _checkedInTime;
+  int? get checkedInVisitId => _checkedInVisitId;
+
+  Future<void> loadCheckInFromSession() async {
+    _checkedInOutletId = await SessionManager.getOutletCheckInOutletId();
+    _checkedInTime = await SessionManager.getOutletCheckInTime();
+    _checkedInVisitId = await SessionManager.getOutletCheckInVisitId();
+    notifyListeners();
+  }
+
+  void setCheckedInOutlet(int? outletId, {DateTime? checkInTime, int? visitId}) {
+    _checkedInOutletId = outletId;
+    _checkedInTime = checkInTime ?? DateTime.now();
+    _checkedInVisitId = visitId;
+    notifyListeners();
+    if (outletId != null) {
+      SessionManager.saveOutletCheckIn(
+        outletId: outletId,
+        visitId: visitId ?? 0,
+        checkInTime: _checkedInTime!,
+      );
+    } else {
+      SessionManager.clearOutletCheckIn();
+    }
+  }
+
+  void clearCheckIn() {
+    _checkedInOutletId = null;
+    _checkedInTime = null;
+    _checkedInVisitId = null;
+    notifyListeners();
+    SessionManager.clearOutletCheckIn();
+  }
 
   List<OutletCategory> _categories = [];
   bool isCategoriesLoading = false;

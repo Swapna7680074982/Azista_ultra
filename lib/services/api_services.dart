@@ -1595,11 +1595,46 @@ class ApiServices {
     String? month,
     int? today,
   }) async {
-    AppLogger.warning("API getTeamAttendanceReport bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getTeamAttendanceReport");
+        return null;
+      }
+
+      AppLogger.info("Get Team Attendance Report API called: ${AppUrls.teamAttendanceReport}");
+
+      final Map<String, dynamic> body = {};
+      if (today != null) {
+        body["today"] = today;
+      } else if (month != null && month.isNotEmpty) {
+        body["month"] = month;
+      }
+
+      final response = await _dio.post(
+        AppUrls.teamAttendanceReport,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Team Attendance Report response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Team Attendance Report error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getAttendanceStatus() async {
@@ -1681,8 +1716,46 @@ class ApiServices {
     int? outletId,
     int? productId,
   }) async {
-    AppLogger.warning("API getTeamPosHistory bypassed (API Removed)");
-    return [];
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getTeamPosHistory");
+        return [];
+      }
+
+      AppLogger.info("Get Team POS History API called: ${AppUrls.teamPosHistory}");
+
+      final Map<String, dynamic> body = {
+        "pos_type": posType.toLowerCase(),
+      };
+      if (outletId != null) body["outlet_id"] = outletId;
+      if (productId != null) body["product_id"] = productId;
+      if (distributorId != null) body["distributor_id"] = distributorId;
+
+      final response = await _dio.post(
+        AppUrls.teamPosHistory,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Team POS History response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map && parsed["data"] is List) {
+        return List<dynamic>.from(parsed["data"]);
+      }
+      return [];
+    } catch (e) {
+      AppLogger.error("Get Team POS History error", e);
+      return [];
+    }
   }
 
   static Future<List<dynamic>> getTeamPobHistory({
@@ -1691,9 +1764,87 @@ class ApiServices {
     String? status,
     String? fromDate,
     String? toDate,
+    int? limit,
+    int? offset,
   }) async {
-    AppLogger.warning("API getTeamPobHistory bypassed (API Removed)");
-    return [];
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getTeamPobHistory");
+        return [];
+      }
+
+      AppLogger.info("Get Team POB History API called: ${AppUrls.teamPobHistory}");
+
+      final Map<String, dynamic> body = {};
+      if (outletId != null) body["outlet_id"] = outletId;
+      if (distributorId != null) body["distributor_id"] = distributorId;
+      if (status != null && status.isNotEmpty) body["status"] = status;
+      if (fromDate != null && fromDate.isNotEmpty) body["from_date"] = fromDate;
+      if (toDate != null && toDate.isNotEmpty) body["to_date"] = toDate;
+      if (limit != null) body["limit"] = limit;
+      if (offset != null) body["offset"] = offset;
+
+      final response = await _dio.post(
+        AppUrls.teamPobHistory,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Team POB History response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map && parsed["data"] is List) {
+        return List<dynamic>.from(parsed["data"]);
+      }
+      return [];
+    } catch (e) {
+      AppLogger.error("Get Team POB History error", e);
+      return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getMyTeam() async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getMyTeam");
+        return null;
+      }
+
+      AppLogger.info("Get My Team API called: ${AppUrls.myTeam}");
+
+      final response = await _dio.post(
+        AppUrls.myTeam,
+        data: {},
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get My Team response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get My Team error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getActivityTypes() async {
@@ -2153,11 +2304,42 @@ class ApiServices {
     required int month,
     required int year,
   }) async {
-    AppLogger.warning("API getTeamMembersSummary bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getTeamMembersSummary");
+        return null;
+      }
+
+      AppLogger.info("Get Team Members Summary API called: ${AppUrls.teamMembersSummary}");
+
+      final response = await _dio.post(
+        AppUrls.teamMembersSummary,
+        data: {
+          "month": month,
+          "year": year,
+        },
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Team Members Summary response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Team Members Summary error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getTeamMemberOutlets({

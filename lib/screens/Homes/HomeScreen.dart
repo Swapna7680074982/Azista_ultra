@@ -14,9 +14,12 @@ import '../productivity/ProductivityScreen.dart';
 import 'HomeProvider.dart';
 import 'main_tab_provider.dart';
 import 'widgets/DonutChart.dart';
-import '../../utilities/date_formatter.dart';
 import '../../permissions/SessionManager.dart';
+import '../../utilities/date_formatter.dart';
 import '../attendance/TeamAttendanceScreen.dart';
+import '../distribution_list/MyTeamScreen.dart';
+import '../distribution_list/TeamPosHistoryScreen.dart';
+import '../geo_requests/outlet_geo_requests_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -939,37 +942,145 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            if (appState.userRole == 'AM' || appState.userRole == 'RM')
+            if (appState.userRole == 'AM' || appState.userRole == 'ASM' || appState.userRole == 'RM') ...[
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      "TEAM & MANAGEMENT",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: (appState.userRole == 'RM' ? Colors.purple : Colors.orange).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: (appState.userRole == 'RM' ? Colors.purple : Colors.orange).withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        appState.userRole ?? "AM",
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: appState.userRole == 'RM' ? Colors.purple.shade700 : Colors.orange.shade800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 child: Row(
                   children: [
                     Expanded(
                       child: ActionBox(
-                        Icons.group,
-                        "TEAM ATTENDANCE",
-                        enabled: appState.isOnline && appState.selectedDistributor != null,
+                        Icons.groups_outlined,
+                        "MY\nTEAM",
+                        enabled: appState.isOnline,
                         onTap: () {
-                          if (AccessValidator.validate(
-                            context: context,
-                            isOnline: appState.isOnline,
-                            hasDistributor: appState.selectedDistributor != null,
-                            checkDistributor: true,
-                            isLeave: false,
-                          )) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const TeamAttendanceScreen(),
-                              ),
+                          if (!appState.isOnline) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Please turn on attendance first.")),
                             );
+                            return;
                           }
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const MyTeamScreen()),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ActionBox(
+                        Icons.people_outline,
+                        "TEAM\nATTENDANCE",
+                        enabled: appState.isOnline,
+                        onTap: () {
+                          if (!appState.isOnline) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Please turn on attendance first.")),
+                            );
+                            return;
+                          }
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const TeamAttendanceScreen()),
+                          );
                         },
                       ),
                     ),
                   ],
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ActionBox(
+                        Icons.history,
+                        "TEAM POB\nHISTORY",
+                        enabled: appState.isOnline,
+                        onTap: () {
+                          if (!appState.isOnline) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Please turn on attendance first.")),
+                            );
+                            return;
+                          }
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const TeamPosHistoryScreen()),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ActionBox(
+                        Icons.edit_location_alt_outlined,
+                        "OUTLET GEO\nREQUESTS",
+                        enabled: appState.isOnline,
+                        onTap: () {
+                          if (!appState.isOnline) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Please turn on attendance first.")),
+                            );
+                            return;
+                          }
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const OutletGeoRequestsScreen()),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 20),
           ],
         ),
       ),

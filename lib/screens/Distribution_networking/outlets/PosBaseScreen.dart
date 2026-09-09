@@ -75,13 +75,12 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
           final checkInTimeStr = activeVisit['checkin_time']?.toString() ?? "";
           final checkInTime = DateTime.tryParse(checkInTimeStr);
 
-          await SessionManager.saveOutletCheckIn(
-            outletId: currentOutletId,
-            visitId: visitId,
-            checkInTime: checkInTime ?? DateTime.now(),
-          );
-
           if (mounted) {
+            context.read<OutletProvider>().setCheckedInOutlet(
+              currentOutletId,
+              visitId: visitId,
+              checkInTime: checkInTime ?? DateTime.now(),
+            );
             setState(() {
               _isCheckedIn = true;
               _visitId = visitId;
@@ -98,7 +97,9 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
 
     final savedOutletId = await SessionManager.getOutletCheckInOutletId();
     if (savedOutletId == currentOutletId) {
-      await SessionManager.clearOutletCheckIn();
+      if (mounted) {
+        context.read<OutletProvider>().clearCheckIn();
+      }
     }
     if (mounted) {
       setState(() {
@@ -202,13 +203,12 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         final visitId = response['visit_id'] ?? 0;
         final checkInTime = DateTime.now();
 
-        await SessionManager.saveOutletCheckIn(
-          outletId: outletId,
-          visitId: visitId,
-          checkInTime: checkInTime,
-        );
-
         if (mounted) {
+          context.read<OutletProvider>().setCheckedInOutlet(
+            outletId,
+            visitId: visitId,
+            checkInTime: checkInTime,
+          );
           setState(() {
             _isCheckedIn = true;
             _visitId = visitId;
@@ -256,9 +256,8 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       }
 
       if (response != null && response['status'] == true) {
-        await SessionManager.clearOutletCheckIn();
-
         if (mounted) {
+          context.read<OutletProvider>().clearCheckIn();
           setState(() {
             _isCheckedIn = false;
             _visitId = null;

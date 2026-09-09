@@ -30,12 +30,16 @@ class HomeProvider extends ChangeNotifier {
   DateTimeRange? customCountsRange;
 
   Future<void> loadDistributors([AppStateProvider? appState]) async {
-    distributors = await SessionManager.getDistributors();
-    if (distributors.isEmpty) {
+    try {
       final res = await ApiServices.getDistributors();
       if (res != null && res["data"] is List) {
         distributors = res["data"];
+        await SessionManager.saveDistributors(distributors);
+      } else {
+        distributors = await SessionManager.getDistributors();
       }
+    } catch (_) {
+      distributors = await SessionManager.getDistributors();
     }
     notifyListeners();
   }

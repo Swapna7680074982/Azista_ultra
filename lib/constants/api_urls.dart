@@ -47,4 +47,11 @@ class AppUrls {
   static const String reviewOutletGeoRequest = "$astraBaseUrl/distribution/review_outlet_geo_request";
   static const String previewOutletCoordinates = "$astraBaseUrl/distribution/preview_outlet_coordinates";
   static const String updateOutletCoordinatesDirect = "$astraBaseUrl/distribution/update_outlet_coordinates_direct";
+
+  // Team APIs (For AM, RM)
+  static const String myTeam = "$astraBaseUrl/user/my_team";
+  static const String teamAttendanceReport = "$astraBaseUrl/user/attendance_report";
+  static const String teamPobHistory = "$astraBaseUrl/distribution/team_pob_history";
+  static const String teamPosHistory = "$astraBaseUrl/distribution/team_pos_history";
+  static const String teamMembersSummary = "$astraBaseUrl/distribution/team_members_summary";
 }

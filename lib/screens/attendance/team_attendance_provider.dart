@@ -91,22 +91,16 @@ class TeamAttendanceProvider extends ChangeNotifier {
           .toList();
     }
 
-    // Hierarchical and self-exclusion logic for AM/RM
+    // Hierarchical and role-based filtering for AM/RM
     roleFiltered = roleFiltered.where((item) {
       final itemRole = _normalizeRole(item.roleCode);
       if (_currentUserRole == 'AM') {
-        if (itemRole == 'RM') {
-          return false; // Exclude RM
-        }
-        if (itemRole == 'AM') {
-          return _currentUserId == null || item.userId == _currentUserId; // Only his own AM record
-        }
-        return true; // Include SO and others
+        // AM only manages and views SO
+        return itemRole == 'SO';
       } else if (_currentUserRole == 'RM') {
-        if (itemRole == 'RM') {
-          return _currentUserId == null || item.userId == _currentUserId; // Only his own RM record
-        }
-        return true; // Include AM and SO
+        // RM manages AM and SO (excludes RM)
+        if (itemRole == 'RM') return false;
+        return itemRole == 'AM' || itemRole == 'SO';
       }
       return true; // Default
     }).toList();

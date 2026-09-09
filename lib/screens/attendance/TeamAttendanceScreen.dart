@@ -336,7 +336,38 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
   }
 
   Widget _buildFilterSection(AppStateProvider appState, TeamAttendanceProvider provider) {
-    final roles = appState.userRole == 'AM' ? ['AM', 'SO'] : ['RM', 'AM', 'SO'];
+    if (appState.userRole == 'AM') {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        color: Colors.transparent,
+        child: Row(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: ChoiceChip(
+                label: const Text("SO"),
+                selected: true,
+                showCheckmark: false,
+                onSelected: (_) {},
+                selectedColor: AppColors.primary,
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: const BorderSide(color: AppColors.primary),
+                ),
+                labelStyle: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final roles = ['AM', 'SO'];
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
@@ -380,9 +411,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
                   backgroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
-                    side: BorderSide(
-                      color: isSelected ? AppColors.primary : Colors.grey.shade300,
-                    ),
+                    side: BorderSide(color: isSelected ? AppColors.primary : Colors.grey.shade300),
                   ),
                   labelStyle: TextStyle(
                     color: isSelected ? Colors.white : Colors.black87,

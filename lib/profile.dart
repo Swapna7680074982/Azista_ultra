@@ -2,17 +2,17 @@ import 'package:azista_ultra/permissions/AccessValidator.dart';
 import 'package:azista_ultra/permissions/AppStateProvider.dart';
 import 'package:azista_ultra/permissions/SessionManager.dart';
 import 'package:azista_ultra/screens/Homes/HomeProvider.dart';
-import 'package:azista_ultra/screens/Distribution_networking/distribution_network_screen.dart';
-import 'package:azista_ultra/screens/Homes/HomeScreen.dart';
 import 'package:azista_ultra/screens/Homes/change_password.dart';
 import 'package:azista_ultra/screens/Homes/main_tab_provider.dart';
-import 'package:azista_ultra/screens/Homes/near_me_screen.dart';
 import 'package:azista_ultra/screens/Homes/support.dart';
 import 'package:azista_ultra/screens/login/login_screen.dart';
 import 'package:azista_ultra/screens/geo_requests/my_geo_requests_screen.dart';
 import 'package:azista_ultra/screens/geo_requests/outlet_geo_requests_screen.dart';
+import 'package:azista_ultra/screens/distribution_list/MyTeamScreen.dart';
+import 'package:azista_ultra/screens/attendance/TeamAttendanceScreen.dart';
+import 'package:azista_ultra/screens/distribution_list/TeamPosHistoryScreen.dart';
+import 'package:azista_ultra/screens/profile_screen.dart';
 import 'package:azista_ultra/services/api_services.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:provider/provider.dart';
@@ -27,11 +27,12 @@ class ProfileDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      child: Column(
+      child: ListView(
+        padding: EdgeInsets.zero,
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(40),
+            padding: const EdgeInsets.fromLTRB(24, 50, 24, 24),
             color: AppColors.white,
             child: FutureBuilder<Map<String, String>>(
               future: _loadProfileInfo(),
@@ -45,28 +46,48 @@ class ProfileDrawer extends StatelessWidget {
                   children: [
                     Text(
                       name.toUpperCase(),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: 4),
-                    Text(role.toUpperCase()),
+                    Text(
+                      role.toUpperCase(),
+                      style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
                     const SizedBox(height: 4),
-                    Text("Version: $version"),
+                    Text(
+                      "Version: $version",
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                    ),
                   ],
                 );
               },
             ),
           ),
 
+          const Divider(height: 1),
+
           sectionTitle("GENERAL"),
 
           menuItem(context, "Dashboard"),
+          menuItem(context, "Profile"),
           menuItem(context, "Near Me"),
           menuItem(context, "Distribution Network"),
           menuItem(context, "My Geo Requests"),
+
           Consumer<AppStateProvider>(
             builder: (context, appState, _) {
-              if (appState.userRole == 'AM' || appState.userRole == 'RM') {
-                return menuItem(context, "Outlet Geo Requests");
+              if (appState.userRole == 'AM' || appState.userRole == 'RM' || appState.userRole == 'ASM') {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Divider(),
+                    sectionTitle("TEAM MANAGEMENT"),
+                    menuItem(context, "My Team"),
+                    menuItem(context, "Team Attendance"),
+                    menuItem(context, "Team POB History"),
+                    menuItem(context, "Outlet Geo Requests"),
+                  ],
+                );
               }
               return const SizedBox.shrink();
             },
@@ -77,7 +98,6 @@ class ProfileDrawer extends StatelessWidget {
           sectionTitle("OTHERS"),
 
           menuItem(context, "Support"),
-          //menuItem(context, "FAQ"),
           menuItem(context, "Change Password"),
           menuItem(context, "Logout"),
         ],
@@ -106,7 +126,7 @@ class ProfileDrawer extends StatelessWidget {
 
   Widget sectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text(
@@ -114,6 +134,8 @@ class ProfileDrawer extends StatelessWidget {
           style: TextStyle(
             color: AppColors.primary,
             fontWeight: FontWeight.bold,
+            fontSize: 12,
+            letterSpacing: 0.5,
           ),
         ),
       ),
@@ -126,9 +148,14 @@ class ProfileDrawer extends StatelessWidget {
     return Container(
       color: isSelected ? AppColors.primary : Colors.transparent,
       child: ListTile(
+        dense: true,
         title: Text(
           title,
-          style: TextStyle(color: isSelected ? Colors.white : Colors.black),
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.black87,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            fontSize: 14,
+          ),
         ),
         onTap: () {
           final navProvider = Provider.of<MainTabProvider>(
@@ -170,6 +197,13 @@ class ProfileDrawer extends StatelessWidget {
               navProvider.setTab(0);
               break;
 
+            case "Profile":
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+              break;
+
             case "Near Me":
               navProvider.setTab(2);
               break;
@@ -185,7 +219,52 @@ class ProfileDrawer extends StatelessWidget {
               );
               break;
 
+            case "My Team":
+              if (!appState.isOnline) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Please turn on attendance first.")),
+                );
+                return;
+              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyTeamScreen()),
+              );
+              break;
+
+            case "Team Attendance":
+              if (!appState.isOnline) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Please turn on attendance first.")),
+                );
+                return;
+              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TeamAttendanceScreen()),
+              );
+              break;
+
+            case "Team POB History":
+              if (!appState.isOnline) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Please turn on attendance first.")),
+                );
+                return;
+              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TeamPosHistoryScreen()),
+              );
+              break;
+
             case "Outlet Geo Requests":
+              if (!appState.isOnline) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Please turn on attendance first.")),
+                );
+                return;
+              }
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const OutletGeoRequestsScreen()),
