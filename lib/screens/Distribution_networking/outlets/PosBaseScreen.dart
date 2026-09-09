@@ -136,11 +136,11 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         widget.outlet.longitude,
       );
 
-      if (distance > 50) {
+      if (distance > 10000) {
         if (mounted) {
           setState(() {
             isLocationValid = false;
-            locationError = "You are ${distance.toStringAsFixed(0)} meters away from the outlet. You must be within 50 meters to access POB.";
+            locationError = "You are ${distance.toStringAsFixed(0)} meters away from the outlet. You must be within 10 km to access POB.";
             _buildTabViews();
           });
         }

@@ -1004,7 +1004,7 @@ class ApiServices {
   static Future<Map<String, dynamic>?> getNearbyOutlets({
     required double latitude,
     required double longitude,
-    int radius = 5,
+    int radius = 10,
     int? routeId,
   }) async {
     try {

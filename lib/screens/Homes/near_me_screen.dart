@@ -101,7 +101,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "You are currently $distStr away from ${outlet.name.toUpperCase()}.\n\nPhysical visits require you to be within 50 meters of the outlet.",
+                "You are currently $distStr away from ${outlet.name.toUpperCase()}.\n\nPhysical visits require you to be within 10 km of the outlet.",
                 style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
               ),
               const SizedBox(height: 14),
@@ -139,7 +139,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
                 LoadingDialog.hide(context);
 
                 final newDist = _getDistanceToOutlet(outlet);
-                if (newDist != null && newDist <= 50) {
+                if (newDist != null && newDist <= 10000) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Location verified! Outlet unblocked.")),
                   );
@@ -153,7 +153,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
                 } else {
                   final distMsg = newDist != null ? "${newDist.toStringAsFixed(0)}m" : "Unknown";
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Still out of range ($distMsg). You must be within 50m.")),
+                    SnackBar(content: Text("Still out of range ($distMsg). You must be within 10km.")),
                   );
                 }
               },
@@ -283,7 +283,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
   Widget outletCard(Outlet outlet, BuildContext context) {
     final isCheckedIn = _checkedInOutletId != null && _checkedInOutletId == int.tryParse(outlet.id);
     final distance = _getDistanceToOutlet(outlet);
-    final isBlocked = distance != null && distance > 50;
+    final isBlocked = distance != null && distance > 10000;
 
     final cardContent = Container(
       padding: const EdgeInsets.all(12),
@@ -331,7 +331,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
                 Text(
                   "${distance.toStringAsFixed(0)}m",
                   style: TextStyle(
-                    color: distance > 50 ? Colors.red.shade700 : Colors.green.shade700,
+                    color: distance > 10000 ? Colors.red.shade700 : Colors.green.shade700,
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
@@ -346,9 +346,9 @@ class _NearMeScreenState extends State<NearMeScreen> {
               Text("OUTLET ID: ${outlet.id}", style: TextStyle(color: Colors.grey.shade700, fontSize: 15)),
               if (distance != null)
                 Text(
-                  "${distance.toStringAsFixed(0)}m ${distance > 50 ? '(> 50m limit)' : '(In range)'}",
+                  "${distance.toStringAsFixed(0)}m ${distance > 10000 ? '(> 10km limit)' : '(In range)'}",
                   style: TextStyle(
-                    color: distance > 50 ? Colors.red.shade700 : Colors.green.shade700,
+                    color: distance > 10000 ? Colors.red.shade700 : Colors.green.shade700,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -613,7 +613,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
-              "Outlets with in 5 km radius",
+              "Outlets with in 10 km radius",
               style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
             ),
           ),

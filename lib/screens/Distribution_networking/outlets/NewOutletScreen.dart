@@ -206,9 +206,9 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
           lng,
         );
 
-        if (distance > 50) {
+        if (distance > 10000) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Selected location is ${distance.toStringAsFixed(0)}m away. You must be within 50 meters to register an outlet.")),
+            SnackBar(content: Text("Selected location is ${distance.toStringAsFixed(0)}m away. You must be within 10 km to register an outlet.")),
           );
           return;
         }
