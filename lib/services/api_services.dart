@@ -2195,4 +2195,294 @@ class ApiServices {
       "data": [],
     };
   }
+
+  // ==========================================
+  // OUTLET GEO REQUEST & COORDINATE APIS
+  // ==========================================
+
+  /// Raise Geo Request (For SO) to unblock or update outlet coordinates
+  static Future<Map<String, dynamic>?> raiseOutletGeoRequest({
+    required int outletId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for raiseOutletGeoRequest");
+        return null;
+      }
+
+      final body = {
+        "outlet_id": outletId,
+        "latitude": latitude,
+        "longitude": longitude,
+      };
+
+      AppLogger.info("Raise Outlet Geo Request API called: ${AppUrls.raiseOutletGeoRequest}");
+      AppLogger.info("Payload: ${jsonEncode(body)}");
+
+      final response = await _dio.post(
+        AppUrls.raiseOutletGeoRequest,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Raise Outlet Geo Request response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Raise Outlet Geo Request error", e);
+      return null;
+    }
+  }
+
+  /// My Outlet Geo Requests (For SO) to view history of raised geo requests
+  static Future<Map<String, dynamic>?> getMyOutletGeoRequests({
+    int? outletId,
+    String? status,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getMyOutletGeoRequests");
+        return null;
+      }
+
+      final Map<String, dynamic> queryParams = {};
+      if (outletId != null) queryParams["outlet_id"] = outletId;
+      if (status != null && status.isNotEmpty && status.toLowerCase() != "all") {
+        queryParams["status"] = status.toLowerCase();
+      }
+
+      AppLogger.info("My Outlet Geo Requests API called: ${AppUrls.myOutletGeoRequests} params: $queryParams");
+
+      final response = await _dio.post(
+        AppUrls.myOutletGeoRequests,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        data: {},
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("My Outlet Geo Requests response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("My Outlet Geo Requests error", e);
+      return null;
+    }
+  }
+
+  /// Outlet Geo Requests (For AM, RM) to list requests for review
+  static Future<Map<String, dynamic>?> getListOutletGeoRequests({
+    String? status,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getListOutletGeoRequests");
+        return null;
+      }
+
+      final Map<String, dynamic> queryParams = {};
+      if (status != null && status.isNotEmpty && status.toLowerCase() != "all") {
+        queryParams["status"] = status.toLowerCase();
+      }
+
+      AppLogger.info("List Outlet Geo Requests API called: ${AppUrls.listOutletGeoRequests} params: $queryParams");
+
+      final response = await _dio.post(
+        AppUrls.listOutletGeoRequests,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        data: {},
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("List Outlet Geo Requests response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("List Outlet Geo Requests error", e);
+      return null;
+    }
+  }
+
+  /// Review Outlet Geo Request (For AM, RM) to approve/reject
+  static Future<Map<String, dynamic>?> reviewOutletGeoRequest({
+    required int requestId,
+    required String action, // "approve" or "reject"
+    required String remarks,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for reviewOutletGeoRequest");
+        return null;
+      }
+
+      final body = {
+        "request_id": requestId,
+        "action": action,
+        "remarks": remarks,
+      };
+
+      AppLogger.info("Review Outlet Geo Request API called: ${AppUrls.reviewOutletGeoRequest}");
+      AppLogger.info("Payload: ${jsonEncode(body)}");
+
+      final response = await _dio.post(
+        AppUrls.reviewOutletGeoRequest,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Review Outlet Geo Request response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Review Outlet Geo Request error", e);
+      return null;
+    }
+  }
+
+  /// Preview Outlet Coordinates (For AM, RM)
+  static Future<Map<String, dynamic>?> previewOutletCoordinates({
+    required int outletId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for previewOutletCoordinates");
+        return null;
+      }
+
+      final body = {
+        "outlet_id": outletId,
+        "latitude": latitude,
+        "longitude": longitude,
+      };
+
+      AppLogger.info("Preview Outlet Coordinates API called: ${AppUrls.previewOutletCoordinates}");
+      AppLogger.info("Payload: ${jsonEncode(body)}");
+
+      final response = await _dio.post(
+        AppUrls.previewOutletCoordinates,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Preview Outlet Coordinates response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Preview Outlet Coordinates error", e);
+      return null;
+    }
+  }
+
+  /// Update Outlet Coordinates Direct (For AM, RM)
+  static Future<Map<String, dynamic>?> updateOutletCoordinatesDirect({
+    required int outletId,
+    required double latitude,
+    required double longitude,
+    required String remarks,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for updateOutletCoordinatesDirect");
+        return null;
+      }
+
+      final body = {
+        "outlet_id": outletId,
+        "latitude": latitude,
+        "longitude": longitude,
+        "remarks": remarks,
+      };
+
+      AppLogger.info("Update Outlet Coordinates Direct API called: ${AppUrls.updateOutletCoordinatesDirect}");
+      AppLogger.info("Payload: ${jsonEncode(body)}");
+
+      final response = await _dio.post(
+        AppUrls.updateOutletCoordinatesDirect,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Update Outlet Coordinates Direct response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Update Outlet Coordinates Direct error", e);
+      return null;
+    }
+  }
 }

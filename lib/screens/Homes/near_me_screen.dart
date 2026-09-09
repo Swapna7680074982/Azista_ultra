@@ -16,6 +16,7 @@ import '../../permissions/SessionManager.dart';
 import '../../utilities/date_formatter.dart';
 import '../../services/api_services.dart';
 import '../../utilities/common_widgets.dart';
+import '../geo_requests/my_geo_requests_screen.dart';
 
 class NearMeScreen extends StatefulWidget {
   const NearMeScreen({super.key});
@@ -33,38 +34,33 @@ class _NearMeScreenState extends State<NearMeScreen> {
   @override
   void initState() {
     super.initState();
-    final cached = LocationService.cachedCoordinates;
-    _userLat = double.tryParse(cached[0]);
-    _userLng = double.tryParse(cached[1]);
-
-    _loadCheckInStatus();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final distProvider = Provider.of<DistributionProvider>(context, listen: false);
-      final routeId = distProvider.selectedRouteId != null 
-          ? int.tryParse(distProvider.selectedRouteId!) 
-          : null;
-      final provider = context.read<OutletProvider>();
-      await Future.wait([
-        _loadUserLocation(),
-        provider.refreshNearbyOutlets(routeId: routeId),
-      ]);
-      if (mounted) {
-        _checkServerCheckInStatus(provider.nearbyOutlets);
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
     });
+  }
+
+  Future<void> _loadData() async {
+    _loadCheckInStatus();
+    await _loadUserLocation();
+    if (_userLat != null && _userLng != null && mounted) {
+      context.read<OutletProvider>().fetchNearbyOutlets(
+        _userLat!,
+        _userLng!,
+      );
+    }
   }
 
   Future<void> _loadUserLocation() async {
     try {
       final coords = await LocationService.getCoordinates();
-      if (mounted) {
+      if (mounted && coords.length >= 2) {
         setState(() {
           _userLat = double.tryParse(coords[0]);
           _userLng = double.tryParse(coords[1]);
         });
       }
     } catch (e) {
-      debugPrint("Error loading user location for near me: $e");
+      debugPrint("Error loading user location: $e");
     }
   }
 
@@ -75,6 +71,161 @@ class _NearMeScreenState extends State<NearMeScreen> {
     if (_userLat == null || _userLng == null) return null;
     if (outlet.latitude == 0.0 && outlet.longitude == 0.0) return null;
     return Geolocator.distanceBetween(_userLat!, _userLng!, outlet.latitude, outlet.longitude);
+  }
+
+  Future<void> _raiseGeoRequestForOutlet(Outlet outlet) async {
+    if (_userLat == null || _userLng == null) {
+      LoadingDialog.show(context, message: "Fetching GPS location...");
+      await _loadUserLocation();
+      if (mounted) LoadingDialog.hide(context);
+    }
+
+    if (_userLat == null || _userLng == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Unable to fetch current GPS coordinates. Please enable GPS and try again.")),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.edit_location_alt, color: Colors.orange.shade800),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                "Raise Geo Request",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Submit a request to update ${outlet.name.toUpperCase()}'s coordinates to your current GPS position?",
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("CURRENT GPS POSITION:", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  const SizedBox(height: 2),
+                  Text("$_userLat, $_userLng", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  const SizedBox(height: 6),
+                  const Text("PREVIOUS REGISTERED:", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  const SizedBox(height: 2),
+                  Text("${outlet.latitude}, ${outlet.longitude}", style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("CANCEL"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade800,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("SUBMIT REQUEST"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    LoadingDialog.show(context, message: "Submitting geo request...");
+    final outletIdInt = int.tryParse(outlet.id) ?? 0;
+    final res = await ApiServices.raiseOutletGeoRequest(
+      outletId: outletIdInt,
+      latitude: _userLat!,
+      longitude: _userLng!,
+    );
+    if (mounted) LoadingDialog.hide(context);
+
+    if (!mounted) return;
+
+    if (res != null && (res["status"] == "success" || res["status_code"] == 200 || res["status_code"] == 201)) {
+      final reqId = res["request_id"] ?? "";
+      final msg = res["message"] ?? "Geo update request raised successfully";
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green.shade700),
+              const SizedBox(width: 8),
+              const Text("Request Submitted"),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(msg, style: const TextStyle(fontSize: 13)),
+              if (reqId.toString().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text("Request ID: #$reqId", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+              ],
+              const SizedBox(height: 8),
+              Text(
+                "Your Area/Regional Manager will review and approve this request.",
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("CLOSE"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MyGeoRequestsScreen(outletId: outletIdInt)),
+                );
+              },
+              child: const Text("VIEW MY REQUESTS"),
+            ),
+          ],
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res?["message"]?.toString() ?? "Failed to raise geo request")),
+      );
+    }
   }
 
   void _showBlockedOutletDialog(Outlet outlet, double? distance) {
@@ -118,7 +269,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        "To place an order remotely without check-in, choose Tele POB.",
+                        "To place an order remotely without check-in, choose Tele POB, or raise a Geo Request to update coordinates.",
                         style: TextStyle(fontSize: 12, color: Colors.black87),
                       ),
                     ),
@@ -130,7 +281,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
           actions: [
             TextButton.icon(
               icon: const Icon(Icons.refresh, size: 16),
-              label: const Text("UNBLOCK (RETRY GPS)", style: TextStyle(fontWeight: FontWeight.bold)),
+              label: const Text("RETRY GPS", style: TextStyle(fontWeight: FontWeight.bold)),
               onPressed: () async {
                 Navigator.pop(ctx);
                 LoadingDialog.show(context, message: "Checking location...");
@@ -156,6 +307,19 @@ class _NearMeScreenState extends State<NearMeScreen> {
                     SnackBar(content: Text("Still out of range ($distMsg). You must be within 10km.")),
                   );
                 }
+              },
+            ),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.orange.shade800,
+                side: BorderSide(color: Colors.orange.shade400),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              icon: const Icon(Icons.edit_location_alt, size: 16),
+              label: const Text("RAISE GEO REQ", style: TextStyle(fontWeight: FontWeight.bold)),
+              onPressed: () {
+                Navigator.pop(ctx);
+                _raiseGeoRequestForOutlet(outlet);
               },
             ),
             ElevatedButton.icon(
@@ -589,6 +753,21 @@ class _NearMeScreenState extends State<NearMeScreen> {
             ),
           ),
         ),
+        actions: [
+          IconButton(
+            tooltip: "My Geo Requests",
+            icon: const Icon(Icons.history_toggle_off, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const MyGeoRequestsScreen(),
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Column(
         children: [

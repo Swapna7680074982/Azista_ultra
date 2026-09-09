@@ -9,6 +9,7 @@ import '../../utilities/date_formatter.dart';
 import '../Homes/HomeProvider.dart';
 import '../attendance/TeamAttendanceScreen.dart';
 import '../distribution_list/TeamPosHistoryScreen.dart';
+import '../geo_requests/outlet_geo_requests_screen.dart';
 
 class AmDashboardScreen extends StatefulWidget {
   const AmDashboardScreen({super.key});
@@ -197,6 +198,17 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const TeamPosHistoryScreen()),
+                    );
+                  },
+                ),
+                _buildMenuItem(
+                  iconPath: Icons.edit_location_alt_outlined,
+                  label: "Outlet Geo Requests",
+                  enabled: appState.isOnline,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const OutletGeoRequestsScreen()),
                     );
                   },
                 ),

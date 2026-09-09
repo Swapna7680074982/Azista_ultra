@@ -9,6 +9,7 @@ import '../Distribution_networking/distribution_network_screen.dart';
 import '../../utilities/date_formatter.dart';
 import '../attendance/TeamAttendanceScreen.dart';
 import '../distribution_list/TeamPosHistoryScreen.dart';
+import '../geo_requests/outlet_geo_requests_screen.dart';
 
 class RmDashboardScreen extends StatefulWidget {
   const RmDashboardScreen({super.key});
@@ -197,6 +198,17 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const TeamPosHistoryScreen()),
+                    );
+                  },
+                ),
+                _buildMenuItem(
+                  iconPath: Icons.edit_location_alt_outlined,
+                  label: "Outlet Geo Requests",
+                  enabled: appState.isOnline,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const OutletGeoRequestsScreen()),
                     );
                   },
                 ),

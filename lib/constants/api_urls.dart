@@ -39,4 +39,12 @@ class AppUrls {
   static const String getTargets = "$astraBaseUrl/distribution/get_targets";
   static const String callsInfo = "$astraBaseUrl/distribution/calls_info";
   static const String posSummary = "$astraBaseUrl/distribution/pos_summary";
+
+  // Outlet Geo Requests & Coordinate APIs
+  static const String raiseOutletGeoRequest = "$astraBaseUrl/distribution/raise_outlet_geo_request";
+  static const String myOutletGeoRequests = "$astraBaseUrl/distribution/my_outlet_geo_requests";
+  static const String listOutletGeoRequests = "$astraBaseUrl/distribution/list_outlet_geo_requests";
+  static const String reviewOutletGeoRequest = "$astraBaseUrl/distribution/review_outlet_geo_request";
+  static const String previewOutletCoordinates = "$astraBaseUrl/distribution/preview_outlet_coordinates";
+  static const String updateOutletCoordinatesDirect = "$astraBaseUrl/distribution/update_outlet_coordinates_direct";
 }

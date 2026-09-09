@@ -9,6 +9,8 @@ import 'package:azista_ultra/screens/Homes/main_tab_provider.dart';
 import 'package:azista_ultra/screens/Homes/near_me_screen.dart';
 import 'package:azista_ultra/screens/Homes/support.dart';
 import 'package:azista_ultra/screens/login/login_screen.dart';
+import 'package:azista_ultra/screens/geo_requests/my_geo_requests_screen.dart';
+import 'package:azista_ultra/screens/geo_requests/outlet_geo_requests_screen.dart';
 import 'package:azista_ultra/services/api_services.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -60,6 +62,15 @@ class ProfileDrawer extends StatelessWidget {
           menuItem(context, "Dashboard"),
           menuItem(context, "Near Me"),
           menuItem(context, "Distribution Network"),
+          menuItem(context, "My Geo Requests"),
+          Consumer<AppStateProvider>(
+            builder: (context, appState, _) {
+              if (appState.userRole == 'AM' || appState.userRole == 'RM') {
+                return menuItem(context, "Outlet Geo Requests");
+              }
+              return const SizedBox.shrink();
+            },
+          ),
 
           const Divider(),
 
@@ -165,6 +176,20 @@ class ProfileDrawer extends StatelessWidget {
 
             case "Distribution Network":
               navProvider.setTab(3);
+              break;
+
+            case "My Geo Requests":
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyGeoRequestsScreen()),
+              );
+              break;
+
+            case "Outlet Geo Requests":
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const OutletGeoRequestsScreen()),
+              );
               break;
 
             case "Support":
