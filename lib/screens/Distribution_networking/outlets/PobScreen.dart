@@ -385,12 +385,12 @@ class _PobBodyState extends State<PobBody> {
                             height: 45,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: (!widget.isTelePob && _capturedImage == null) ? Colors.grey.shade400 : AppColors.button,
+                                  backgroundColor: _capturedImage == null ? Colors.grey.shade400 : AppColors.button,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                               ),
-                              onPressed: (!widget.isTelePob && _capturedImage == null) ? null : () async {
+                              onPressed: _capturedImage == null ? null : () async {
                                 final appState = Provider.of<AppStateProvider>(context, listen: false);
 
                                 LoadingDialog.show(context, message: widget.isTelePob ? "Submitting Tele POB..." : "Submitting POB...");
