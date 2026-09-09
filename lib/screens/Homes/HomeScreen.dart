@@ -270,7 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   if (val != null) {
                                     final found = distributors.firstWhere(
                                       (d) => d["distributor_name"] == val,
-                                      orElse: () => {},
+                                      orElse: () => <String, dynamic>{},
                                     );
                                     final distId = int.tryParse(found["distributor_id"]?.toString() ?? "");
                                     appState.setSelectedDistributor(val, distId);

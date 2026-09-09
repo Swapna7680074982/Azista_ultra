@@ -6,7 +6,6 @@ import '../../constants/app_colors.dart';
 import '../../profile.dart';
 import '../../services/call_service.dart';
 import '../../services/location_service.dart';
-import '../Distribution_networking/distribution_provider.dart';
 import '../Distribution_networking/outlets/outlet_provider.dart';
 import '../Distribution_networking/outlets/PobScreen.dart';
 import '../Distribution_networking/outlets/PosBaseScreen.dart';
@@ -43,10 +42,16 @@ class _NearMeScreenState extends State<NearMeScreen> {
     _loadCheckInStatus();
     await _loadUserLocation();
     if (_userLat != null && _userLng != null && mounted) {
-      context.read<OutletProvider>().fetchNearbyOutlets(
+      await context.read<OutletProvider>().fetchNearbyOutlets(
         _userLat!,
         _userLng!,
       );
+      if (mounted) {
+        _checkServerCheckInStatus(context.read<OutletProvider>().nearbyOutlets);
+      }
+    }
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -836,6 +841,13 @@ class _NearMeScreenState extends State<NearMeScreen> {
           ),
           Container(height: 1, color: Colors.grey.shade300),
           
+          if (provider.isLoading)
+            const LinearProgressIndicator(
+              minHeight: 3,
+              backgroundColor: Color(0x1F000000),
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
@@ -845,16 +857,34 @@ class _NearMeScreenState extends State<NearMeScreen> {
           ),
 
           Expanded(
-            child: provider.isLoading
-                ? const LogoProgressIndicator()
-                : provider.nearbyOutlets.isEmpty
-                    ? const Center(child: Text("No nearby outlets found"))
-                    : ListView.builder(
-              itemCount: provider.nearbyOutlets.length,
-              itemBuilder: (context, index) {
-                return outletCard(provider.nearbyOutlets[index], context);
-              },
-            ),
+            child: provider.isLoading && provider.nearbyOutlets.isEmpty
+                ? const Center(child: LogoProgressIndicator())
+                : RefreshIndicator(
+                    color: AppColors.primary,
+                    onRefresh: _loadData,
+                    child: provider.nearbyOutlets.isEmpty
+                        ? LayoutBuilder(
+                            builder: (context, constraints) => SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                                child: const Center(
+                                  child: Text(
+                                    "No nearby outlets found",
+                                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: provider.nearbyOutlets.length,
+                            itemBuilder: (context, index) {
+                              return outletCard(provider.nearbyOutlets[index], context);
+                            },
+                          ),
+                  ),
           )
         ],
       ),

@@ -906,29 +906,53 @@ class _OutletsScreenState extends State<OutletsScreen> {
             ),
           ),
 
+          if (provider.isLoading)
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: LinearProgressIndicator(
+                minHeight: 3,
+                backgroundColor: Color(0x1F000000),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              ),
+            ),
+
           const SizedBox(height: 10),
 
           Expanded(
-            child: provider.isLoading 
-                ? const LogoProgressIndicator() 
-                : provider.outlets.isEmpty 
-                    ? const Center(child: Text("No outlets found")) 
-                    : RefreshIndicator(
-                        onRefresh: () async {
-                          await _loadUserLocation();
-                          await provider.fetchOutlets(widget.routeId);
-                          if (mounted) {
-                            _checkServerCheckInStatus(provider.outlets);
-                          }
-                        },
-                        child: ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          itemCount: provider.outlets.length,
-                          itemBuilder: (context, index) {
-                            return outletCard(provider.outlets[index], context);
-                          },
-                        ),
-                      ),
+            child: provider.isLoading && provider.outlets.isEmpty
+                ? const Center(child: LogoProgressIndicator())
+                : RefreshIndicator(
+                    color: AppColors.primary,
+                    onRefresh: () async {
+                      await _loadUserLocation();
+                      await provider.fetchOutlets(widget.routeId);
+                      if (mounted) {
+                        _checkServerCheckInStatus(provider.outlets);
+                      }
+                    },
+                    child: provider.outlets.isEmpty
+                        ? LayoutBuilder(
+                            builder: (context, constraints) => SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                                child: const Center(
+                                  child: Text(
+                                    "No outlets found",
+                                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: provider.outlets.length,
+                            itemBuilder: (context, index) {
+                              return outletCard(provider.outlets[index], context);
+                            },
+                          ),
+                  ),
           )
         ],
       ),
