@@ -6,6 +6,7 @@ import '../../services/call_service.dart';
 import '../../utilities/common_widgets.dart';
 import '../../permissions/SessionManager.dart';
 import '../attendance/TeamAttendanceScreen.dart';
+import 'TeamMemberDetailScreen.dart';
 import 'TeamPosHistoryScreen.dart';
 
 class MyTeamScreen extends StatefulWidget {
@@ -373,61 +374,80 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  backgroundColor: roleColor.withValues(alpha: 0.12),
-                  radius: 22,
-                  child: Text(
-                    name.isNotEmpty ? name.substring(0, 1) : "U",
-                    style: TextStyle(
-                      color: roleColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+      child: InkWell(
+        onTap: () {
+          final userId = int.tryParse(member['user_id']?.toString() ?? '') ?? 0;
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TeamMemberDetailScreen(
+                userId: userId,
+                fullname: name,
+                rolecode: role,
+                month: DateTime.now().month,
+                year: DateTime.now().year,
+              ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    backgroundColor: roleColor.withValues(alpha: 0.12),
+                    radius: 22,
+                    child: Text(
+                      name.isNotEmpty ? name.substring(0, 1) : "U",
+                      style: TextStyle(
+                        color: roleColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: Colors.black87,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: Colors.black87,
+                                ),
                               ),
                             ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: roleColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: roleColor.withValues(alpha: 0.3)),
-                            ),
-                            child: Text(
-                              role,
-                              style: TextStyle(
-                                color: roleColor,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: roleColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: roleColor.withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                role,
+                                style: TextStyle(
+                                  color: roleColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.chevron_right, size: 20, color: Colors.grey.shade400),
+                          ],
+                        ),
                       const SizedBox(height: 4),
                       Text(
                         "Employee ID: $empId",
@@ -602,6 +622,6 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 }

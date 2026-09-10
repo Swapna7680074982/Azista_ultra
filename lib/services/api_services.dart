@@ -2347,11 +2347,46 @@ class ApiServices {
     required int month,
     required int year,
   }) async {
-    AppLogger.warning("API getTeamMemberOutlets bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getTeamMemberOutlets");
+        return null;
+      }
+
+      final body = {
+        "user_id": userId,
+        "month": month,
+        "year": year,
+      };
+
+      AppLogger.info("Get Team Member Outlets API called: ${AppUrls.teamMemberOutlets}");
+      AppLogger.info("Payload: ${jsonEncode(body)}");
+
+      final response = await _dio.post(
+        AppUrls.teamMemberOutlets,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Team Member Outlets response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Team Member Outlets error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getOutletPobHistory({
@@ -2359,11 +2394,46 @@ class ApiServices {
     required int month,
     required int year,
   }) async {
-    AppLogger.warning("API getOutletPobHistory bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getOutletPobHistory");
+        return null;
+      }
+
+      final body = {
+        "outlet_id": outletId,
+        "month": month,
+        "year": year,
+      };
+
+      AppLogger.info("Get Outlet POB History API called: ${AppUrls.outletPobHistory}");
+      AppLogger.info("Payload: ${jsonEncode(body)}");
+
+      final response = await _dio.post(
+        AppUrls.outletPobHistory,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Outlet POB History response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Outlet POB History error", e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>?> getOutletVisitActivityHistory({
@@ -2371,11 +2441,46 @@ class ApiServices {
     required int month,
     required int year,
   }) async {
-    AppLogger.warning("API getOutletVisitActivityHistory bypassed (API Removed)");
-    return {
-      "status": true,
-      "data": [],
-    };
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getOutletVisitActivityHistory");
+        return null;
+      }
+
+      final body = {
+        "outlet_id": outletId,
+        "month": month,
+        "year": year,
+      };
+
+      AppLogger.info("Get Outlet Visit-Activity History API called: ${AppUrls.outletVisitActivityHistory}");
+      AppLogger.info("Payload: ${jsonEncode(body)}");
+
+      final response = await _dio.post(
+        AppUrls.outletVisitActivityHistory,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Outlet Visit-Activity History response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Outlet Visit-Activity History error", e);
+      return null;
+    }
   }
 
   // ==========================================

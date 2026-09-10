@@ -54,4 +54,7 @@ class AppUrls {
   static const String teamPobHistory = "$astraBaseUrl/distribution/team_pob_history";
   static const String teamPosHistory = "$astraBaseUrl/distribution/team_pos_history";
   static const String teamMembersSummary = "$astraBaseUrl/distribution/team_members_summary";
+  static const String teamMemberOutlets = "$astraBaseUrl/distribution/team_member_outlets";
+  static const String outletPobHistory = "$astraBaseUrl/distribution/outlet_pob_history";
+  static const String outletVisitActivityHistory = "$astraBaseUrl/distribution/outlet_visit_activity_history";
 }
