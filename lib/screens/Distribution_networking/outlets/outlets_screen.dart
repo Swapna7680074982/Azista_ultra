@@ -16,6 +16,7 @@ import '../../../utilities/date_formatter.dart';
 import '../../../services/api_services.dart';
 import '../../../utilities/common_widgets.dart';
 import '../../geo_requests/my_geo_requests_screen.dart';
+import '../../geo_requests/direct_coordinate_update_screen.dart';
 
 class OutletsScreen extends StatefulWidget {
   final int routeId;
@@ -36,6 +37,13 @@ class _OutletsScreenState extends State<OutletsScreen> {
   String? _checkInTimeAndDate;
   double? _userLat;
   double? _userLng;
+  String _userRole = 'SO';
+
+  bool get _isManager =>
+      _userRole.toUpperCase() == 'RM' ||
+      _userRole.toUpperCase() == 'AM' ||
+      _userRole.toUpperCase() == 'ASM' ||
+      _userRole.toUpperCase() == 'ADMIN';
 
   @override
   void initState() {
@@ -53,6 +61,12 @@ class _OutletsScreenState extends State<OutletsScreen> {
 
   Future<void> _loadInitialData() async {
     _loadCheckInStatus();
+    final role = await SessionManager.getUserRole();
+    if (mounted) {
+      setState(() {
+        _userRole = role;
+      });
+    }
     final provider = Provider.of<OutletProvider>(context, listen: false);
     await Future.wait([
       _loadUserLocation(),
@@ -247,7 +261,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
     showDialog(
       context: context,
       builder: (ctx) {
-        final distStr = distance != null ? "${distance.toStringAsFixed(0)} meters" : "out of range";
+        final distStr = distance != null ? "${(distance / 1000).toStringAsFixed(1)} km" : "out of range";
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
@@ -267,7 +281,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "You are currently $distStr away from ${outlet.name.toUpperCase()}.\n\nPhysical visits require you to be within 10 km of the outlet.",
+                "You are currently $distStr away from ${outlet.name.toUpperCase()}.",
                 style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
               ),
               const SizedBox(height: 14),
@@ -284,16 +298,18 @@ class _OutletsScreenState extends State<OutletsScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        isGeoPending
-                            ? "To place an order remotely without check-in, choose Tele POB."
-                            : "To place an order remotely without check-in, choose Tele POB, or raise a Geo Request to update coordinates.",
+                        _isManager
+                            ? "As a Manager, you can directly update this outlet's GPS pin to your current position."
+                            : (isGeoPending
+                                ? "To place an order remotely without check-in, choose Tele POB."
+                                : "To place an order remotely without check-in, choose Tele POB, or raise a Geo Request to update coordinates."),
                         style: const TextStyle(fontSize: 12, color: Colors.black87),
                       ),
                     ),
                   ],
                 ),
               ),
-              if (isGeoPending) ...[
+              if (!_isManager && isGeoPending) ...[
                 const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.all(10),
@@ -342,14 +358,39 @@ class _OutletsScreenState extends State<OutletsScreen> {
                   );
                   _loadCheckInStatus();
                 } else {
-                  final distMsg = newDist != null ? "${newDist.toStringAsFixed(0)}m" : "Unknown";
+                  final distMsg = newDist != null ? "${(newDist / 1000).toStringAsFixed(1)} km" : "Unknown";
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text("Still out of range ($distMsg). You must be within 10km.")),
                   );
                 }
               },
             ),
-            if (isGeoPending)
+            if (_isManager)
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.teal.shade800,
+                  side: BorderSide(color: Colors.teal.shade600),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.edit_location_alt, size: 16),
+                label: const Text("DIRECT UPDATE", style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DirectCoordinateUpdateScreen(
+                        initialOutletId: outletIdInt,
+                        initialOutletName: outlet.name,
+                        initialLat: _userLat,
+                        initialLng: _userLng,
+                      ),
+                    ),
+                  );
+                  _loadInitialData();
+                },
+              )
+            else if (isGeoPending)
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.orange.shade900,
@@ -477,7 +518,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
                 )
               else if (distance != null)
                 Text(
-                  "${distance.toStringAsFixed(0)}m",
+                  "${(distance / 1000).toStringAsFixed(1)} km",
                   style: TextStyle(
                     color: distance > 10000 ? Colors.red.shade700 : Colors.green.shade700,
                     fontSize: 13,
@@ -501,7 +542,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
           ] else if (distance != null) ...[
             const SizedBox(height: 4),
             Text(
-              "DISTANCE: ${distance.toStringAsFixed(0)}m ${distance > 10000 ? '(> 10km limit)' : '(Within range)'}",
+              "DISTANCE: ${(distance / 1000).toStringAsFixed(1)} km ${distance > 10000 ? '(> 10km limit)' : '(Within range)'}",
               style: TextStyle(
                 color: distance > 10000 ? Colors.red.shade700 : Colors.green.shade700,
                 fontSize: 14,

@@ -32,31 +32,9 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController contactController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
-  final TextEditingController whatsappController = TextEditingController();
-  final TextEditingController dobController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
-  final TextEditingController landmarkController = TextEditingController();
-  final TextEditingController landlineController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController gstController = TextEditingController();
-  final TextEditingController areaController = TextEditingController();
-  final TextEditingController footTrafficController = TextEditingController();
-  final TextEditingController yearLaunchedController = TextEditingController();
 
-  final TextEditingController altNameController = TextEditingController();
-  final TextEditingController altMobileController = TextEditingController();
-  final TextEditingController altPositionController = TextEditingController();
-  final TextEditingController altEmailController = TextEditingController();
-  String selectedType = "Retailer";
   OutletCategory? selectedCategory;
-  String gender = "";
-  String vicinityType = "Near";
-  String outletShape = "Square";
-  String stockPosition = "Shelf Display";
-  String isStoreLaunched = "Yes";
-
-  TimeOfDay? openingTime;
-  TimeOfDay? closingTime;
 
   LatLng currentPosition = const LatLng(20.5937, 78.9629);
   Marker? marker;
@@ -72,6 +50,15 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
         context.read<OutletProvider>().fetchCategories();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    contactController.dispose();
+    phoneController.dispose();
+    addressController.dispose();
+    super.dispose();
   }
 
   bool _isFetchingAddress = false;
@@ -137,14 +124,8 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
       print("Location error: $e");
     }
   }
-  Future<void> submitOutlet() async {
-    if (nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Outlet Name is mandatory")),
-      );
-      return;
-    }
 
+  Future<void> submitOutlet() async {
     if (selectedCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please select an Outlet Category")),
@@ -152,9 +133,9 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
       return;
     }
 
-    if (phoneController.text.trim().isEmpty) {
+    if (nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Phone Number is mandatory")),
+        const SnackBar(content: Text("Outlet Name is mandatory")),
       );
       return;
     }
@@ -166,23 +147,16 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
       return;
     }
 
-    if (phoneController.text.length != 10) {
+    if (phoneController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid phone number")),
+        const SnackBar(content: Text("Phone Number is mandatory")),
       );
       return;
     }
 
-    if (whatsappController.text.isNotEmpty && whatsappController.text.length != 10) {
+    if (phoneController.text.trim().length != 10) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("WhatsApp number must be exactly 10 digits")),
-      );
-      return;
-    }
-
-    if (altMobileController.text.isNotEmpty && altMobileController.text.length != 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Alternative mobile number must be exactly 10 digits")),
+        const SnackBar(content: Text("Phone number must be exactly 10 digits")),
       );
       return;
     }
@@ -208,7 +182,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
 
         if (distance > 10000) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Selected location is ${distance.toStringAsFixed(0)}m away. You must be within 10 km to register an outlet.")),
+            SnackBar(content: Text("Selected location is ${(distance / 1000).toStringAsFixed(1)} km away. You must be within 10 km to register an outlet.")),
           );
           return;
         }
@@ -219,7 +193,6 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
         return;
       }
     } else {
-      // Default to current GPS coordinates if available, otherwise fallback to currentPosition
       try {
         final coords = await LocationService.getCoordinates();
         lat = double.parse(coords[0]);
@@ -250,33 +223,13 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
     final payload = {
       "route_id": widget.routeId,
       "distributor_id": distId,
-      "beat_id": widget.routeId,
       "outlet_category": int.tryParse(selectedCategory!.categoryId) ?? 0,
       "outlet_name": nameController.text.trim(),
       "owner_name": contactController.text.trim(),
       "mobile": phoneController.text.trim(),
-      "whatsapp_mobile": whatsappController.text.trim(),
-      "date_of_birth": dobController.text,
-      "gender": gender,
-      "address": addressController.text.trim(),
-      "landmark": landmarkController.text.trim(),
-      "email": emailController.text.trim(),
-      "opening_time": _formatTime(openingTime),
-      "closing_time": _formatTime(closingTime),
-      "gst": gstController.text.trim(),
-      "area": areaController.text.trim(),
-      "vicinity_type": vicinityType,
-      "outlet_shape": outletShape,
-      "stock_position": stockPosition,
-      "store_year_launched": yearLaunchedController.text,
-      "daily_foot_traffic":
-      int.tryParse(footTrafficController.text) ?? 0,
       "latitude": lat,
       "longitude": lng,
-      "alt_name": altNameController.text.trim(),
-      "alt_mobile": altMobileController.text.trim(),
-      "alt_position": altPositionController.text.trim(),
-      "alt_email": altEmailController.text.trim(),
+      if (addressController.text.trim().isNotEmpty) "address": addressController.text.trim(),
     };
 
     final res = await ApiServices.registerOutlet(payload: payload);
@@ -296,12 +249,6 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
       );
     }
   }
-  String _formatTime(TimeOfDay? time) {
-    if (time == null) return "";
-    final hour = time.hour.toString().padLeft(2, '0');
-    final min = time.minute.toString().padLeft(2, '0');
-    return "$hour:$min";
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -309,7 +256,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text(
-          "REGISTRATION",
+          "OUTLET REGISTRATION",
           style: TextStyle(
             color: AppColors.white,
             fontSize: 18,
@@ -338,331 +285,148 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "ROUTE",
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 2),
-
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: AppColors.inputFill,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(widget.routeName.toUpperCase()),
-                      const SizedBox.shrink(),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 5),
-          SizedBox(
-            height: 200,
-            child: isLoadingLocation
-                ? const Center(child: LogoProgressIndicator())
-                : GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: currentPosition,
-                zoom: 14,
-              ),
-              markers: marker != null ? {marker!} : {},
-              myLocationEnabled: true,
-              onTap: (latLng) {
-                setState(() {
-                  marker = Marker(
-                    markerId: const MarkerId("selected"),
-                    position: latLng,
-                  );
-                });
-                _autoFetchAddress(latLng.latitude, latLng.longitude);
-              },
-              onMapCreated: (controller) {
-                _mapController = controller;
-              },
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(10),
-            color: Colors.yellow.shade100,
-            child: const Row(
-              children: [
-                Icon(Icons.warning, color: Colors.orange),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    "Registration has to be done only at the Outlet Location.",
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            children: [
-
-                  _categorySelectField(context.watch<OutletProvider>()),
-
-                  _textField(nameController, "Outlet Name", Icons.store, isRequired: true),
-                  _textField(contactController, "Contact Person", Icons.person, isRequired: true),
-                  _textField(phoneController, "Phone", Icons.phone, isRequired: true),
-
-                  _textField(whatsappController, "WhatsApp Number", Icons.chat),
-                  _buildField(
-                    child: TextField(
-                      controller: dobController,
-                      readOnly: true,
-                      onTap: () async {
-                        DateTime? picked = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime(2000),
-                          firstDate: DateTime(1950),
-                          lastDate: DateTime.now(),
-                        );
-                        if (picked != null) {
-                          dobController.text =
-                          picked.toString().split(" ")[0];
-                        }
-                      },
-                      decoration: const InputDecoration(
-                        hintText: "Date of Birth",
-                        prefixIcon: Icon(Icons.calendar_today),
-                        border: InputBorder.none,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "ROUTE",
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
+                  const SizedBox(height: 2),
                   Container(
-                    margin: const EdgeInsets.all(10),
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    height: 50,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey.shade300),
+                      color: AppColors.inputFill,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Column(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Center(
-                          child: Text(
-                            "SELECT GENDER",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-
-                        RadioListTile<String>(
-                          value: "Male",
-                          groupValue: gender,
-                          activeColor: AppColors.button,
-                          title: const Text("Male"),
-                          onChanged: (v) => setState(() => gender = v!),
-                        ),
-
-                        RadioListTile<String>(
-                          value: "Female",
-                          groupValue: gender,
-                          activeColor: AppColors.button,
-                          title: const Text("Female"),
-                          onChanged: (v) => setState(() => gender = v!),
-                        ),
-
-                        RadioListTile<String>(
-                          value: "other",
-                          groupValue: gender,
-                          activeColor: AppColors.button,
-                          title: const Text("other"),
-                          onChanged: (v) => setState(() => gender = v!),
-                        ),
+                        Text(widget.routeName.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox.shrink(),
                       ],
                     ),
                   ),
-                  _textField(addressController, "Address", Icons.location_on),
-                  _textField(landmarkController, "Landmark", Icons.place),
-                  _textField(landlineController, "Landline", Icons.phone),
-                  _textField(emailController, "Email", Icons.email),
-                  _timeField("Opening Time", true),
-                  _timeField("Closing Time", false),
-
-                  _textField(gstController, "GST", Icons.receipt),
-                  _textField(areaController, "Area (sq ft)", Icons.square_foot),
-
-                  _dropdownField(
-                      value: vicinityType,
-                      list: ["vicinity Type", "ON", "Near","Far"],
-                      icon: Icons.map,
-                      onChanged: (v) => setState(() => vicinityType = v)),
-
-                  _dropdownField(
-                      value: outletShape,
-                      list: ["Outlet Shape", "Square", "Rectangle"],
-                      icon: Icons.crop_square,
-                      onChanged: (v) => setState(() => outletShape = v)),
-
-                  _dropdownField(
-                      value: stockPosition,
-                      list: ["Stock Position", "Shelf Display", "Store room", "Both"],
-                      icon: Icons.inventory,
-                      onChanged: (v) => setState(() => stockPosition = v)),
-
-                  _buildField(
-                    child: TextField(
-                      controller: yearLaunchedController,
-                      readOnly: true,
-                      onTap: () async {
-                        DateTime? picked = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime(1950),
-                          lastDate: DateTime.now(),
-                          initialDatePickerMode: DatePickerMode.year,
-                        );
-
-                        if (picked != null) {
-                          yearLaunchedController.text = picked.year.toString();
-                        }
-                      },
-                      decoration: const InputDecoration(
-                        hintText: "Year Store Launched",
-                        prefixIcon: Icon(Icons.calendar_today),
-                        border: InputBorder.none,
+                ],
+              ),
+            ),
+            const SizedBox(height: 5),
+            SizedBox(
+              height: 200,
+              child: isLoadingLocation
+                  ? const Center(child: LogoProgressIndicator())
+                  : GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: currentPosition,
+                        zoom: 14,
                       ),
+                      markers: marker != null ? {marker!} : {},
+                      myLocationEnabled: true,
+                      onTap: (latLng) {
+                        setState(() {
+                          marker = Marker(
+                            markerId: const MarkerId("selected"),
+                            position: latLng,
+                          );
+                        });
+                        _autoFetchAddress(latLng.latitude, latLng.longitude);
+                      },
+                      onMapCreated: (controller) {
+                        _mapController = controller;
+                      },
+                    ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(10),
+              color: Colors.yellow.shade100,
+              child: const Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.orange),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "Registration has to be done only at the Outlet Location.",
                     ),
                   ),
-
-                  _textField(
-                      footTrafficController, "Average daily foot traffic", Icons.people),
-
-                  const Padding(
-                    padding: EdgeInsets.all(10),
-                    child: Text("ALTERNATIVE CONTACT DETAILS",
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Column(
+              children: [
+                _categorySelectField(context.watch<OutletProvider>()),
+                _textField(nameController, "Outlet Name", Icons.store, isRequired: true),
+                _textField(contactController, "Owner / Contact Person", Icons.person, isRequired: true),
+                _textField(phoneController, "Mobile Number", Icons.phone, isRequired: true),
+                _textField(addressController, "Address", Icons.location_on),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: GestureDetector(
+                onTap: submitOutlet,
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: AppColors.button,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-
-                  _textField(altNameController, "Name", Icons.person),
-                  _textField(altMobileController, "Mobile", Icons.phone),
-                  _textField(altPositionController, "Position", Icons.work),
-                  _textField(altEmailController, "Email", Icons.email),
-
-                  const SizedBox(height: 80),
-            ],
-          ),
-
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: GestureDetector(
-              onTap: submitOutlet,
-              child: Container(
-                height: 50,
-                color: AppColors.button,
-                child: const Center(
-                  child: Text("CONFIRM",
-                      style: TextStyle(color: Colors.white)),
+                  child: Center(
+                    child: isSubmitting
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            "CONFIRM REGISTRATION",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 40),
-        ],
+            const SizedBox(height: 40),
+          ],
+        ),
       ),
-    ));
+    );
   }
+
   Widget _textField(
-      TextEditingController controller,
-      String hint,
-      IconData icon, {
-      bool isRequired = false,
-      }) {
-    bool isNumberField =
-        hint.toLowerCase().contains("phone") ||
-            hint.toLowerCase().contains("mobile") ||
-            hint.toLowerCase().contains("whatsapp") ;
+    TextEditingController controller,
+    String hint,
+    IconData icon, {
+    bool isRequired = false,
+  }) {
+    bool isNumberField = hint.toLowerCase().contains("phone") ||
+        hint.toLowerCase().contains("mobile") ||
+        hint.toLowerCase().contains("whatsapp");
 
     return _buildField(
       child: TextField(
         controller: controller,
-
-        keyboardType:
-        isNumberField
-            ? TextInputType.number
-            : TextInputType.text,
-
-        inputFormatters:
-        isNumberField
+        keyboardType: isNumberField ? TextInputType.number : TextInputType.text,
+        inputFormatters: isNumberField
             ? [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)]
             : null,
-
         decoration: InputDecoration(
           hintText: isRequired ? "$hint *" : hint,
           prefixIcon: Icon(icon),
           border: InputBorder.none,
         ),
-      ),
-    );
-  }
-
-  Widget _dropdownField(
-      {required String value,
-        required List<String> list,
-        required IconData icon,
-        required Function(String) onChanged}) {
-    return _buildField(
-      child: DropdownButtonFormField(
-        value: value,
-        items: list
-            .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-            .toList(),
-        onChanged: (v) => onChanged(v.toString()),
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon),
-          border: InputBorder.none,
-        ),
-      ),
-    );
-  }
-
-  Widget _timeField(String title, bool isOpening) {
-    return _buildField(
-      child: ListTile(
-        leading: const Icon(Icons.access_time),
-        title: Text(isOpening
-            ? (openingTime?.format(context) ?? title)
-            : (closingTime?.format(context) ?? title)),
-        onTap: () async {
-          TimeOfDay? picked = await showTimePicker(
-            context: context,
-            initialTime: TimeOfDay.now(),
-          );
-          if (picked != null) {
-            setState(() {
-              if (isOpening) {
-                openingTime = picked;
-              } else {
-                closingTime = picked;
-              }
-            });
-          }
-        },
       ),
     );
   }

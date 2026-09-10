@@ -283,11 +283,21 @@ class _PobBodyState extends State<PobBody> {
                             }).toList(),
 
                           const SizedBox(height: 16),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8.0),
-                            child: Text(
-                              "CAPTURE / UPLOAD PHOTO",
-                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 13),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "UPLOAD PHOTO OF ORDER COPY",
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  "Capture or select photo of the physical order copy / bill",
+                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -299,20 +309,24 @@ class _PobBodyState extends State<PobBody> {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.button,
                                     foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   ),
                                   onPressed: () => _pickImage(ImageSource.camera),
-                                  icon: const Icon(Icons.camera_alt),
-                                  label: const Text("Camera"),
+                                  icon: const Icon(Icons.camera_alt, size: 18),
+                                  label: const Text("Capture Photo"),
                                 ),
                                 const SizedBox(width: 12),
                                 ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.button,
                                     foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   ),
                                   onPressed: () => _pickImage(ImageSource.gallery),
-                                  icon: const Icon(Icons.photo_library),
-                                  label: const Text("Gallery"),
+                                  icon: const Icon(Icons.photo_library, size: 18),
+                                  label: const Text("Upload Photo"),
                                 ),
                               ],
                             ),
@@ -328,6 +342,7 @@ class _PobBodyState extends State<PobBody> {
                                     width: double.infinity,
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.grey.shade300),
                                       image: DecorationImage(
                                         image: FileImage(File(_capturedImage!.path)),
                                         fit: BoxFit.cover,
@@ -355,7 +370,7 @@ class _PobBodyState extends State<PobBody> {
                             ),
                           const SizedBox(height: 16),
                           const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8.0),
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
                             child: Text(
                               "REMARKS",
                               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 13),
@@ -385,12 +400,20 @@ class _PobBodyState extends State<PobBody> {
                             height: 45,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: _capturedImage == null ? Colors.grey.shade400 : AppColors.button,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
+                                backgroundColor: AppColors.button,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
                               ),
-                              onPressed: _capturedImage == null ? null : () async {
+                              onPressed: () async {
+                                final hasAnyQty = provider.pobQuantities.values.any((q) => q > 0);
+                                if (!hasAnyQty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text("Please enter quantity for at least one item")),
+                                  );
+                                  return;
+                                }
+
                                 final appState = Provider.of<AppStateProvider>(context, listen: false);
 
                                 LoadingDialog.show(context, message: widget.isTelePob ? "Submitting Tele POB..." : "Submitting POB...");
