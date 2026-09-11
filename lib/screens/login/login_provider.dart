@@ -34,19 +34,29 @@ class LoginProvider extends ChangeNotifier {
         final status = response["status"];
         if (status == true || status == "success" || status == 1) {
           final data = (response["data"] is Map) ? response["data"] : response;
-          final token = data["access_token"] ?? response["access_token"];
-          final refreshToken = data["refresh_token"] ?? response["refresh_token"];
+          final token = data["access_token"]?.toString() ??
+              response["access_token"]?.toString() ??
+              data["token"]?.toString() ??
+              response["token"]?.toString() ??
+              data["jwt"]?.toString();
+          final refreshToken = data["refresh_token"]?.toString() ??
+              response["refresh_token"]?.toString() ??
+              data["refreshToken"]?.toString() ??
+              response["refreshToken"]?.toString();
 
-          if (token == null || refreshToken == null) {
+          if (token == null || refreshToken == null || token.trim().isEmpty || refreshToken.trim().isEmpty) {
             error = "Missing login tokens in response";
             isLoading = false;
             notifyListeners();
             return false;
           }
 
+          // Clear any stale cached session/keys first before saving new session
+          await SessionManager.clearSession();
+
           await SessionManager.saveSession(
-            refreshToken: refreshToken,
-            token: token,
+            refreshToken: refreshToken.trim(),
+            token: token.trim(),
           );
 
           final userInfo = data["user_info"] ?? response["user_info"];

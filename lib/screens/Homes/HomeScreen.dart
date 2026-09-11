@@ -307,7 +307,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const SecondaryStockUpdateScreen(),
+                              builder: (_) => SecondaryStockUpdateScreen(
+                                initialDistributorId: appState.selectedDistributorId,
+                                initialDistributorName: appState.selectedDistributor,
+                              ),
                             ),
                           );
                         },

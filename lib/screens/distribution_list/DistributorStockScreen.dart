@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../../constants/app_colors.dart';
 import 'StockOnHandScreen.dart';
 import 'package:provider/provider.dart';
@@ -8,7 +7,14 @@ import '../../../permissions/AppStateProvider.dart';
 import '../../../utilities/common_widgets.dart';
 
 class SecondaryStockUpdateScreen extends StatefulWidget {
-  const SecondaryStockUpdateScreen({super.key});
+  final int? initialDistributorId;
+  final String? initialDistributorName;
+
+  const SecondaryStockUpdateScreen({
+    super.key,
+    this.initialDistributorId,
+    this.initialDistributorName,
+  });
 
   @override
   State<SecondaryStockUpdateScreen> createState() => _SecondaryStockUpdateScreenState();
@@ -20,10 +26,19 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
+    Future.microtask(() async {
+      if (!mounted) return;
       final provider = Provider.of<DistributionListProvider>(context, listen: false);
+      final appState = Provider.of<AppStateProvider>(context, listen: false);
+
+      final targetDistId = widget.initialDistributorId ?? appState.selectedDistributorId;
+      final targetDistName = widget.initialDistributorName ?? appState.selectedDistributor;
+
       provider.fetchProductsWithSkus();
-      provider.fetchDistributorsList();
+      await provider.fetchDistributorsList(
+        initialDistributorId: targetDistId,
+        initialDistributorName: targetDistName,
+      );
     });
   }
 

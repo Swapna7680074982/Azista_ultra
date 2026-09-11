@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
@@ -298,23 +299,40 @@ class ApiServices {
     }
   }
 
+  static Completer<bool>? _refreshCompleter;
+
   static Future<bool> refreshToken() async {
+    // If a refresh is already in progress, wait for it to complete
+    if (_refreshCompleter != null) {
+      AppLogger.info("Token refresh already in progress, awaiting existing request...");
+      return _refreshCompleter!.future;
+    }
+
+    _refreshCompleter = Completer<bool>();
+
     try {
       final refresh = await SessionManager.getRefreshToken();
       if (refresh == null || refresh.isEmpty) {
         AppLogger.warning("Refresh token is null or empty");
+        _refreshCompleter?.complete(false);
+        _refreshCompleter = null;
         return false;
       }
 
       final deviceId = NotificationService.instance.deviceId ?? "no_device";
       final deviceType = Platform.isAndroid ? "Android" : "iOS";
-      final coords = await LocationService.getCoordinates(
-        requestPermission: false,
-        throwOnError: false,
-      ).timeout(
-        const Duration(seconds: 3),
-        onTimeout: () => ["0.0", "0.0"],
-      );
+      
+      // Use cached coordinates if available to prevent timeout delay
+      List<String> coords = LocationService.cachedCoordinates;
+      if (coords.length < 2) {
+        coords = await LocationService.getCoordinates(
+          requestPermission: false,
+          throwOnError: false,
+        ).timeout(
+          const Duration(seconds: 2),
+          onTimeout: () => ["0.0", "0.0"],
+        );
+      }
 
       final payload = {
         "refresh_token": refresh,
@@ -329,12 +347,12 @@ class ApiServices {
       AppLogger.info("Refresh Token API called");
       AppLogger.info("Payload: ${jsonEncode(payload)}");
 
-      // Use a separate Dio instance to avoid infinite loops
+      // Use a separate Dio instance to avoid interceptor recursion
       final dio = Dio(
         BaseOptions(
-          connectTimeout: const Duration(seconds: 50),
-          receiveTimeout: const Duration(seconds: 50),
-          sendTimeout: const Duration(seconds: 50),
+          connectTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(seconds: 30),
+          sendTimeout: const Duration(seconds: 30),
         ),
       );
       final response = await dio.post(
@@ -348,20 +366,41 @@ class ApiServices {
       final parsed = _safeParseJson(response.data);
       AppLogger.info("Refresh Token response: $parsed");
 
-      if (response.statusCode == 200 && parsed is Map && parsed["status"] == true) {
-        final newAccessToken = parsed["access_token"];
-        if (newAccessToken != null) {
-          await SessionManager.saveSession(
-            token: newAccessToken,
-            refreshToken: refresh,
-          );
-          AppLogger.success("Token refreshed successfully");
-          return true;
+      if (response.statusCode == 200 && parsed is Map) {
+        final status = parsed["status"];
+        if (status == true || status == "success" || status == 1) {
+          final data = (parsed["data"] is Map) ? parsed["data"] : parsed;
+          final newAccessToken = data["access_token"]?.toString() ??
+              parsed["access_token"]?.toString() ??
+              data["token"]?.toString() ??
+              parsed["token"]?.toString() ??
+              data["jwt"]?.toString();
+
+          final newRefreshToken = data["refresh_token"]?.toString() ??
+              parsed["refresh_token"]?.toString() ??
+              data["refreshToken"]?.toString() ??
+              parsed["refreshToken"]?.toString() ??
+              refresh;
+
+          if (newAccessToken != null && newAccessToken.isNotEmpty) {
+            await SessionManager.saveSession(
+              token: newAccessToken.trim(),
+              refreshToken: newRefreshToken.trim(),
+            );
+            AppLogger.success("Token refreshed successfully");
+            _refreshCompleter?.complete(true);
+            _refreshCompleter = null;
+            return true;
+          }
         }
       }
+      _refreshCompleter?.complete(false);
+      _refreshCompleter = null;
       return false;
     } catch (e) {
       AppLogger.error("Refresh token error", e);
+      _refreshCompleter?.complete(false);
+      _refreshCompleter = null;
       return false;
     }
   }
@@ -469,38 +508,42 @@ class ApiServices {
       AppLogger.info("Logout API called");
       AppLogger.info("Payload: ${jsonEncode(payload)}");
 
-      final response = await _dio.post(
-        AppUrls.logout,
-        data: payload,
-        options: Options(
-          responseType: ResponseType.plain,
-          headers: {
-            "Authorization": "Bearer $accessToken",
-          },
-          validateStatus: (status) => true,
-        ),
-      );
+      try {
+        final response = await _dio.post(
+          AppUrls.logout,
+          data: payload,
+          options: Options(
+            responseType: ResponseType.plain,
+            headers: {
+              "Authorization": "Bearer $accessToken",
+            },
+            validateStatus: (status) => true,
+          ),
+        );
 
-      final parsed = _safeParseJson(response.data);
-      AppLogger.info("Logout response: $parsed");
+        final parsed = _safeParseJson(response.data);
+        AppLogger.info("Logout response: $parsed");
 
-      if (response.statusCode == 200 &&
-          parsed is Map &&
-          parsed["status"] == true) {
-        AppLogger.success("Logout successful");
-        return true;
+        if (response.statusCode == 200 &&
+            parsed is Map &&
+            parsed["status"] == true) {
+          AppLogger.success("Logout successful");
+        } else if (response.statusCode == 401) {
+          AppLogger.warning("Token expired → treated as logout success");
+        } else {
+          AppLogger.warning("Logout server response not success");
+        }
+      } catch (e) {
+        AppLogger.error("Logout request error", e);
+      } finally {
+        await SessionManager.clearSession();
       }
 
-      if (response.statusCode == 401) {
-        AppLogger.warning("Token expired → treated as logout success");
-        return true;
-      }
-
-      AppLogger.warning("Logout failed");
-      return false;
+      return true;
     } catch (e) {
       AppLogger.error("Logout error", e);
-      return false;
+      await SessionManager.clearSession();
+      return true;
     }
   }
 

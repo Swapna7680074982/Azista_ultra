@@ -90,20 +90,29 @@ class DistributionListProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchDistributorsList() async {
+  Future<void> fetchDistributorsList({int? initialDistributorId, String? initialDistributorName}) async {
     _isLoadingDistributors = true;
     notifyListeners();
 
     final response = await ApiServices.getDistributors();
     if (response != null && response['status'] == true) {
       _distributors = response['data'] ?? [];
-      if (_selectedDistributor != null) {
-        final existingId = _selectedDistributor['distributor_id']?.toString();
+      
+      final targetIdStr = initialDistributorId?.toString() ?? _selectedDistributor?['distributor_id']?.toString();
+      final targetName = initialDistributorName ?? _selectedDistributor?['distributor_name'];
+
+      if (targetIdStr != null || targetName != null) {
         final match = _distributors.where(
-          (d) => d['distributor_id']?.toString() == existingId,
+          (d) => (targetIdStr != null && d['distributor_id']?.toString() == targetIdStr) ||
+                 (targetName != null && d['distributor_name'] == targetName),
         ).firstOrNull;
         if (match != null) {
           _selectedDistributor = match;
+        } else if (targetName != null || targetIdStr != null) {
+          _selectedDistributor = {
+            'distributor_id': targetIdStr ?? '',
+            'distributor_name': targetName ?? '',
+          };
         } else {
           _selectedDistributor = null;
         }
@@ -112,7 +121,14 @@ class DistributionListProvider extends ChangeNotifier {
       }
     } else {
       _distributors = [];
-      _selectedDistributor = null;
+      if (initialDistributorId != null || initialDistributorName != null) {
+        _selectedDistributor = {
+          'distributor_id': initialDistributorId?.toString() ?? '',
+          'distributor_name': initialDistributorName ?? '',
+        };
+      } else {
+        _selectedDistributor = null;
+      }
     }
 
     _isLoadingDistributors = false;
