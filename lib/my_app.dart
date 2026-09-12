@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
-        title: 'Ultra Edge',
+        title: 'ASTRA',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: AppColors.button,
