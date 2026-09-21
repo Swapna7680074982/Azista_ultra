@@ -257,9 +257,35 @@ class _Logo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      ImageConstants.appLogo,
-      width: 250,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            ImageConstants.appLogo,
+            width: 220,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: 180,
+            height: 1.5,
+            color: Colors.white.withValues(alpha: 0.6),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            "Field Force Automation for Smarter Sales Operations",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -48,9 +48,35 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Container(
         color: AppColors.primary,
         child: Center(
-          child: Image.asset(
-            ImageConstants.appLogo,
-            width: 220,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  ImageConstants.appLogo,
+                  width: 240,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: 200,
+                  height: 1.5,
+                  color: Colors.white.withValues(alpha: 0.6),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "Field Force Automation for Smarter Sales Operations",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
