@@ -161,92 +161,118 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
       return;
     }
 
-    double lat = currentPosition.latitude;
-    double lng = currentPosition.longitude;
-
-    if (marker != null) {
-      lat = marker!.position.latitude;
-      lng = marker!.position.longitude;
-
-      try {
-        final coords = await LocationService.getCoordinates();
-        final currentLat = double.parse(coords[0]);
-        final currentLng = double.parse(coords[1]);
-
-        final distance = Geolocator.distanceBetween(
-          currentLat,
-          currentLng,
-          lat,
-          lng,
-        );
-
-        if (distance > 10000) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Selected location is ${(distance / 1000).toStringAsFixed(1)} km away. You must be within 10 km to register an outlet.")),
-          );
-          return;
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to verify location. Please check GPS and try again.")),
-        );
-        return;
-      }
-    } else {
-      try {
-        final coords = await LocationService.getCoordinates();
-        lat = double.parse(coords[0]);
-        lng = double.parse(coords[1]);
-      } catch (_) {
-        lat = currentPosition.latitude;
-        lng = currentPosition.longitude;
-      }
-    }
-
     if (isSubmitting) return;
 
     setState(() => isSubmitting = true);
+    LoadingDialog.show(context, message: "Registering outlet...");
 
-    int distId = widget.routeId;
     try {
-      final appState = Provider.of<AppStateProvider>(context, listen: false);
-      if (appState.selectedDistributorId != null) {
-        distId = appState.selectedDistributorId!;
+      double lat = currentPosition.latitude;
+      double lng = currentPosition.longitude;
+
+      if (marker != null) {
+        lat = marker!.position.latitude;
+        lng = marker!.position.longitude;
+
+        try {
+          final coords = await LocationService.getCoordinates();
+          final currentLat = double.parse(coords[0]);
+          final currentLng = double.parse(coords[1]);
+
+          final distance = Geolocator.distanceBetween(
+            currentLat,
+            currentLng,
+            lat,
+            lng,
+          );
+
+          if (distance > 250) {
+            if (mounted) LoadingDialog.hide(context);
+            final distStr = distance < 1000 ? "${distance.toStringAsFixed(0)} m" : "${(distance / 1000).toStringAsFixed(1)} km";
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Selected location is $distStr away. You must be within 250 meters to register an outlet.")),
+              );
+            }
+            return;
+          }
+        } catch (e) {
+          if (mounted) LoadingDialog.hide(context);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Failed to verify location. Please check GPS and try again.")),
+            );
+          }
+          return;
+        }
       } else {
-        final dists = await SessionManager.getDistributors();
-        if (dists.isNotEmpty) {
-          distId = int.tryParse(dists.first["distributor_id"]?.toString() ?? '') ?? widget.routeId;
+        try {
+          final coords = await LocationService.getCoordinates();
+          lat = double.parse(coords[0]);
+          lng = double.parse(coords[1]);
+        } catch (_) {
+          lat = currentPosition.latitude;
+          lng = currentPosition.longitude;
         }
       }
-    } catch (_) {}
 
-    final payload = {
-      "route_id": widget.routeId,
-      "distributor_id": distId,
-      "outlet_category": int.tryParse(selectedCategory!.categoryId) ?? 0,
-      "outlet_name": nameController.text.trim(),
-      "owner_name": contactController.text.trim(),
-      "mobile": phoneController.text.trim(),
-      "latitude": lat,
-      "longitude": lng,
-      if (addressController.text.trim().isNotEmpty) "address": addressController.text.trim(),
-    };
+      if (!mounted) return;
+      int distId = widget.routeId;
+      try {
+        final appState = Provider.of<AppStateProvider>(context, listen: false);
+        if (appState.selectedDistributorId != null) {
+          distId = appState.selectedDistributorId!;
+        } else {
+          final dists = await SessionManager.getDistributors();
+          if (dists.isNotEmpty) {
+            distId = int.tryParse(dists.first["distributor_id"]?.toString() ?? '') ?? widget.routeId;
+          }
+        }
+      } catch (_) {}
 
-    final res = await ApiServices.registerOutlet(payload: payload);
+      final payload = {
+        "route_id": widget.routeId,
+        "distributor_id": distId,
+        "outlet_category": int.tryParse(selectedCategory!.categoryId) ?? 0,
+        "outlet_name": nameController.text.trim(),
+        "owner_name": contactController.text.trim(),
+        "mobile": phoneController.text.trim(),
+        "latitude": lat,
+        "longitude": lng,
+        if (addressController.text.trim().isNotEmpty) "address": addressController.text.trim(),
+      };
 
-    setState(() => isSubmitting = false);
+      final res = await ApiServices.registerOutlet(payload: payload);
 
-    final message = res?["message"]?.toString() ?? "Registration failed";
-    final status = res?["status"] == true;
+      if (mounted) LoadingDialog.hide(context);
 
-    if (status) {
-      SuccessDialog.show(context, message: message, onDismiss: () {
-        Navigator.pop(context, true);
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      final message = res?["message"]?.toString() ?? "Registration failed";
+      final status = res?["status"] == true;
+
+      if (status) {
+        if (mounted) {
+          SuccessDialog.show(context, message: message, onDismiss: () {
+            Navigator.pop(context, true);
+          });
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) LoadingDialog.hide(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("An error occurred: $e")),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isSubmitting = false);
+      }
     }
   }
 
@@ -385,13 +411,18 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
                   ),
                   child: Center(
                     child: isSubmitting
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                          )
                         : const Text(
-                            "CONFIRM REGISTRATION",
+                            "COMPLETE REGISTRATION",
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
+                              letterSpacing: 0.5,
                             ),
                           ),
                   ),

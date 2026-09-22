@@ -1037,10 +1037,16 @@ class ApiServices {
       if (response.statusCode == 200 && parsed is Map) {
         return Map<String, dynamic>.from(parsed);
       }
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
       return null;
     } catch (e) {
       AppLogger.error("Get User Outlets error", e);
-      return null;
+      return {
+        "status": "error",
+        "message": "Connection error: ${e.toString()}",
+      };
     }
   }
 
@@ -1087,10 +1093,16 @@ class ApiServices {
       if (response.statusCode == 200 && parsed is Map) {
         return Map<String, dynamic>.from(parsed);
       }
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
       return null;
     } catch (e) {
       AppLogger.error("Get Nearby Outlets error", e);
-      return null;
+      return {
+        "status": "error",
+        "message": "Connection error: ${e.toString()}",
+      };
     }
   }
 

@@ -112,6 +112,12 @@ class OutletProvider extends ChangeNotifier {
   List<Outlet> _nearbyOutlets = [];
   bool isLoading = false;
   String _searchQuery = "";
+  String? _outletsErrorMessage;
+  String? _nearbyErrorMessage;
+
+  String? get outletsErrorMessage => _outletsErrorMessage;
+  String? get nearbyErrorMessage => _nearbyErrorMessage;
+  String get searchQuery => _searchQuery;
 
   // Reactive active check-in state across NearMe & Outlets screens
   int? _checkedInOutletId;
@@ -223,14 +229,30 @@ class OutletProvider extends ChangeNotifier {
 
   Future<void> fetchOutlets(int routeId) async {
     isLoading = true;
+    _outletsErrorMessage = null;
     notifyListeners();
 
-    final response = await ApiServices.getUserOutlets(routeId: routeId);
-    if (response != null && response['data'] != null) {
-      final List<dynamic> data = response['data'];
-      _outlets = data.map((json) => Outlet.fromJson(json)).toList();
-    } else {
+    try {
+      final response = await ApiServices.getUserOutlets(routeId: routeId);
+      if (response != null && response['data'] != null && response['data'] is List) {
+        final List<dynamic> data = response['data'];
+        _outlets = data.map((json) => Outlet.fromJson(json)).toList();
+        _outletsErrorMessage = null;
+      } else {
+        _outlets = [];
+        if (response != null && response['message'] != null && response['message'].toString().trim().isNotEmpty) {
+          _outletsErrorMessage = response['message'].toString();
+        } else if (response != null && response['status'] == 'error') {
+          _outletsErrorMessage = response['message']?.toString() ?? "Failed to load outlets";
+        } else if (response == null) {
+          _outletsErrorMessage = "Unable to connect to server. Please check your internet connection and retry.";
+        } else {
+          _outletsErrorMessage = null;
+        }
+      }
+    } catch (e) {
       _outlets = [];
+      _outletsErrorMessage = "An error occurred: ${e.toString()}";
     }
 
     isLoading = false;
@@ -242,6 +264,7 @@ class OutletProvider extends ChangeNotifier {
 
   Future<void> fetchNearbyOutlets(double latitude, double longitude, {int radius = 10, int? routeId}) async {
     isLoading = true;
+    _nearbyErrorMessage = null;
     notifyListeners();
     await _fetchNearbyOutletsInternal(latitude, longitude, radius: radius, routeId: routeId);
     isLoading = false;
@@ -250,23 +273,39 @@ class OutletProvider extends ChangeNotifier {
   }
 
   Future<void> _fetchNearbyOutletsInternal(double latitude, double longitude, {int radius = 10, int? routeId}) async {
-    final response = await ApiServices.getNearbyOutlets(
-      latitude: latitude,
-      longitude: longitude,
-      radius: radius,
-      routeId: routeId,
-    );
-    
-    if (response != null && response['data'] != null) {
-      final List<dynamic> data = response['data'];
-      _nearbyOutlets = data.map((json) => Outlet.fromJson(json)).toList();
-    } else {
+    try {
+      final response = await ApiServices.getNearbyOutlets(
+        latitude: latitude,
+        longitude: longitude,
+        radius: radius,
+        routeId: routeId,
+      );
+      
+      if (response != null && response['data'] != null && response['data'] is List) {
+        final List<dynamic> data = response['data'];
+        _nearbyOutlets = data.map((json) => Outlet.fromJson(json)).toList();
+        _nearbyErrorMessage = null;
+      } else {
+        _nearbyOutlets = [];
+        if (response != null && response['message'] != null && response['message'].toString().trim().isNotEmpty) {
+          _nearbyErrorMessage = response['message'].toString();
+        } else if (response != null && response['status'] == 'error') {
+          _nearbyErrorMessage = response['message']?.toString() ?? "Failed to load nearby outlets";
+        } else if (response == null) {
+          _nearbyErrorMessage = "Unable to connect to server. Please check your internet connection and retry.";
+        } else {
+          _nearbyErrorMessage = null;
+        }
+      }
+    } catch (e) {
       _nearbyOutlets = [];
+      _nearbyErrorMessage = "An error occurred: ${e.toString()}";
     }
   }
 
   Future<void> refreshNearbyOutlets({int? routeId}) async {
     isLoading = true;
+    _nearbyErrorMessage = null;
     notifyListeners();
     try {
       final coords = await LocationService.getCoordinates();
@@ -275,6 +314,7 @@ class OutletProvider extends ChangeNotifier {
       await _fetchNearbyOutletsInternal(lat, lng, radius: 10, routeId: routeId);
     } catch (e) {
       debugPrint("Error refreshing location/outlets: $e");
+      _nearbyErrorMessage = "Unable to determine current location: ${e.toString()}";
     } finally {
       isLoading = false;
       notifyListeners();

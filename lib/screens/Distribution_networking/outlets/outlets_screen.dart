@@ -67,6 +67,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
         _userRole = role;
       });
     }
+    if (!mounted) return;
     final provider = Provider.of<OutletProvider>(context, listen: false);
     await Future.wait([
       _loadUserLocation(),
@@ -261,7 +262,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
     showDialog(
       context: context,
       builder: (ctx) {
-        final distStr = distance != null ? "${(distance / 1000).toStringAsFixed(1)} km" : "out of range";
+        final distStr = distance != null ? (distance < 1000 ? "${distance.toStringAsFixed(0)} m" : "${(distance / 1000).toStringAsFixed(1)} km") : "out of range";
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
@@ -281,7 +282,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "You are currently $distStr away from ${outlet.name.toUpperCase()}.",
+                "You are currently $distStr away from ${outlet.name.toUpperCase()}. Physical check-in requires being within 250 meters.",
                 style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
               ),
               const SizedBox(height: 14),
@@ -346,7 +347,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
                 LoadingDialog.hide(context);
 
                 final newDist = _getDistanceToOutlet(outlet);
-                if (newDist != null && newDist <= 10000) {
+                if (newDist != null && newDist <= 250) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Location verified! Outlet unblocked.")),
                   );
@@ -358,9 +359,11 @@ class _OutletsScreenState extends State<OutletsScreen> {
                   );
                   _loadCheckInStatus();
                 } else {
-                  final distMsg = newDist != null ? "${(newDist / 1000).toStringAsFixed(1)} km" : "Unknown";
+                  final distMsg = newDist != null
+                      ? (newDist < 1000 ? "${newDist.toStringAsFixed(0)} m" : "${(newDist / 1000).toStringAsFixed(1)} km")
+                      : "Unknown";
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Still out of range ($distMsg). You must be within 10km.")),
+                    SnackBar(content: Text("Still out of range ($distMsg). You must be within 250 meters.")),
                   );
                 }
               },
@@ -472,7 +475,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
         ? provider.checkedInTime!.toIso8601String()
         : _checkInTimeAndDate;
     final distance = _getDistanceToOutlet(outlet);
-    final isBlocked = distance != null && distance > 10000;
+    final isBlocked = distance != null && distance > 250;
 
     final cardContent = Container(
       padding: const EdgeInsets.all(12),
@@ -518,9 +521,9 @@ class _OutletsScreenState extends State<OutletsScreen> {
                 )
               else if (distance != null)
                 Text(
-                  "${(distance / 1000).toStringAsFixed(1)} km",
+                  distance < 1000 ? "${distance.toStringAsFixed(0)} m" : "${(distance / 1000).toStringAsFixed(1)} km",
                   style: TextStyle(
-                    color: distance > 10000 ? Colors.red.shade700 : Colors.green.shade700,
+                    color: distance > 250 ? Colors.red.shade700 : Colors.green.shade700,
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
@@ -542,9 +545,9 @@ class _OutletsScreenState extends State<OutletsScreen> {
           ] else if (distance != null) ...[
             const SizedBox(height: 4),
             Text(
-              "DISTANCE: ${(distance / 1000).toStringAsFixed(1)} km ${distance > 10000 ? '(> 10km limit)' : '(Within range)'}",
+              "DISTANCE: ${distance < 1000 ? '${distance.toStringAsFixed(0)} m' : '${(distance / 1000).toStringAsFixed(1)} km'} ${distance > 250 ? '(> 250m limit)' : '(Within range)'}",
               style: TextStyle(
-                color: distance > 10000 ? Colors.red.shade700 : Colors.green.shade700,
+                color: distance > 250 ? Colors.red.shade700 : Colors.green.shade700,
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
@@ -750,6 +753,103 @@ class _OutletsScreenState extends State<OutletsScreen> {
     );
   }
 
+  Widget _buildEmptyOrErrorState(OutletProvider provider) {
+    final hasError = provider.outletsErrorMessage != null && provider.outletsErrorMessage!.isNotEmpty;
+    final isSearching = provider.searchQuery.isNotEmpty;
+
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: hasError
+                          ? Colors.red.shade50
+                          : (isSearching ? Colors.amber.shade50 : AppColors.primary.withValues(alpha: 0.08)),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      hasError
+                          ? Icons.error_outline
+                          : (isSearching ? Icons.search_off : Icons.storefront_outlined),
+                      size: 38,
+                      color: hasError
+                          ? Colors.red.shade700
+                          : (isSearching ? Colors.amber.shade800 : AppColors.primary),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    hasError
+                        ? "Failed to Load Outlets"
+                        : (isSearching ? "No Matching Outlets" : "No Outlets Found"),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    hasError
+                        ? provider.outletsErrorMessage!
+                        : (isSearching
+                            ? "No outlets matched '${provider.searchQuery}'. Try adjusting your search query."
+                            : "No outlets found registered for this route."),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                      height: 1.4,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 2,
+                    ),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text(
+                      "REFRESH DATA",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    onPressed: () async {
+                      await _loadUserLocation();
+                      await provider.fetchOutlets(widget.routeId);
+                      if (mounted) {
+                        await _loadCheckInStatus();
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<OutletProvider>();
@@ -782,6 +882,24 @@ class _OutletsScreenState extends State<OutletsScreen> {
           color: AppColors.white,
         ),
         actions: [
+          IconButton(
+            tooltip: "Refresh Outlets",
+            icon: const Icon(Icons.refresh),
+            onPressed: () async {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing outlets..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              await _loadUserLocation();
+              await provider.fetchOutlets(widget.routeId);
+              if (mounted) {
+                await _loadCheckInStatus();
+              }
+            },
+          ),
           IconButton(
             tooltip: "My Geo Requests",
             icon: const Icon(Icons.history_toggle_off),
@@ -896,20 +1014,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
                       }
                     },
                     child: provider.outlets.isEmpty
-                        ? LayoutBuilder(
-                            builder: (context, constraints) => SingleChildScrollView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                                child: const Center(
-                                  child: Text(
-                                    "No outlets found",
-                                    style: TextStyle(color: Colors.grey, fontSize: 14),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          )
+                        ? _buildEmptyOrErrorState(provider)
                         : ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
                             itemCount: provider.outlets.length,

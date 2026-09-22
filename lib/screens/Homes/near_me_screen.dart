@@ -17,6 +17,7 @@ import '../../services/api_services.dart';
 import '../../utilities/common_widgets.dart';
 import '../geo_requests/my_geo_requests_screen.dart';
 import '../geo_requests/direct_coordinate_update_screen.dart';
+import 'main_tab_provider.dart';
 
 class NearMeScreen extends StatefulWidget {
   const NearMeScreen({super.key});
@@ -31,6 +32,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
   double? _userLat;
   double? _userLng;
   String _userRole = 'SO';
+  int _lastRefreshTick = 0;
 
   bool get _isManager =>
       _userRole.toUpperCase() == 'RM' ||
@@ -44,6 +46,22 @@ class _NearMeScreenState extends State<NearMeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    try {
+      final tabProvider = Provider.of<MainTabProvider>(context);
+      if (tabProvider.currentIndex == 2 && tabProvider.nearMeRefreshTick != _lastRefreshTick) {
+        _lastRefreshTick = tabProvider.nearMeRefreshTick;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _loadData();
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadData() async {
@@ -263,7 +281,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
     showDialog(
       context: context,
       builder: (ctx) {
-        final distStr = distance != null ? "${(distance / 1000).toStringAsFixed(1)} km" : "out of range";
+        final distStr = distance != null ? (distance < 1000 ? "${distance.toStringAsFixed(0)} m" : "${(distance / 1000).toStringAsFixed(1)} km") : "out of range";
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
@@ -283,7 +301,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "You are currently $distStr away from ${outlet.name.toUpperCase()}.",
+                "You are currently $distStr away from ${outlet.name.toUpperCase()}. Physical check-in requires being within 250 meters.",
                 style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
               ),
               const SizedBox(height: 14),
@@ -348,7 +366,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
                 LoadingDialog.hide(context);
 
                 final newDist = _getDistanceToOutlet(outlet);
-                if (newDist != null && newDist <= 10000) {
+                if (newDist != null && newDist <= 250) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Location verified! Outlet unblocked.")),
                   );
@@ -360,9 +378,11 @@ class _NearMeScreenState extends State<NearMeScreen> {
                   );
                   _loadCheckInStatus();
                 } else {
-                  final distMsg = newDist != null ? "${(newDist / 1000).toStringAsFixed(1)} km" : "Unknown";
+                  final distMsg = newDist != null
+                      ? (newDist < 1000 ? "${newDist.toStringAsFixed(0)} m" : "${(newDist / 1000).toStringAsFixed(1)} km")
+                      : "Unknown";
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Still out of range ($distMsg). You must be within 10km.")),
+                    SnackBar(content: Text("Still out of range ($distMsg). You must be within 250 meters.")),
                   );
                 }
               },
@@ -474,7 +494,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
         ? provider.checkedInTime!.toIso8601String()
         : _checkInTimeAndDate;
     final distance = _getDistanceToOutlet(outlet);
-    final isBlocked = distance != null && distance > 10000;
+    final isBlocked = distance != null && distance > 250;
 
     final cardContent = Container(
       padding: const EdgeInsets.all(12),
@@ -520,9 +540,9 @@ class _NearMeScreenState extends State<NearMeScreen> {
                 )
               else if (distance != null)
                 Text(
-                  "${(distance / 1000).toStringAsFixed(1)} km",
+                  distance < 1000 ? "${distance.toStringAsFixed(0)} m" : "${(distance / 1000).toStringAsFixed(1)} km",
                   style: TextStyle(
-                    color: distance > 10000 ? Colors.red.shade700 : Colors.green.shade700,
+                    color: distance > 250 ? Colors.red.shade700 : Colors.green.shade700,
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
@@ -537,9 +557,9 @@ class _NearMeScreenState extends State<NearMeScreen> {
               Text("OUTLET ID: ${outlet.id}", style: TextStyle(color: Colors.grey.shade700, fontSize: 15)),
               if (distance != null)
                 Text(
-                  "${(distance / 1000).toStringAsFixed(1)} km ${distance > 10000 ? '(> 10km limit)' : '(In range)'}",
+                  "${distance < 1000 ? '${distance.toStringAsFixed(0)} m' : '${(distance / 1000).toStringAsFixed(1)} km'} ${distance > 250 ? '(> 250m limit)' : '(In range)'}",
                   style: TextStyle(
-                    color: distance > 10000 ? Colors.red.shade700 : Colors.green.shade700,
+                    color: distance > 250 ? Colors.red.shade700 : Colors.green.shade700,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -757,6 +777,99 @@ class _NearMeScreenState extends State<NearMeScreen> {
     );
   }
 
+  Widget _buildEmptyOrErrorState(OutletProvider provider) {
+    final hasError = provider.nearbyErrorMessage != null && provider.nearbyErrorMessage!.isNotEmpty;
+    final isSearching = provider.searchQuery.isNotEmpty;
+
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: hasError
+                          ? Colors.red.shade50
+                          : (isSearching ? Colors.amber.shade50 : AppColors.primary.withValues(alpha: 0.08)),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      hasError
+                          ? Icons.error_outline
+                          : (isSearching ? Icons.search_off : Icons.storefront_outlined),
+                      size: 38,
+                      color: hasError
+                          ? Colors.red.shade700
+                          : (isSearching ? Colors.amber.shade800 : AppColors.primary),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    hasError
+                        ? "Failed to Load Outlets"
+                        : (isSearching ? "No Matching Outlets" : "No Nearby Outlets Found"),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    hasError
+                        ? provider.nearbyErrorMessage!
+                        : (isSearching
+                            ? "No outlets matched '${provider.searchQuery}'. Try adjusting your search query."
+                            : "No outlets found within 10 km radius of your current location. Make sure GPS is enabled."),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                      height: 1.4,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 2,
+                    ),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text(
+                      "REFRESH DATA",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    onPressed: () {
+                      _loadData();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<OutletProvider>();
@@ -781,6 +894,20 @@ class _NearMeScreenState extends State<NearMeScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            tooltip: "Refresh Outlets",
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing nearby outlets..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              _loadData();
+            },
+          ),
           IconButton(
             tooltip: "My Geo Requests",
             icon: const Icon(Icons.history_toggle_off, color: Colors.white),
@@ -838,20 +965,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
                     color: AppColors.primary,
                     onRefresh: _loadData,
                     child: provider.nearbyOutlets.isEmpty
-                        ? LayoutBuilder(
-                            builder: (context, constraints) => SingleChildScrollView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                                child: const Center(
-                                  child: Text(
-                                    "No nearby outlets found",
-                                    style: TextStyle(color: Colors.grey, fontSize: 14),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          )
+                        ? _buildEmptyOrErrorState(provider)
                         : ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
                             itemCount: provider.nearbyOutlets.length,

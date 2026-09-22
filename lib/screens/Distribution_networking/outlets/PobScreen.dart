@@ -86,11 +86,12 @@ class _PobBodyState extends State<PobBody> {
             widget.outletLng,
           );
 
-          if (distance > 10000) {
+          if (distance > 250) {
             if (mounted) {
               setState(() {
                 isLocationValid = false;
-                locationError = "You are ${distance.toStringAsFixed(0)} meters away from the outlet. You must be within 10 km to add POB.";
+                final distStr = distance < 1000 ? "${distance.toStringAsFixed(0)} m" : "${(distance / 1000).toStringAsFixed(1)} km";
+                locationError = "You are $distStr away from the outlet. You must be within 250 meters to add regular POB (or choose Tele POB).";
               });
             }
             return;

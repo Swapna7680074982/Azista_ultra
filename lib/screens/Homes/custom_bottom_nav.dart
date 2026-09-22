@@ -4,10 +4,6 @@ import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../permissions/AccessValidator.dart';
 import '../../permissions/AppStateProvider.dart';
-import '../Distribution_networking/outlets/outlet_provider.dart';
-import '../Distribution_networking/distribution_provider.dart';
-import 'HomeProvider.dart';
-import '../attendance/attendance_provider.dart';
 import 'main_tab_provider.dart';
 
 class CustomBottomNav extends StatelessWidget {
@@ -63,9 +59,7 @@ class CustomBottomNav extends StatelessWidget {
                   return;
                 }
 
-                if (provider.currentIndex != 2) {
-                  provider.setTab(2);
-                }
+                provider.setTab(2);
               },
               child: Column(
                 children: [
