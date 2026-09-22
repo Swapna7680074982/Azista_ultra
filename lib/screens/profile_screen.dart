@@ -8,6 +8,7 @@ import '../../services/api_services.dart';
 import 'login/login_screen.dart';
 import 'Homes/change_password.dart';
 import '../utilities/common_widgets.dart';
+import '../utilities/delete_account_dialog.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -61,6 +62,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   context,
                   MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
                 );
+              } else if (value == 'delete_account') {
+                showDeleteAccountDialog(context);
               }
             },
             itemBuilder: (BuildContext context) {
@@ -72,6 +75,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Icon(Icons.lock_outline, color: Colors.black87, size: 20),
                       SizedBox(width: 8),
                       Text('Change Password'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'delete_account',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, color: Colors.red.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Text('Delete Account', style: TextStyle(color: Colors.red.shade700)),
                     ],
                   ),
                 ),
@@ -90,6 +103,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildInfoList(),
                   const SizedBox(height: 40),
                   _buildLogoutButton(),
+                  const SizedBox(height: 14),
+                  _buildDeleteAccountButton(),
                   const SizedBox(height: 20),
                 ],
               ),
@@ -226,6 +241,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildDeleteAccountButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: SizedBox(
+        width: double.infinity,
+        height: 55,
+        child: OutlinedButton(
+          onPressed: () => showDeleteAccountDialog(context),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.red.shade700,
+            side: BorderSide(color: Colors.red.shade300),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.delete_outline, color: Colors.red.shade700),
+              const SizedBox(width: 10),
+              Text(
+                "Delete Account",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleLogout() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -243,6 +293,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (confirm == true) {
+      if (!mounted) return;
       // Pre-capture providers and navigator before async operations
       final appState = Provider.of<AppStateProvider>(context, listen: false);
       final homeProvider = Provider.of<HomeProvider>(context, listen: false);

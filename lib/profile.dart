@@ -13,6 +13,7 @@ import 'package:azista_ultra/screens/attendance/TeamAttendanceScreen.dart';
 import 'package:azista_ultra/screens/distribution_list/TeamPosHistoryScreen.dart';
 import 'package:azista_ultra/screens/profile_screen.dart';
 import 'package:azista_ultra/services/api_services.dart';
+import 'package:azista_ultra/utilities/delete_account_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:provider/provider.dart';
@@ -99,6 +100,7 @@ class ProfileDrawer extends StatelessWidget {
 
           menuItem(context, "Support"),
           menuItem(context, "Change Password"),
+          menuItem(context, "Delete Account"),
           menuItem(context, "Logout"),
         ],
       ),
@@ -285,6 +287,11 @@ class ProfileDrawer extends StatelessWidget {
                 context,
                 MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
               );
+              break;
+
+            case "Delete Account":
+              navProvider.setTab(0);
+              showDeleteAccountDialog(context);
               break;
 
             case "Logout":

@@ -606,6 +606,58 @@ class ApiServices {
     }
   }
 
+  static Future<Map<String, dynamic>?> deleteAccount({
+    required String password,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+
+      if (token == null) {
+        AppLogger.warning("No token found for deleteAccount");
+        return null;
+      }
+
+      final payload = {
+        "password": password,
+      };
+
+      AppLogger.info("Delete Account API called: ${AppUrls.deleteAccount}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.deleteAccount,
+        data: payload,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Delete Account response: $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+
+      return null;
+    } on DioException catch (e) {
+      AppLogger.error("Delete Account DioException", e);
+      if (e.response != null && e.response?.data != null) {
+        final parsed = _safeParseJson(e.response?.data);
+        if (parsed is Map) {
+          return Map<String, dynamic>.from(parsed);
+        }
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Delete Account error", e);
+      return null;
+    }
+  }
+
   static Future<Map<String, dynamic>?> getRoutes() async {
     try {
       final token = await SessionManager.getToken();

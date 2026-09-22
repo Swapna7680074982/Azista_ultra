@@ -144,4 +144,38 @@ class LoginProvider extends ChangeNotifier {
     return false;
   }
 
+  Future<Map<String, dynamic>?> deleteAccount({
+    required String password,
+  }) async {
+    isLoading = true;
+    error = null;
+    notifyListeners();
+
+    try {
+      final response = await ApiServices.deleteAccount(
+        password: password,
+      );
+
+      if (response != null &&
+          (response["status"] == true ||
+           response["status"] == "success" ||
+           response["status_code"] == 200 ||
+           response["statusCode"] == 200)) {
+        await SessionManager.clearSession();
+
+        isLoading = false;
+        notifyListeners();
+        return response;
+      } else {
+        error = response?["message"]?.toString() ?? "Delete account failed";
+      }
+    } catch (e) {
+      debugPrint("Delete account error: $e");
+      error = "Operation failed";
+    }
+
+    isLoading = false;
+    notifyListeners();
+    return null;
+  }
 }
