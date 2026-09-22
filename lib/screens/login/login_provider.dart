@@ -121,14 +121,18 @@ class LoginProvider extends ChangeNotifier {
         confirmPassword: confirmPassword,
       );
 
-      if (response != null && response["status"] == true) {
+      if (response != null &&
+          (response["status"] == true ||
+           response["status"] == "success" ||
+           response["status_code"] == 200 ||
+           response["statusCode"] == 200)) {
         await SessionManager.clearSession();
 
         isLoading = false;
         notifyListeners();
         return true;
       } else {
-        error = response?["message"] ?? "Change password failed";
+        error = response?["message"]?.toString() ?? "Change password failed";
       }
     } catch (e) {
       debugPrint("Change password error: $e");

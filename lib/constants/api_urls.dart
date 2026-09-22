@@ -7,7 +7,7 @@ class AppUrls {
   static const String login = "$astraBaseUrl/user/login";
   static const String logout = "$astraBaseUrl/user/logout";
   static const String refreshToken = "$astraBaseUrl/user/refresh_token";
-  static const String changePassword = "$ultraIrisBaseUrl/user/change_password";
+  static const String changePassword = "$astraBaseUrl/user/change_password";
   static const String routes = "$astraBaseUrl/user/get_user_routes";
   static const String getDistributors = "$astraBaseUrl/user/get_user_distributors";
   static const String markAttendance = "$astraBaseUrl/user/mark_attendance";

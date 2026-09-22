@@ -162,10 +162,11 @@ class ApiServices {
         final isLogin = path.contains('/user/login');
         final isRefresh = path.contains('/user/refresh_token');
         final isLogout = path.contains('/user/logout');
+        final isRetry = response.requestOptions.extra['isRetry'] == true;
 
         final parsedData = _safeParseJson(response.data);
 
-        if (!isLogin && !isRefresh && !isLogout &&
+        if (!isRetry && !isLogin && !isRefresh && !isLogout &&
             (response.statusCode == 401 ||
                 (parsedData is Map &&
                     (parsedData["message"]?.toString().contains("Token expired") == true ||
@@ -183,6 +184,8 @@ class ApiServices {
             opts.headers["Authorization"] = "Bearer $token";
             
             try {
+              final extra = Map<String, dynamic>.from(opts.extra);
+              extra["isRetry"] = true;
               final cloneReq = await _dio.request(
                 opts.path,
                 data: opts.data,
@@ -192,6 +195,7 @@ class ApiServices {
                   headers: opts.headers,
                   contentType: opts.contentType,
                   responseType: opts.responseType,
+                  extra: extra,
                 ),
               );
               return handler.resolve(cloneReq);
@@ -212,10 +216,11 @@ class ApiServices {
         final isLogin = path.contains('/user/login');
         final isRefresh = path.contains('/user/refresh_token');
         final isLogout = path.contains('/user/logout');
+        final isRetry = e.requestOptions.extra['isRetry'] == true;
 
         final parsedData = _safeParseJson(e.response?.data);
 
-        if (!isLogin && !isRefresh && !isLogout &&
+        if (!isRetry && !isLogin && !isRefresh && !isLogout &&
             (e.response?.statusCode == 401 ||
                 (parsedData is Map &&
                     (parsedData["message"]?.toString().contains("Token expired") == true ||
@@ -233,6 +238,8 @@ class ApiServices {
             opts.headers["Authorization"] = "Bearer $token";
             
             try {
+              final extra = Map<String, dynamic>.from(opts.extra);
+              extra["isRetry"] = true;
               final cloneReq = await _dio.request(
                 opts.path,
                 data: opts.data,
@@ -242,6 +249,7 @@ class ApiServices {
                   headers: opts.headers,
                   contentType: opts.contentType,
                   responseType: opts.responseType,
+                  extra: extra,
                 ),
               );
               return handler.resolve(cloneReq);
