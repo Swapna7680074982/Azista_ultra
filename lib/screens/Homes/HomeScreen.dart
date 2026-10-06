@@ -187,12 +187,30 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
 
-          const SizedBox(width: 12),
+          IconButton(
+            tooltip: "Refresh Dashboard",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () async {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing dashboard..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              await _refreshData();
+            },
+          ),
+          const SizedBox(width: 4),
         ],
       ),
 
-      body: SingleChildScrollView(
-        child: Column(
+      body: RefreshIndicator(
+        onRefresh: () => _refreshData(),
+        color: AppColors.primary,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
           children: [
             const SizedBox(height: 10),
 
@@ -1087,6 +1105,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 

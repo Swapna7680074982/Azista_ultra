@@ -299,6 +299,24 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
           ),
         ),
         iconTheme: const IconThemeData(color: AppColors.white),
+        actions: [
+          IconButton(
+            tooltip: "Refresh Outlet History",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing outlet history..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              _fetchPobHistory();
+              _fetchVisitHistory();
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.white,

@@ -88,8 +88,25 @@ class _MyGeoRequestsScreenState extends State<MyGeoRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const WavyAppBar(
+      appBar: WavyAppBar(
         title: "MY GEO REQUESTS",
+        actions: [
+          IconButton(
+            tooltip: "Refresh Geo Requests",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing geo requests..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              _fetchRequests();
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: Column(
         children: [

@@ -70,6 +70,23 @@ class _ProductListScreenState extends State<ProductListScreen> {
         iconTheme: const IconThemeData(
           color: AppColors.white,
         ),
+        actions: [
+          IconButton(
+            tooltip: "Refresh Products",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing products..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              setState(() {});
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(10),

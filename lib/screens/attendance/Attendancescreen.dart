@@ -29,8 +29,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final provider = context.watch<AttendanceProvider>();
 
     return Scaffold(
-      appBar: const WavyAppBar(
+      appBar: WavyAppBar(
         title: "ATTENDANCE",
+        actions: [
+          IconButton(
+            tooltip: "Refresh Attendance",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing attendance..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              context.read<AttendanceProvider>().fetchAttendance();
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: Column(
         children: [
@@ -39,13 +56,24 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           Expanded(
             child: provider.isLoading
                 ? const LogoProgressIndicator()
-                : provider.list.isEmpty
-                ? const Center(child: Text("No attendance found"))
-                : ListView(
-              children: provider.list
-                  .map((e) => AttendanceCard(data: e))
-                  .toList(),
-            ),
+                : RefreshIndicator(
+                    onRefresh: () async => context.read<AttendanceProvider>().fetchAttendance(),
+                    color: AppColors.primary,
+                    child: provider.list.isEmpty
+                        ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: const [
+                              SizedBox(height: 100),
+                              Center(child: Text("No attendance found")),
+                            ],
+                          )
+                        : ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: provider.list
+                                .map((e) => AttendanceCard(data: e))
+                                .toList(),
+                          ),
+                  ),
           ),
         ],
       ),

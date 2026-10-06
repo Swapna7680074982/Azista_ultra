@@ -65,6 +65,31 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
           ),
         ),
         iconTheme: const IconThemeData(color: AppColors.white),
+        actions: [
+          IconButton(
+            tooltip: "Refresh Stock",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing stock on hand..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              final appState = Provider.of<AppStateProvider>(context, listen: false);
+              int? distId;
+              if (provider.selectedDistributor != null) {
+                distId = int.tryParse(provider.selectedDistributor['distributor_id']?.toString() ?? '');
+              }
+              distId ??= appState.selectedDistributorId;
+              if (distId != null) {
+                provider.fetchDistributorStock(distId);
+              }
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
 
       body: provider.isLoadingStock

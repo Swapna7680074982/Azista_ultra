@@ -35,6 +35,20 @@ class DistributorVisitScreen extends StatelessWidget {
           iconTheme: const IconThemeData(
             color: AppColors.white,
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.sync, color: AppColors.white),
+              tooltip: "Refresh",
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Data refreshed"),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       body: Column(
         children: [

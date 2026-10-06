@@ -54,6 +54,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.sync, color: Colors.white),
+            tooltip: 'Sync Profile',
+            onPressed: () async {
+              setState(() => isLoading = true);
+              await _loadUserInfo();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Profile refreshed'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              }
+            },
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
@@ -95,18 +111,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: isLoading
           ? const LogoProgressIndicator()
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 20),
-                  _buildInfoList(),
-                  const SizedBox(height: 40),
-                  _buildLogoutButton(),
-                  const SizedBox(height: 14),
-                  _buildDeleteAccountButton(),
-                  const SizedBox(height: 20),
-                ],
+          : RefreshIndicator(
+              onRefresh: _loadUserInfo,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    _buildHeader(),
+                    const SizedBox(height: 20),
+                    _buildInfoList(),
+                    const SizedBox(height: 40),
+                    _buildLogoutButton(),
+                    const SizedBox(height: 14),
+                    _buildDeleteAccountButton(),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
     );

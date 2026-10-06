@@ -32,6 +32,20 @@ class TravelPlanScreen extends StatelessWidget {
           "Travel Plan",
           style: TextStyle(color: Colors.white, fontSize: 18),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sync, color: Colors.white),
+            tooltip: "Refresh",
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Travel plans refreshed"),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Consumer<AmProvider>(
         builder: (context, amProvider, child) {

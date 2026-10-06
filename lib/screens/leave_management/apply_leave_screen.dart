@@ -44,8 +44,25 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const WavyAppBar(
+      appBar: WavyAppBar(
         title: 'APPLY LEAVE',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sync, color: Colors.white),
+            tooltip: "Refresh Leave Data",
+            onPressed: () async {
+              await Provider.of<LeaveProvider>(context, listen: false).refresh();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Leave data refreshed"),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),

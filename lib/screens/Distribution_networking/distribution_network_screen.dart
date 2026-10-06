@@ -74,11 +74,35 @@ class _DistributionNetworkScreenState
             fontWeight: FontWeight.w500,
           ),
         ),
+        actions: [
+          IconButton(
+            tooltip: "Refresh Routes",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () async {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing routes..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              await context.read<DistributionProvider>().fetchRoutes();
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
 
-      body: provider.isLoading
-          ? const Center(child: LogoProgressIndicator())
-          : Column(
+      body: RefreshIndicator(
+        onRefresh: () async => context.read<DistributionProvider>().fetchRoutes(),
+        color: AppColors.primary,
+        child: provider.isLoading
+            ? const Center(child: LogoProgressIndicator())
+            : SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height - (widget.isFromDashboard ? 140 : 260),
+                  child: Column(
         children: [
           const SizedBox(height: 10),
 
@@ -214,9 +238,12 @@ class _DistributionNetworkScreenState
               ),
             ),
           ),
-          const SizedBox(height: 25),
+          SizedBox(height: widget.isFromDashboard ? 25 : 55),
         ],
       ),
+    ),
+    ),
+    ),
     );
   }
 }

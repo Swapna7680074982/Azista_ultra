@@ -34,6 +34,18 @@ class SelectSoScreen extends StatelessWidget {
           style: TextStyle(color: Colors.white, fontSize: 18),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.sync, color: Colors.white),
+            tooltip: "Refresh",
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("SO list refreshed"),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
           Switch(
             value: true,
             onChanged: (val) {},

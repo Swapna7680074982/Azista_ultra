@@ -64,8 +64,25 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const WavyAppBar(
+      appBar: WavyAppBar(
         title: "USER TRANSACTIONS",
+        actions: [
+          IconButton(
+            tooltip: "Refresh Transactions",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing transactions..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              _reload();
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,19 +97,41 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
                     return const LogoProgressIndicator();
                   }
                   if (snapshot.hasError || !snapshot.hasData) {
-                    return const Center(child: Text("No Data Found"));
+                    return RefreshIndicator(
+                      onRefresh: () async => _reload(),
+                      color: AppColors.primary,
+                      child: ListView(
+                        children: const [
+                          SizedBox(height: 100),
+                          Center(child: Text("No Data Found")),
+                        ],
+                      ),
+                    );
                   }
                   
                   final outletsMap = snapshot.data!;
                   final outlets = outletsMap.values.toList();
                   
                   if (outlets.isEmpty) {
-                    return const Center(child: Text("No Data Found"));
+                    return RefreshIndicator(
+                      onRefresh: () async => _reload(),
+                      color: AppColors.primary,
+                      child: ListView(
+                        children: const [
+                          SizedBox(height: 100),
+                          Center(child: Text("No Data Found")),
+                        ],
+                      ),
+                    );
                   }
                   
-                  return ListView.builder(
-                    itemCount: outlets.length,
-                    itemBuilder: (context, index) {
+                  return RefreshIndicator(
+                    onRefresh: () async => _reload(),
+                    color: AppColors.primary,
+                    child: ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: outlets.length,
+                      itemBuilder: (context, index) {
                       final outlet = outlets[index];
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -128,8 +167,9 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
                         ),
                       );
                     },
-                  );
-                },
+                  ),
+                );
+              },
               ),
             ),
           ],

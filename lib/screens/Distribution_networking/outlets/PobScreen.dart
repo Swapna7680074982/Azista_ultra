@@ -66,6 +66,67 @@ class _PobBodyState extends State<PobBody> {
     }
   }
 
+  void _showImageSourcePicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Upload ORDER COPY",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "Choose photo source for physical bill / order copy",
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.camera_alt, color: AppColors.primary),
+                ),
+                title: const Text("Camera (Take Photo)", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.photo_library, color: Colors.blue),
+                ),
+                title: const Text("Gallery (Choose Existing)", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -194,8 +255,8 @@ class _PobBodyState extends State<PobBody> {
                       ),
                     // Prefilled Non-Editable Date Field
                     Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(8),
@@ -224,8 +285,15 @@ class _PobBodyState extends State<PobBody> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 4),
                     Container(
-                      color: Colors.grey.shade200,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        border: Border(
+                          top: BorderSide(color: Colors.grey.shade300, width: 0.8),
+                          bottom: BorderSide(color: Colors.grey.shade300, width: 0.8),
+                        ),
+                      ),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       child: Row(
                         children: [
@@ -267,9 +335,11 @@ class _PobBodyState extends State<PobBody> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 8),
                     Expanded(
                       child: ListView(
-                        padding: const EdgeInsets.all(8),
+                        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.only(top: 6, left: 8, right: 8, bottom: 220),
                         children: [
                           if (provider.productsWithSkus.isEmpty)
                             const Center(
@@ -290,7 +360,7 @@ class _PobBodyState extends State<PobBody> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  "UPLOAD PHOTO OF ORDER COPY",
+                                  "UPLOAD PHOTO OF ORDER COPY / BILL",
                                   style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
                                 ),
                                 const SizedBox(height: 2),
@@ -304,32 +374,27 @@ class _PobBodyState extends State<PobBody> {
                           const SizedBox(height: 8),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                            child: Row(
-                              children: [
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.button,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                  onPressed: () => _pickImage(ImageSource.camera),
-                                  icon: const Icon(Icons.camera_alt, size: 18),
-                                  label: const Text("Capture Photo"),
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 44,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.button,
+                                  foregroundColor: Colors.white,
+                                  elevation: 1,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 ),
-                                const SizedBox(width: 12),
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.button,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                onPressed: _showImageSourcePicker,
+                                icon: const Icon(Icons.add_a_photo, size: 18),
+                                label: const Text(
+                                  "UPLOAD ORDER COPY",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    letterSpacing: 0.5,
                                   ),
-                                  onPressed: () => _pickImage(ImageSource.gallery),
-                                  icon: const Icon(Icons.photo_library, size: 18),
-                                  label: const Text("Upload Photo"),
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -383,6 +448,7 @@ class _PobBodyState extends State<PobBody> {
                             child: TextField(
                               controller: remarksController,
                               maxLines: 2,
+                              scrollPadding: const EdgeInsets.only(bottom: 220),
                               decoration: InputDecoration(
                                 hintText: "Enter POB remarks...",
                                 hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
@@ -634,6 +700,24 @@ class PobScreen extends StatelessWidget {
         ),
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sync, color: Colors.white),
+            tooltip: "Refresh Products",
+            onPressed: () async {
+              final provider = Provider.of<OutletActivityProvider>(context, listen: false);
+              await provider.fetchProductsWithSkus(forceRefresh: true);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Products refreshed successfully"),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: PobBody(
         outletId: outletId,

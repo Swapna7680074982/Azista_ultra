@@ -42,6 +42,23 @@ class _ProductivityScreenState extends State<ProductivityScreen> {
           elevation: 0,
           toolbarHeight: 60,
           iconTheme: const IconThemeData(color: Colors.white),
+          actions: [
+            IconButton(
+              tooltip: "Refresh Productivity",
+              icon: const Icon(Icons.sync, color: Colors.white),
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Refreshing productivity data..."),
+                    duration: Duration(milliseconds: 900),
+                  ),
+                );
+                setState(() {});
+              },
+            ),
+            const SizedBox(width: 4),
+          ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(kToolbarHeight),
             child: Container(

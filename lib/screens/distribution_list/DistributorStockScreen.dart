@@ -77,6 +77,27 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
             ),
             actions: [
               IconButton(
+                tooltip: "Refresh Stock & Products",
+                icon: const Icon(Icons.sync, color: AppColors.white),
+                onPressed: () async {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Refreshing distributor stock..."),
+                      duration: Duration(milliseconds: 900),
+                    ),
+                  );
+                  final targetDistId = widget.initialDistributorId ?? appState.selectedDistributorId;
+                  final targetDistName = widget.initialDistributorName ?? appState.selectedDistributor;
+                  provider.fetchProductsWithSkus();
+                  await provider.fetchDistributorsList(
+                    initialDistributorId: targetDistId,
+                    initialDistributorName: targetDistName,
+                  );
+                },
+              ),
+              IconButton(
+                tooltip: "Stock On Hand",
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -87,7 +108,7 @@ class _SecondaryStockUpdateScreenState extends State<SecondaryStockUpdateScreen>
                 },
                 icon: const Icon(Icons.menu_book),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 4),
             ],
           ),
           body: provider.isLoadingProducts || provider.isLoadingDistributors

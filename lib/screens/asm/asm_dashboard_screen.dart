@@ -34,46 +34,84 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
     });
   }
 
+  Future<void> _refresh() async {
+    final homeProvider = Provider.of<HomeProvider>(context, listen: false);
+    final appState = Provider.of<AppStateProvider>(context, listen: false);
+    final role = await SessionManager.getUserRole();
+    if (mounted) appState.setUserRole(role);
+    await Future.wait([
+      homeProvider.initializeAttendance(appState),
+      homeProvider.loadDistributors(appState),
+      homeProvider.fetchTodayAttendance(),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppStateProvider>(context);
     final homeProvider = Provider.of<HomeProvider>(context);
 
     return Scaffold(
-      body: Column(
-        children: [
-          // Header
-          Container(
-            height: MediaQuery.of(context).size.height * 0.4,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.primary,
-                  AppColors.button,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(80),
-                bottomRight: Radius.circular(80),
-              ),
-            ),
-            child: SafeArea(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    "ULTRA AM",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                    ),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        color: AppColors.primary,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                height: MediaQuery.of(context).size.height * 0.4,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary,
+                      AppColors.button,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  const SizedBox(height: 20),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(80),
+                    bottomRight: Radius.circular(80),
+                  ),
+                ),
+                child: SafeArea(
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        top: 8,
+                        right: 12,
+                        child: IconButton(
+                          tooltip: "Refresh Dashboard",
+                          icon: const Icon(Icons.sync, color: Colors.white),
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Refreshing dashboard..."),
+                                duration: Duration(milliseconds: 900),
+                              ),
+                            );
+                            _refresh();
+                          },
+                        ),
+                      ),
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              "ULTRA AM",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 40,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
                   // Attendance Toggle
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -133,9 +171,11 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                 ],
               ),
             ),
-          ),
-
-          const SizedBox(height: 10),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
 
           // Error Message Box
           if (!appState.isOnline)
@@ -263,6 +303,8 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
           ),
         ],
       ),
+    ),
+    ),
     );
   }
 

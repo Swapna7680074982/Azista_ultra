@@ -457,6 +457,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
   }
 
   Future<void> _loadCheckInStatus() async {
+    await context.read<OutletProvider>().loadCheckInFromSession();
     final id = await SessionManager.getOutletCheckInOutletId();
     final checkInTime = await SessionManager.getOutletCheckInTime();
     if (mounted) {

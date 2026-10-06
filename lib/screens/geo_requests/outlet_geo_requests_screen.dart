@@ -232,6 +232,20 @@ class _OutletGeoRequestsScreenState extends State<OutletGeoRequestsScreen> {
         title: "OUTLET GEO REQUESTS",
         actions: [
           IconButton(
+            tooltip: "Refresh Requests",
+            icon: const Icon(Icons.sync, color: Colors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing geo requests..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              _fetchRequests();
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.edit_location_alt_outlined, color: Colors.white),
             tooltip: "Direct Coordinate Override",
             onPressed: () async {

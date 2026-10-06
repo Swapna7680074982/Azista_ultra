@@ -38,6 +38,20 @@ class SuppliedProductListScreen extends StatelessWidget {
         iconTheme: const IconThemeData(
           color: AppColors.white,
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            tooltip: "Refresh",
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Supplied products refreshed"),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(10),

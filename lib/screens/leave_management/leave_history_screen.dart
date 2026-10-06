@@ -8,8 +8,24 @@ class LeaveHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const WavyAppBar(
+      appBar: WavyAppBar(
         title: 'LEAVE HISTORY',
+        actions: [
+          IconButton(
+            tooltip: "Refresh Leave History",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing leave history..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: Column(
         children: [

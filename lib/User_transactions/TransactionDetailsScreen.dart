@@ -31,8 +31,23 @@ class _TransactionDetailsScreenState
     final provider = Provider.of<TransactionProvider>(context);
 
     return Scaffold(
-      appBar: const WavyAppBar(
+      appBar: WavyAppBar(
         title: "Transaction Details",
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sync, color: Colors.white),
+            tooltip: "Refresh Details",
+            onPressed: () {
+              setState(() {});
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing transaction details..."),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [

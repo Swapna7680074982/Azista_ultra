@@ -318,6 +318,24 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
           ),
         ),
         iconTheme: const IconThemeData(color: AppColors.white),
+        actions: [
+          IconButton(
+            tooltip: "Refresh Team History",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing team history..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              _loadOutletNames();
+              _fetchHistory();
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.white,

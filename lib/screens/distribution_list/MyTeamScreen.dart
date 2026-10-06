@@ -171,6 +171,23 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
           ),
         ),
         iconTheme: const IconThemeData(color: AppColors.white),
+        actions: [
+          IconButton(
+            tooltip: "Refresh Team",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing team members..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              _fetchTeam();
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: Column(
         children: [

@@ -39,8 +39,29 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
   Widget build(BuildContext context) {
     final appState = context.watch<AppStateProvider>();
     return Scaffold(
-      appBar: const WavyAppBar(
+      appBar: WavyAppBar(
         title: "TEAM ATTENDANCE",
+        actions: [
+          IconButton(
+            tooltip: "Refresh Team Attendance",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing team attendance..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              context.read<TeamAttendanceProvider>().fetchTeamAttendance(
+                isToday: true,
+                defaultRole: 'ALL',
+                currentUserRole: appState.userRole,
+              );
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: Consumer<TeamAttendanceProvider>(
         builder: (context, provider, _) {
@@ -51,12 +72,30 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
               Expanded(
                 child: provider.isLoading
                     ? const LogoProgressIndicator()
-                    : provider.attendanceList.isEmpty
-                        ? _buildEmptyState()
-                        : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                            itemCount: provider.attendanceList.length,
-                            itemBuilder: (context, index) {
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          await provider.fetchTeamAttendance(
+                            isToday: true,
+                            defaultRole: 'ALL',
+                            currentUserRole: appState.userRole,
+                          );
+                        },
+                        color: AppColors.primary,
+                        child: provider.attendanceList.isEmpty
+                            ? ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: [
+                                  SizedBox(
+                                    height: MediaQuery.of(context).size.height * 0.5,
+                                    child: _buildEmptyState(),
+                                  ),
+                                ],
+                              )
+                            : ListView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                                itemCount: provider.attendanceList.length,
+                                itemBuilder: (context, index) {
                               final user = provider.attendanceList[index];
                               final logs = provider.getAllLogsForUser(user.userId).where((log) {
                                 return log['attendance_date']?.toString() == user.attendanceDate;
@@ -169,6 +208,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
                               );
                             },
                           ),
+                        ),
               ),
             ],
           );

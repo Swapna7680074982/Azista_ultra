@@ -306,10 +306,31 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
         iconTheme: const IconThemeData(
           color: AppColors.white,
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            tooltip: "Refresh Data",
+            onPressed: () async {
+              context.read<OutletProvider>().fetchCategories();
+              _loadCurrentLocation();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing categories and location..."),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          context.read<OutletProvider>().fetchCategories();
+          _loadCurrentLocation();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -433,6 +454,7 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 

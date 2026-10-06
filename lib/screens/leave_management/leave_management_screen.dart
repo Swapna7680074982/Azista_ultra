@@ -11,12 +11,33 @@ class LeaveManagementScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const WavyAppBar(
+      appBar: WavyAppBar(
         title: 'LEAVE MANAGEMENT',
+        actions: [
+          IconButton(
+            tooltip: "Refresh Leaves",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing leave data..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              // Provider notify
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+      body: RefreshIndicator(
+        onRefresh: () async {},
+        color: AppColors.primary,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -106,6 +127,7 @@ class LeaveManagementScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

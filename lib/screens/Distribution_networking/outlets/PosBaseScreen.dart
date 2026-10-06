@@ -17,6 +17,7 @@ import 'SaleScreen.dart';
 import 'outlet_provider.dart';
 import '../../../services/api_services.dart';
 import '../../../utilities/common_widgets.dart';
+import '../../../permissions/AppStateProvider.dart';
 import '../../../permissions/SessionManager.dart';
 import '../../../utilities/date_formatter.dart';
 
@@ -41,6 +42,11 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   bool? isLocationValid;
   String locationError = "";
   List<Widget> _tabViews = [];
+  bool _isOutletCardExpanded = true;
+
+  bool _isCheckedIn = false;
+  DateTime? _checkInTime;
+  int? _visitId;
 
   void _buildTabViews() {
     _tabViews = dynamicTabs.map((tab) => _getModuleBody(tab['module_code'], selectedTab)).toList();
@@ -49,6 +55,15 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   @override
   void initState() {
     super.initState();
+    // Synchronously initialize check-in status from provider so there is 0ms delay / no UI flicker
+    final currentOutletId = int.tryParse(widget.outlet.id);
+    final outletProv = context.read<OutletProvider>();
+    if (currentOutletId != null && outletProv.checkedInOutletId == currentOutletId) {
+      _isCheckedIn = true;
+      _visitId = outletProv.checkedInVisitId;
+      _checkInTime = outletProv.checkedInTime;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _fetchModules();
@@ -62,6 +77,29 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
     final currentOutletId = int.tryParse(widget.outlet.id);
     if (currentOutletId == null) return;
 
+    // 1. Check local session first for fast local check
+    final savedOutletId = await SessionManager.getOutletCheckInOutletId();
+    final savedCheckInTime = await SessionManager.getOutletCheckInTime();
+    final savedVisitId = await SessionManager.getOutletCheckInVisitId();
+
+    if (savedOutletId == currentOutletId && savedCheckInTime != null) {
+      if (mounted) {
+        context.read<OutletProvider>().setCheckedInOutlet(
+          currentOutletId,
+          visitId: savedVisitId,
+          checkInTime: savedCheckInTime,
+        );
+        setState(() {
+          _isCheckedIn = true;
+          _visitId = savedVisitId;
+          _checkInTime = savedCheckInTime;
+          _buildTabViews();
+        });
+      }
+      return;
+    }
+
+    // 2. Query history API in background as fallback only if not in local session
     try {
       final history = await ApiServices.getOutletHistory(outletId: currentOutletId);
       if (history != null && history['status'] == true) {
@@ -94,18 +132,27 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
     } catch (e) {
       debugPrint("Error loading check-in status from API: $e");
     }
+  }
 
-    final savedOutletId = await SessionManager.getOutletCheckInOutletId();
-    if (savedOutletId == currentOutletId) {
-      if (mounted) {
-        context.read<OutletProvider>().clearCheckIn();
-      }
-    }
+  Future<void> _syncData() async {
+    setState(() {
+      isLoadingTabs = true;
+    });
+    await Future.wait([
+      _fetchModules(),
+      _checkLocation(),
+      _loadOutletCheckInStatus(),
+    ]);
     if (mounted) {
+      final actProvider = context.read<OutletActivityProvider>();
+      actProvider.fetchProductsWithSkus();
+      final appState = context.read<AppStateProvider>();
+      if (appState.selectedDistributorId != null) {
+        actProvider.fetchDistributorStock(appState.selectedDistributorId!);
+      }
       setState(() {
-        _isCheckedIn = false;
-        _visitId = null;
-        _checkInTime = null;
+        isLoadingTabs = false;
+        _buildTabViews();
       });
     }
   }
@@ -164,10 +211,6 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       }
     }
   }
-
-  bool _isCheckedIn = false;
-  DateTime? _checkInTime;
-  int? _visitId;
 
   void _showErrorSnackBar(String message) {
     if (mounted) {
@@ -403,6 +446,22 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         iconTheme: const IconThemeData(
           color: AppColors.white,
         ),
+        actions: [
+          IconButton(
+            tooltip: "Sync & Refresh",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () async {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Syncing outlet data..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              await _syncData();
+            },
+          ),
+        ],
       ),
       body: isLoadingTabs 
           ? const Center(child: LogoProgressIndicator()) 
@@ -414,7 +473,10 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
           else if (_isCheckedIn) ...[
             Container(
               color: Colors.green.shade50,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: MediaQuery.of(context).viewInsets.bottom > 0 ? 5 : 8,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -541,62 +603,105 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
     );
   }
   Widget outletCard(Outlet outlet) {
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+    final isExpanded = _isOutletCardExpanded && !isKeyboardOpen;
+
     return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: const [
-              BoxShadow(color: Colors.black12, blurRadius: 4)
-            ],
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: isExpanded ? 10 : 8),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 4),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isOutletCardExpanded = !_isOutletCardExpanded;
+              });
+            },
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        outlet.name.toUpperCase(),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text("OUTLET ID: ${outlet.id}", style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+                    ],
+                  ),
+                ),
+                if (!isExpanded && outlet.type.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.shade50,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      outlet.type.toUpperCase(),
+                      style: TextStyle(fontSize: 11, color: Colors.teal.shade800, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                Icon(
+                  isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+              ],
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(outlet.name.toUpperCase(),
-                  style: const TextStyle(fontWeight: FontWeight.bold,fontSize: 16)),
-
-              Text("OUTLET ID: ${outlet.id}",style: const TextStyle(fontSize: 15)),
-
-              const Divider(),
-
-              Row(
-                children: [
-                  const Icon(Icons.person, size: 20),
-                  const SizedBox(width: 8),
-                  Text(outlet.owner.toUpperCase(),style: const TextStyle(fontSize: 18)),
-                ],
-              ),
-
-              const SizedBox(height: 6),
-
-              Row(
-                children: [
-                  const Icon(Icons.phone, size: 20),
-                  const SizedBox(width: 8),
-                  Text(outlet.phone,style: const TextStyle(fontSize: 18)),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
+          if (isExpanded) ...[
+            const Divider(height: 14),
+            Row(
+              children: [
+                const Icon(Icons.person, size: 18, color: Colors.grey),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    outlet.owner.toUpperCase(),
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.phone, size: 18, color: Colors.grey),
+                const SizedBox(width: 8),
+                Text(outlet.phone, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            if (outlet.type.isNotEmpty)
               Align(
                 alignment: Alignment.centerRight,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (outlet.type.isNotEmpty)
-                      Text(
-                        outlet.type.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.teal.shade700,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    Text(
+                      outlet.type.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.teal.shade700,
+                        fontWeight: FontWeight.w500,
                       ),
-                    if (outlet.type.isNotEmpty) const SizedBox(width: 5),
-
+                    ),
+                    const SizedBox(width: 5),
                     ShaderMask(
                       shaderCallback: (bounds) => const LinearGradient(
                         colors: [
@@ -606,156 +711,149 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                       ).createShader(bounds),
                       child: const Icon(
                         Icons.storefront,
-                        size: 18,
+                        size: 16,
                         color: Colors.white,
                       ),
                     ),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 10),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    height: 30,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(4),
-                      color: Colors.white,
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  height: 30,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(4),
+                    color: Colors.white,
+                  ),
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: TextButton(
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Feature will be implemented in future"),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        "JOINT CALL",
-                        style: TextStyle(
-                          color: Colors.black87,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 12,
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Feature will be implemented in future"),
+                          duration: Duration(seconds: 2),
                         ),
+                      );
+                    },
+                    child: const Text(
+                      "JOINT CALL",
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 12,
                       ),
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Container(
-                        height: 30,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(4),
-                          color: Colors.white,
-                        ),
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => StockSalePosScreen(
-                                  outletId: int.tryParse(widget.outlet.id) ?? 0,
-                                ),
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            "PREVIOUS TRANSACTIONS",
-                            style: TextStyle(
-                              color: Colors.black87,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 35,
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      height: 30,
                       decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.green),
-                        borderRadius: BorderRadius.circular(6),
-                        color: AppColors.green.withValues(alpha:0.05),
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(4),
+                        color: Colors.white,
                       ),
                       child: TextButton(
-                        onPressed: () {
-                          CallService.makeCall(outlet.phone);
-                        },
-                        child: const Text(
-                          "CALL",
-                          style: TextStyle(
-                            color: AppColors.green,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Container(
-                      height: 35,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.green),
-                        borderRadius: BorderRadius.circular(6),
-                        color: AppColors.green.withValues(alpha:0.05),
-                      ),
-                      child: TextButton(
                         onPressed: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => DirectionsMapScreen(
-                                outletLat: widget.outlet.latitude,
-                                outletLng: widget.outlet.longitude,
-                                outletName: widget.outlet.name,
+                              builder: (_) => StockSalePosScreen(
+                                outletId: int.tryParse(widget.outlet.id) ?? 0,
                               ),
                             ),
                           );
                         },
                         child: const Text(
-                          "DIRECTIONS",
+                          "PREVIOUS TRANSACTIONS",
                           style: TextStyle(
-                            color: AppColors.green,
-                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 12,
                           ),
                         ),
                       ),
                     ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 34,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.green),
+                      borderRadius: BorderRadius.circular(6),
+                      color: AppColors.green.withValues(alpha: 0.05),
+                    ),
+                    child: TextButton(
+                      onPressed: () => CallService.makeCall(outlet.phone),
+                      child: const Text(
+                        "CALL",
+                        style: TextStyle(
+                          color: AppColors.green,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
-                ],
-              )
-            ],
-          ),
-
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    height: 34,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.green),
+                      borderRadius: BorderRadius.circular(6),
+                      color: AppColors.green.withValues(alpha: 0.05),
+                    ),
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DirectionsMapScreen(
+                              outletLat: widget.outlet.latitude,
+                              outletLng: widget.outlet.longitude,
+                              outletName: widget.outlet.name,
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        "DIRECTIONS",
+                        style: TextStyle(
+                          color: AppColors.green,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
   Widget _tabs() {

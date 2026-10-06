@@ -33,6 +33,20 @@ class DailyActivitiesScreen extends StatelessWidget {
           "Daily Activities",
           style: TextStyle(color: Colors.white, fontSize: 18),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sync, color: Colors.white),
+            tooltip: "Refresh",
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Daily activities refreshed"),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Consumer<AmProvider>(
         builder: (context, amProvider, child) {

@@ -476,6 +476,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
   }
 
   Future<void> _loadCheckInStatus() async {
+    await context.read<OutletProvider>().loadCheckInFromSession();
     final id = await SessionManager.getOutletCheckInOutletId();
     final checkInTime = await SessionManager.getOutletCheckInTime();
     if (mounted) {

@@ -134,6 +134,21 @@ class _TeamMemberDetailScreenState extends State<TeamMemberDetailScreen> {
           ),
         ),
         iconTheme: const IconThemeData(color: AppColors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            tooltip: "Sync Details",
+            onPressed: () {
+              _fetchDetails();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing team member details..."),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: LogoProgressIndicator(size: 80))

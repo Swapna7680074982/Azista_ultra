@@ -46,6 +46,23 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            tooltip: "Refresh Products & Transactions",
+            icon: const Icon(Icons.sync, color: Colors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing transactions..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              setState(() {});
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: Column(
         children: [

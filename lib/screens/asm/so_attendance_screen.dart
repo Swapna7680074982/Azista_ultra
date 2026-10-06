@@ -18,6 +18,18 @@ class SoAttendanceScreen extends StatelessWidget {
             title: "SO Attendance",
             actions: [
               IconButton(
+                icon: const Icon(Icons.sync, color: Colors.white),
+                tooltip: "Refresh Attendance",
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("SO attendance refreshed"),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                },
+              ),
+              IconButton(
                 icon: const Icon(Icons.file_download, color: Colors.white),
                 onPressed: () {
                   // Download logic

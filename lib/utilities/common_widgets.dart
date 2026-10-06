@@ -45,6 +45,7 @@ class QtyBox extends StatelessWidget {
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
         textInputAction: TextInputAction.done,
+        scrollPadding: const EdgeInsets.only(bottom: 220),
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
         ],

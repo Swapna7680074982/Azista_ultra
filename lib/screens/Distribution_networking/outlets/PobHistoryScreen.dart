@@ -552,6 +552,25 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
         iconTheme: const IconThemeData(
           color: AppColors.white,
         ),
+        actions: [
+          IconButton(
+            tooltip: "Refresh POB History",
+            icon: const Icon(Icons.sync, color: AppColors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Refreshing POB history..."),
+                  duration: Duration(milliseconds: 900),
+                ),
+              );
+              final appState = Provider.of<AppStateProvider>(context, listen: false);
+              Provider.of<OutletActivityProvider>(context, listen: false)
+                  .fetchPobHistory(widget.outletId, distributorId: appState.selectedDistributorId);
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: Consumer<OutletActivityProvider>(
         builder: (context, provider, child) {

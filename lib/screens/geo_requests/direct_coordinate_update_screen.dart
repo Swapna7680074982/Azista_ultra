@@ -199,8 +199,29 @@ class _DirectCoordinateUpdateScreenState extends State<DirectCoordinateUpdateScr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const WavyAppBar(
+      appBar: WavyAppBar(
         title: "DIRECT COORDINATE UPDATE",
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sync, color: Colors.white),
+            tooltip: "Reset Form",
+            onPressed: () {
+              setState(() {
+                _outletIdController.clear();
+                _latController.clear();
+                _lngController.clear();
+                _remarksController.clear();
+                _previewData = null;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Form reset"),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
