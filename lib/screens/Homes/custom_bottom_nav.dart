@@ -11,136 +11,126 @@ class CustomBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<MainTabProvider>();
-
     return SafeArea(
       top: false,
-      child:  Container(
-      height: 90,
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        boxShadow: [
-          BoxShadow(
-            blurRadius: 10,
-            color: AppColors.shadow,
-            offset: const Offset(0, -2),
-          ),
-        ],
+      child: Container(
+        height: 65,
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 10,
+              color: AppColors.shadow,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            Expanded(child: navItemIcon(context, Icons.access_time, "Home", 0)),
+            Expanded(child: navItemIcon(context, Icons.receipt_long, "User Trans.", 1)),
+            // Near Me button commented out:
+            // Expanded(child: navItemIcon(context, Icons.location_on, "Near Me", 2)),
+            Expanded(child: navItemIcon(context, Icons.account_tree_outlined, "Dist. Net.", 3)),
+            Expanded(child: navItemIcon(context, Icons.check_circle, "Attendance", 4)),
+          ],
+        ),
       ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.bottomCenter,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              navItemIcon(context, Icons.access_time, "Home", 0),
-              navItemIcon(context, Icons.receipt_long, "User Trans.", 1),
-              const SizedBox(width: 70),
+    );
+  }
 
-              navItemIcon(context, Icons.account_tree_outlined, "Dist. Net.", 3),
-              navItemIcon(context, Icons.check_circle, "Attendance", 4),
-            ],
-          ),
-
-          Positioned(
-            top: -20,
-            child: GestureDetector(
-              onTap: () {
-                final appState =
-                Provider.of<AppStateProvider>(context, listen: false);
-
-                if (!AccessValidator.validateTab(
-                  context: context,
-                  isOnline: appState.isOnline,
-                  hasDistributor: appState.selectedDistributor != null,
-                  index: 2,
-                )) {
-                  return;
-                }
-
-                provider.setTab(2);
-              },
-              child: Column(
-                children: [
-                  Container(
-                    height: 70,
-                    width: 70,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFF8E0E13), // dark red outer circle
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Container(
-                        height: 52,
-                        width: 52,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFE53935), // light red middle circle
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Container(
-                            height: 34,
-                            width: 34,
-                            decoration: const BoxDecoration(
-                              color: Colors.white, // white inner circle
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.location_on,
-                                color: Color(0xFF8E0E13), // dark red icon
-                                size: 20,
-                              ),
-                            ),
-                          ),
+  /*
+  // Near Me Floating Button Widget (Commented out):
+  Widget _buildNearMeButton(BuildContext context, MainTabProvider provider) {
+    return Positioned(
+      top: -20,
+      child: GestureDetector(
+        onTap: () {
+          final appState = Provider.of<AppStateProvider>(context, listen: false);
+          if (!AccessValidator.validateTab(
+            context: context,
+            isOnline: appState.isOnline,
+            hasDistributor: appState.selectedDistributor != null,
+            index: 2,
+          )) {
+            return;
+          }
+          provider.setTab(2);
+        },
+        child: Column(
+          children: [
+            Container(
+              height: 70,
+              width: 70,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF8E0E13),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Container(
+                  height: 52,
+                  width: 52,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE53935),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Container(
+                      height: 34,
+                      width: 34,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.location_on,
+                          color: Color(0xFF8E0E13),
+                          size: 20,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "Near Me",
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: provider.currentIndex == 2
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                      color: provider.currentIndex == 2
-                          ? AppColors.button
-                          : const Color(0xFF8C7B87),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              "Near Me",
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: provider.currentIndex == 2 ? FontWeight.w600 : FontWeight.normal,
+                color: provider.currentIndex == 2 ? AppColors.button : const Color(0xFF8C7B87),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
+  */
 
   Widget navItemIcon(
-      BuildContext context,
-      IconData icon,
-      String text,
-      int index,
-      ) {
+    BuildContext context,
+    IconData icon,
+    String text,
+    int index,
+  ) {
     final provider = context.watch<MainTabProvider>();
     final selected = provider.currentIndex == index;
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () {
-        final appState =
-        Provider.of<AppStateProvider>(context, listen: false);
+        final appState = Provider.of<AppStateProvider>(context, listen: false);
 
         if (!AccessValidator.validateTab(
           context: context,
@@ -168,8 +158,7 @@ class CustomBottomNav extends StatelessWidget {
             text.length > 12 ? "${text.substring(0, 12)}..." : text,
             style: TextStyle(
               fontSize: 13,
-              fontWeight:
-              selected ? FontWeight.w600 : FontWeight.normal,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
               color: selected ? AppColors.button : const Color(0xFF8C7B87),
             ),
           ),
