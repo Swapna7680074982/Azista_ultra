@@ -98,152 +98,139 @@ class _DistributionNetworkScreenState
         color: AppColors.primary,
         child: provider.isLoading
             ? const Center(child: LogoProgressIndicator())
-            : SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: SizedBox(
-                  height: MediaQuery.of(context).size.height - (widget.isFromDashboard ? 140 : 260),
-                  child: Column(
-        children: [
-          const SizedBox(height: 10),
+            : Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 8),
 
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                DropdownButtonFormField<String>(
-                  icon: provider.regions.length <= 1 ? const SizedBox.shrink() : null,
-                  value: provider.selectedRegion,
-                  hint: const Text("Select Region"),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: AppColors.inputFill,
-                    border: InputBorder.none,
-                  ),
-                  items: provider.regions.map((region) {
-                    return DropdownMenuItem(
-                      value: region,
-                      child: Text(region.toUpperCase()),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      provider.setRegion(value);
-                    }
-                  },
-                ),
+                          // State Dropdown
+                          DropdownButtonFormField<String>(
+                            icon: provider.states.length <= 1 ? const SizedBox.shrink() : null,
+                            value: provider.selectedState,
+                            hint: const Text("Select State"),
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: AppColors.inputFill,
+                              border: InputBorder.none,
+                            ),
+                            items: provider.states.map((state) {
+                              return DropdownMenuItem(
+                                value: state,
+                                child: Text(state.toUpperCase()),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                provider.setStateValue(value);
+                              }
+                            },
+                          ),
 
-                const SizedBox(height: 12),
+                          const SizedBox(height: 14),
 
-                DropdownButtonFormField<String>(
-                  icon: provider.areas.length <= 1 ? const SizedBox.shrink() : null,
-                  value: provider.selectedArea,
-                  hint: const Text("Select Area"),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: AppColors.inputFill,
-                    border: InputBorder.none,
-                  ),
-                  items: provider.areas.map((area) {
-                    return DropdownMenuItem(
-                      value: area,
-                      child: Text(area.toUpperCase()),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      provider.setArea(value);
-                    }
-                  },
-                ),
+                          // City Dropdown
+                          DropdownButtonFormField<String>(
+                            icon: provider.cities.length <= 1 ? const SizedBox.shrink() : null,
+                            value: provider.selectedCity,
+                            hint: const Text("Select City"),
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: AppColors.inputFill,
+                              border: InputBorder.none,
+                            ),
+                            items: provider.cities.map((city) {
+                              return DropdownMenuItem(
+                                value: city,
+                                child: Text(city.toUpperCase()),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                provider.setCity(value);
+                              }
+                            },
+                          ),
 
-                const SizedBox(height: 12),
+                          const SizedBox(height: 14),
 
-                DropdownButtonFormField<String>(
-                  icon: provider.hqs.length <= 1 ? const SizedBox.shrink() : null,
-                  value: provider.selectedHq,
-                  hint: const Text("Select HQ"),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: AppColors.inputFill,
-                    border: InputBorder.none,
-                  ),
-                  items: provider.hqs.map((hq) {
-                    return DropdownMenuItem(
-                      value: hq,
-                      child: Text(hq.toUpperCase()),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      provider.setHq(value);
-                    }
-                  },
-                ),
-
-                const SizedBox(height: 12),
-
-                DropdownButtonFormField<String>(
-                  icon: provider.beats.length <= 1 ? const SizedBox.shrink() : null,
-                  value: provider.selectedBeat,
-                  hint: const Text("Select Beat"),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: AppColors.inputFill,
-                    border: InputBorder.none,
-                  ),
-                  items: provider.beats.map((beat) {
-                    return DropdownMenuItem(
-                      value: beat,
-                      child: Text(beat.toUpperCase()),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      provider.setBeat(value);
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          const Spacer(),
-
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.buttonBlue,
-                minimumSize: const Size(double.infinity, 45),
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.zero,
-                ),
-              ),
-              onPressed: provider.selectedBeat == null || provider.selectedRouteId == null
-                  ? null
-                  : () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => OutletsScreen(
-                      routeId: int.tryParse(provider.selectedRouteId!) ?? 0,
-                      routeName: provider.selectedBeat!,
+                          // Route Dropdown
+                          DropdownButtonFormField<String>(
+                            icon: provider.routes.length <= 1 ? const SizedBox.shrink() : null,
+                            value: provider.selectedRoute,
+                            hint: const Text("Select Route"),
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: AppColors.inputFill,
+                              border: InputBorder.none,
+                            ),
+                            items: provider.routes.map((route) {
+                              return DropdownMenuItem(
+                                value: route,
+                                child: Text(route.toUpperCase()),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                provider.setRoute(value);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                );
-              },
-              child: const Text(
-                "SHOW OUTLETS IN THIS BEAT",
-                style: TextStyle(color: AppColors.white),
+
+                  // Bottom Action Button positioned neatly above bottom bar
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.buttonBlue,
+                            foregroundColor: Colors.white,
+                            elevation: 1.5,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onPressed: provider.selectedRoute == null || provider.selectedRouteId == null
+                              ? null
+                              : () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => OutletsScreen(
+                                        routeId: int.tryParse(provider.selectedRouteId!) ?? 0,
+                                        routeName: provider.selectedRoute!,
+                                      ),
+                                    ),
+                                  );
+                                },
+                          child: const Text(
+                            "SHOW OUTLETS IN THIS ROUTE",
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ),
-          SizedBox(height: widget.isFromDashboard ? 25 : 55),
-        ],
       ),
-    ),
-    ),
-    ),
     );
   }
 }

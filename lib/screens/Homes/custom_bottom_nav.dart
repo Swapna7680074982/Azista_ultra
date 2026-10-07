@@ -151,10 +151,6 @@ class CustomBottomNav extends StatelessWidget {
           return;
         }
 
-        if (index == 0) {
-          appState.setSelectedDistributor(null, null);
-        }
-
         if (provider.currentIndex != index) {
           provider.setTab(index);
         }

@@ -37,8 +37,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onTabChanged() {
     if (_tabProvider.currentIndex == 0 && _lastTabIndex != 0) {
       _lastTabIndex = 0;
-      final appState = Provider.of<AppStateProvider>(context, listen: false);
-      appState.setSelectedDistributor(null, null);
       _refreshData();
     } else {
       _lastTabIndex = _tabProvider.currentIndex;
@@ -80,9 +78,6 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       final homeProvider = Provider.of<HomeProvider>(context, listen: false);
       final appState = Provider.of<AppStateProvider>(context, listen: false);
-
-      // Ensure no default distributor selection when opening home screen
-      appState.setSelectedDistributor(null, null);
 
       _tabProvider = Provider.of<MainTabProvider>(context, listen: false);
       _lastTabIndex = _tabProvider.currentIndex;
