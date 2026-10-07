@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_services.dart';
 import '../../utilities/wavy_app_bar.dart';
@@ -21,6 +22,7 @@ class MyGeoRequestsScreen extends StatefulWidget {
 
 class _MyGeoRequestsScreenState extends State<MyGeoRequestsScreen> {
   String _selectedStatus = "all";
+  DateTime? _selectedDate;
   bool _isLoading = false;
   List<Map<String, dynamic>> _requests = [];
   String _searchQuery = "";
@@ -74,15 +76,105 @@ class _MyGeoRequestsScreenState extends State<MyGeoRequestsScreen> {
     }
   }
 
+  DateTime? _parseDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty || dateStr == '-' || dateStr == 'N/A') return null;
+    final cleaned = dateStr.trim();
+    final parsed = DateTime.tryParse(cleaned);
+    if (parsed != null) return parsed;
+    try {
+      return DateFormat("yyyy-MM-dd HH:mm:ss").parse(cleaned);
+    } catch (_) {
+      try {
+        return DateFormat("yyyy-MM-dd").parse(cleaned);
+      } catch (_) {
+        try {
+          return DateFormat("dd-MM-yyyy HH:mm:ss").parse(cleaned);
+        } catch (_) {
+          try {
+            return DateFormat("dd-MM-yyyy").parse(cleaned);
+          } catch (_) {
+            return null;
+          }
+        }
+      }
+    }
+  }
+
   List<Map<String, dynamic>> get _filteredRequests {
-    if (_searchQuery.trim().isEmpty) return _requests;
-    final q = _searchQuery.trim().toLowerCase();
     return _requests.where((r) {
-      final name = (r["outlet_name"] ?? "").toString().toLowerCase();
-      final id = (r["request_id"] ?? "").toString().toLowerCase();
-      final outletId = (r["outlet_id"] ?? "").toString().toLowerCase();
-      return name.contains(q) || id.contains(q) || outletId.contains(q);
+      // Date filter
+      if (_selectedDate != null) {
+        final dateStr = (r["created_at"] ?? r["created_on"] ?? r["requested_at"])?.toString();
+        final dt = _parseDate(dateStr);
+        if (dt == null) return false;
+        final matchesDate = dt.year == _selectedDate!.year &&
+            dt.month == _selectedDate!.month &&
+            dt.day == _selectedDate!.day;
+        if (!matchesDate) return false;
+      }
+
+      // Search filter
+      if (_searchQuery.trim().isNotEmpty) {
+        final q = _searchQuery.trim().toLowerCase();
+        final name = (r["outlet_name"] ?? "").toString().toLowerCase();
+        final id = (r["request_id"] ?? "").toString().toLowerCase();
+        final outletId = (r["outlet_id"] ?? "").toString().toLowerCase();
+        final matchesQuery = name.contains(q) || id.contains(q) || outletId.contains(q);
+        if (!matchesQuery) return false;
+      }
+
+      return true;
     }).toList();
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              onSurface: Colors.black87,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  void _previousDay() {
+    setState(() {
+      _selectedDate = (_selectedDate ?? DateTime.now()).subtract(const Duration(days: 1));
+    });
+  }
+
+  void _nextDay() {
+    setState(() {
+      _selectedDate = (_selectedDate ?? DateTime.now()).add(const Duration(days: 1));
+    });
+  }
+
+  void _clearDateFilter() {
+    setState(() {
+      _selectedDate = null;
+    });
   }
 
   @override
@@ -113,6 +205,9 @@ class _MyGeoRequestsScreenState extends State<MyGeoRequestsScreen> {
           // Filter Tabs
           _buildFilterTabs(),
 
+          // Calendar / Date Filter Bar
+          _buildCalendarFilterBar(),
+
           // Search Field
           _buildSearchBar(),
 
@@ -134,6 +229,98 @@ class _MyGeoRequestsScreenState extends State<MyGeoRequestsScreen> {
                   ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCalendarFilterBar() {
+    final hasDate = _selectedDate != null;
+    final dateText = hasDate
+        ? DateFormat('EEE, dd MMM yyyy').format(_selectedDate!)
+        : "All Dates (Tap to filter by date)";
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: hasDate ? AppColors.primary.withValues(alpha: 0.5) : Colors.grey.shade300,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            if (hasDate)
+              IconButton(
+                icon: const Icon(Icons.chevron_left, size: 22, color: AppColors.primary),
+                tooltip: "Previous Day",
+                visualDensity: VisualDensity.compact,
+                onPressed: _previousDay,
+              )
+            else
+              const Padding(
+                padding: EdgeInsets.only(left: 12),
+                child: Icon(Icons.calendar_today, size: 18, color: AppColors.primary),
+              ),
+            Expanded(
+              child: InkWell(
+                onTap: () => _selectDate(context),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                  child: Row(
+                    mainAxisAlignment: hasDate ? MainAxisAlignment.center : MainAxisAlignment.start,
+                    children: [
+                      if (hasDate) ...[
+                        const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                      ],
+                      Flexible(
+                        child: Text(
+                          dateText,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: hasDate ? FontWeight.bold : FontWeight.w500,
+                            color: hasDate ? Colors.black87 : Colors.grey.shade600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (hasDate) ...[
+              IconButton(
+                icon: const Icon(Icons.chevron_right, size: 22, color: AppColors.primary),
+                tooltip: "Next Day",
+                visualDensity: VisualDensity.compact,
+                onPressed: _nextDay,
+              ),
+              IconButton(
+                icon: Icon(Icons.clear, size: 18, color: Colors.grey.shade600),
+                tooltip: "Clear Date Filter",
+                visualDensity: VisualDensity.compact,
+                onPressed: _clearDateFilter,
+              ),
+            ] else
+              IconButton(
+                icon: const Icon(Icons.date_range, size: 20, color: AppColors.primary),
+                tooltip: "Select Date",
+                visualDensity: VisualDensity.compact,
+                onPressed: () => _selectDate(context),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -236,6 +423,15 @@ class _MyGeoRequestsScreenState extends State<MyGeoRequestsScreen> {
   }
 
   Widget _buildEmptyState() {
+    String message = "You have not submitted any geo update requests yet.";
+    if (_selectedDate != null && _selectedStatus != "all") {
+      message = "No ${_selectedStatus.toUpperCase()} requests found on ${DateFormat('dd MMM yyyy').format(_selectedDate!)}.";
+    } else if (_selectedDate != null) {
+      message = "No requests found on ${DateFormat('dd MMM yyyy').format(_selectedDate!)}.";
+    } else if (_selectedStatus != "all") {
+      message = "No requests found with status: ${_selectedStatus.toUpperCase()}";
+    }
+
     return Center(
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -256,12 +452,25 @@ class _MyGeoRequestsScreenState extends State<MyGeoRequestsScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                _selectedStatus == "all"
-                    ? "You have not submitted any geo update requests yet."
-                    : "No requests found with status: ${_selectedStatus.toUpperCase()}",
+                message,
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
+              if (_selectedDate != null) ...[
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: _clearDateFilter,
+                  icon: const Icon(Icons.clear, size: 16),
+                  label: const Text("Show All Dates"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
