@@ -223,8 +223,217 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
     }
   }
 
-  Future<void> _handleCheckIn() async {
-    LoadingDialog.show(context, message: "Checking in...");
+  void _showVisitTypeSelectionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 8,
+        backgroundColor: Colors.white,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.primary, AppColors.button],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.storefront, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Select Visit Type",
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "Check-in at ${widget.outlet.name.toUpperCase()}",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.grey, size: 22),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                "Please select your visit type to proceed with check-in:",
+                style: TextStyle(fontSize: 13, color: Colors.black54),
+              ),
+              const SizedBox(height: 14),
+
+              // Single Visit Card
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleCheckIn("Single Visit");
+                  },
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.blue.shade100),
+                          ),
+                          child: Icon(Icons.person, color: Colors.blue.shade700, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Single Visit",
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                "Individual representative visit",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.arrow_forward_ios, size: 12, color: Colors.blue.shade700),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Combined Visit Card
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleCheckIn("Combined Visit");
+                  },
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.teal.shade100),
+                          ),
+                          child: Icon(Icons.groups_rounded, color: Colors.teal.shade700, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Combined Visit",
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                "Joint visit with manager or colleague",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.shade50,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.arrow_forward_ios, size: 12, color: Colors.teal.shade700),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleCheckIn(String visitType) async {
+    LoadingDialog.show(context, message: "Checking in ($visitType)...");
     try {
       final coords = await LocationService.getCoordinates();
       final currentLat = double.parse(coords[0]);
@@ -236,7 +445,8 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         outletId: outletId,
         latitude: currentLat,
         longitude: currentLng,
-        remarks: "Visited outlet",
+        remarks: "$visitType - Visited outlet",
+        visitType: visitType,
       );
 
       if (mounted) {
@@ -262,7 +472,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
 
           SuccessDialog.show(
             context,
-            message: response['message'] ?? "Outlet checked-in successfully",
+            message: response['message'] ?? "Outlet checked-in successfully ($visitType)",
           );
         }
       } else {
@@ -583,7 +793,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                 ),
-                                onPressed: _handleCheckIn,
+                                onPressed: _showVisitTypeSelectionDialog,
                                 child: const Text(
                                   "CHECK-IN",
                                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),

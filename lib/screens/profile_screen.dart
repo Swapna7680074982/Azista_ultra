@@ -6,7 +6,7 @@ import '../../permissions/AppStateProvider.dart';
 import 'Homes/HomeProvider.dart';
 import '../../services/api_services.dart';
 import 'login/login_screen.dart';
-import 'Homes/change_password.dart';
+// import 'Homes/change_password.dart';
 import '../utilities/common_widgets.dart';
 import '../utilities/delete_account_dialog.dart';
 
@@ -73,27 +73,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
-              if (value == 'change_password') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-                );
-              } else if (value == 'delete_account') {
+              // if (value == 'change_password') {
+              //   Navigator.push(
+              //     context,
+              //     MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+              //   );
+              // } else
+              if (value == 'delete_account') {
                 showDeleteAccountDialog(context);
               }
             },
             itemBuilder: (BuildContext context) {
               return [
-                const PopupMenuItem<String>(
-                  value: 'change_password',
-                  child: Row(
-                    children: [
-                      Icon(Icons.lock_outline, color: Colors.black87, size: 20),
-                      SizedBox(width: 8),
-                      Text('Change Password'),
-                    ],
-                  ),
-                ),
+                // const PopupMenuItem<String>(
+                //   value: 'change_password',
+                //   child: Row(
+                //     children: [
+                //       Icon(Icons.lock_outline, color: Colors.black87, size: 20),
+                //       SizedBox(width: 8),
+                //       Text('Change Password'),
+                //     ],
+                //   ),
+                // ),
                 PopupMenuItem<String>(
                   value: 'delete_account',
                   child: Row(

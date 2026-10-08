@@ -414,8 +414,9 @@ class ApiServices {
   }
 
   static Future<Map<String, dynamic>?> login({
-    required String phone,
+    required String employeeId,
     required String password,
+    String? phone,
   }) async {
     try {
       final coords = await LocationService.getCoordinates(
@@ -427,13 +428,18 @@ class ApiServices {
       );
 
       final deviceId =
-          NotificationService.instance.deviceId ?? "no_device";
+          NotificationService.instance.deviceId ?? "V1UGS35H.75-14-9-3-1-1";
       final token =
-          NotificationService.instance.fcmToken ?? "no_token";
+          NotificationService.instance.fcmToken ?? "eaEnOKK9nb864KVG41vh7v:APA91bF4";
+
+      final empIdVal = employeeId.isNotEmpty ? employeeId : (phone ?? "");
 
       final payload = {
+        "employeeId": empIdVal,
+        "password": password,
         "credentials": {
-          "mobile": phone,
+          "employeeId": empIdVal,
+          "mobile": empIdVal,
           "password": password,
         },
         "meta": {
@@ -455,6 +461,7 @@ class ApiServices {
         data: payload,
         options: Options(
           responseType: ResponseType.plain,
+          validateStatus: (status) => status != null && status < 600,
         ),
       );
 
@@ -838,6 +845,7 @@ class ApiServices {
     int? distributorId,
     String? address,
     String? remarks,
+    String? visitType,
   }) async {
     try {
       final token = await SessionManager.getToken();
@@ -861,6 +869,7 @@ class ApiServices {
         if (finalDistId != null) "distributor_id": finalDistId,
         if (address != null && address.isNotEmpty) "address": address,
         if (remarks != null && remarks.isNotEmpty) "remarks": remarks,
+        if (visitType != null && visitType.isNotEmpty) "visit_type": visitType,
       };
 
       AppLogger.info("Outlet Check-In API called: ${AppUrls.outletCheckIn}");

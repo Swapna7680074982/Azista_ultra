@@ -257,43 +257,71 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                isExpanded: true,
-                                isDense: true,
-                                value: isValidSelection ? currentSelected : null,
-                                hint: const Text(
-                                  "Select Distributor",
-                                  style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500),
-                                ),
-                                icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary, size: 20),
-                                items: distributors.map((d) {
-                                  final name = d["distributor_name"]?.toString() ?? "";
-                                  return DropdownMenuItem<String>(
-                                    value: name,
-                                    child: Text(
-                                      name,
-                                      style: const TextStyle(
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: distributors.isEmpty
+                                  ? () {
+                                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: const Text("No distributors found for your account."),
+                                          action: SnackBarAction(
+                                            label: "REFRESH",
+                                            textColor: Colors.amberAccent,
+                                            onPressed: () {
+                                              homeProvider.loadDistributors(appState);
+                                            },
+                                          ),
+                                          duration: const Duration(seconds: 4),
+                                        ),
+                                      );
+                                    }
+                                  : null,
+                              child: IgnorePointer(
+                                ignoring: distributors.isEmpty,
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    isExpanded: true,
+                                    isDense: true,
+                                    value: isValidSelection ? currentSelected : null,
+                                    hint: Text(
+                                      distributors.isEmpty ? "No Distributors Available" : "Select Distributor",
+                                      style: TextStyle(
                                         fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black87,
+                                        color: distributors.isEmpty ? Colors.red.shade400 : Colors.grey,
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  );
-                                }).toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    final found = distributors.firstWhere(
-                                      (d) => d["distributor_name"] == val,
-                                      orElse: () => <String, dynamic>{},
-                                    );
-                                    final distId = int.tryParse(found["distributor_id"]?.toString() ?? "");
-                                    appState.setSelectedDistributor(val, distId);
-                                  } else {
-                                    appState.setSelectedDistributor(null, null);
-                                  }
-                                },
+                                    icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary, size: 20),
+                                    items: distributors.map((d) {
+                                      final name = d["distributor_name"]?.toString() ?? "";
+                                      return DropdownMenuItem<String>(
+                                        value: name,
+                                        child: Text(
+                                          name,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black87,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        final found = distributors.firstWhere(
+                                          (d) => d["distributor_name"] == val,
+                                          orElse: () => <String, dynamic>{},
+                                        );
+                                        final distId = int.tryParse(found["distributor_id"]?.toString() ?? "");
+                                        appState.setSelectedDistributor(val, distId);
+                                      } else {
+                                        appState.setSelectedDistributor(null, null);
+                                      }
+                                    },
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -311,7 +339,24 @@ class _HomeScreenState extends State<HomeScreen> {
                           elevation: 1,
                         ),
                         onPressed: () {
+                          if (distributors.isEmpty) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text("No distributors available. Please refresh or contact admin."),
+                                action: SnackBarAction(
+                                  label: "REFRESH",
+                                  textColor: Colors.amberAccent,
+                                  onPressed: () {
+                                    homeProvider.loadDistributors(appState);
+                                  },
+                                ),
+                              ),
+                            );
+                            return;
+                          }
                           if (appState.selectedDistributor == null) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text("Please select a distributor first.")),
                             );

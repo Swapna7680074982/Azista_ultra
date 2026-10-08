@@ -137,7 +137,7 @@ class _DistributionNetworkScreenState
                           DropdownButtonFormField<String>(
                             icon: provider.cities.length <= 1 ? const SizedBox.shrink() : null,
                             value: provider.selectedCity,
-                            hint: const Text("Select City"),
+                            hint: const Text("Select HQ"),
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: AppColors.inputFill,

@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
@@ -508,10 +507,10 @@ class _NearMeScreenState extends State<NearMeScreen> {
               Expanded(
                 child: Text(
                   outlet.name.toUpperCase(),
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    color: isBlocked ? Colors.grey.shade700 : Colors.black,
+                    color: Colors.black,
                   ),
                 ),
               ),
@@ -694,6 +693,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
               ),
             ],
           ),
+
         ],
       ),
     );
@@ -727,15 +727,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
           child: isBlocked
               ? Stack(
                   children: [
-                    ImageFiltered(
-                      imageFilter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
-                      child: cardContent,
-                    ),
-                    Positioned.fill(
-                      child: Container(
-                        color: Colors.white.withValues(alpha: 0.45),
-                      ),
-                    ),
+                    cardContent,
                     Positioned.fill(
                       child: Center(
                         child: Container(

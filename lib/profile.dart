@@ -2,7 +2,7 @@ import 'package:azista_ultra/permissions/AccessValidator.dart';
 import 'package:azista_ultra/permissions/AppStateProvider.dart';
 import 'package:azista_ultra/permissions/SessionManager.dart';
 import 'package:azista_ultra/screens/Homes/HomeProvider.dart';
-import 'package:azista_ultra/screens/Homes/change_password.dart';
+// import 'package:azista_ultra/screens/Homes/change_password.dart';
 import 'package:azista_ultra/screens/Homes/main_tab_provider.dart';
 import 'package:azista_ultra/screens/Homes/support.dart';
 import 'package:azista_ultra/screens/login/login_screen.dart';
@@ -99,7 +99,7 @@ class ProfileDrawer extends StatelessWidget {
           sectionTitle("OTHERS"),
 
           menuItem(context, "Support"),
-          menuItem(context, "Change Password"),
+          // menuItem(context, "Change Password"),
           menuItem(context, "Delete Account"),
           menuItem(context, "Logout"),
         ],
@@ -281,13 +281,13 @@ class ProfileDrawer extends StatelessWidget {
               );
               break;
 
-            case "Change Password":
-              navProvider.setTab(0);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-              );
-              break;
+            // case "Change Password":
+            //   navProvider.setTab(0);
+            //   Navigator.push(
+            //     context,
+            //     MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+            //   );
+            //   break;
 
             case "Delete Account":
               navProvider.setTab(0);

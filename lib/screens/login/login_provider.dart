@@ -7,15 +7,15 @@ class LoginProvider extends ChangeNotifier {
   bool isLoading = false;
   String? error;
 
-  Future<bool> login(String phone, String password) async {
+  Future<bool> login(String employeeId, String password) async {
     error = null;
 
-    if (phone.isEmpty) {
-      error = "Mobile number is required";
+    if (employeeId.trim().isEmpty) {
+      error = "Employee ID is required";
       notifyListeners();
       return false;
     }
-    if (password.isEmpty) {
+    if (password.trim().isEmpty) {
       error = "Password is required";
       notifyListeners();
       return false;
@@ -26,25 +26,31 @@ class LoginProvider extends ChangeNotifier {
 
     try {
       final response = await ApiServices.login(
-        phone: phone,
-        password: password,
+        employeeId: employeeId.trim(),
+        password: password.trim(),
       );
 
       if (response != null) {
         final status = response["status"];
-        if (status == true || status == "success" || status == 1) {
+        final statusCode = response["status_code"];
+        final empStatus = response["empStatus"];
+
+        if (status == true || status == "success" || status == 1 || statusCode == 200 || empStatus == true) {
           final data = (response["data"] is Map) ? response["data"] : response;
+          final basicDetails = (response["basicDetails"] is Map) ? response["basicDetails"] : null;
+
           final token = data["access_token"]?.toString() ??
+              response["token"]?.toString() ??
               response["access_token"]?.toString() ??
               data["token"]?.toString() ??
-              response["token"]?.toString() ??
               data["jwt"]?.toString();
           final refreshToken = data["refresh_token"]?.toString() ??
               response["refresh_token"]?.toString() ??
               data["refreshToken"]?.toString() ??
-              response["refreshToken"]?.toString();
+              response["refreshToken"]?.toString() ??
+              token;
 
-          if (token == null || refreshToken == null || token.trim().isEmpty || refreshToken.trim().isEmpty) {
+          if (token == null || token.trim().isEmpty) {
             error = "Missing login tokens in response";
             isLoading = false;
             notifyListeners();
@@ -55,17 +61,34 @@ class LoginProvider extends ChangeNotifier {
           await SessionManager.clearSession();
 
           await SessionManager.saveSession(
-            refreshToken: refreshToken.trim(),
+            refreshToken: (refreshToken ?? token).trim(),
             token: token.trim(),
           );
 
-          final userInfo = data["user_info"] ?? response["user_info"];
-          if (userInfo != null) {
-            final name = userInfo["name"]?.toString() ?? "Unknown";
-            final rolecode = userInfo["rolecode"]?.toString().trim();
-            final role = (rolecode == null || rolecode.isEmpty) ? "Sale Off" : rolecode;
-            await SessionManager.saveUserDetails(name, role, userInfo: userInfo);
+          final userInfo = (data["user_info"] is Map)
+              ? Map<String, dynamic>.from(data["user_info"])
+              : <String, dynamic>{};
+
+          if (basicDetails != null) {
+            if (!userInfo.containsKey("name") || userInfo["name"] == null) {
+              userInfo["name"] = basicDetails["EMPNAME"];
+            }
+            if (!userInfo.containsKey("employee_id") || userInfo["employee_id"] == null) {
+              userInfo["employee_id"] = basicDetails["EMPID"]?.toString();
+            }
+            if (!userInfo.containsKey("email") || userInfo["email"] == null) {
+              userInfo["email"] = basicDetails["EMAIL"];
+            }
+            if (!userInfo.containsKey("mobile") || userInfo["mobile"] == null) {
+              userInfo["mobile"] = basicDetails["MOBILE"];
+            }
+            userInfo["basicDetails"] = basicDetails;
           }
+
+          final name = userInfo["name"]?.toString() ?? basicDetails?["EMPNAME"]?.toString() ?? "Unknown";
+          final rolecode = userInfo["rolecode"]?.toString().trim();
+          final role = (rolecode == null || rolecode.isEmpty) ? "Sale Off" : rolecode;
+          await SessionManager.saveUserDetails(name, role, userInfo: userInfo);
 
           final attStatusObj = (data["attendance_status"] ?? response["attendance_status"]);
           final attendanceStatus = attStatusObj?["today_status"]?.toString();
@@ -90,10 +113,10 @@ class LoginProvider extends ChangeNotifier {
           notifyListeners();
           return true;
         } else {
-          error = response["message"] ?? "Invalid login";
+          error = response["message"]?.toString() ?? "Invalid credentials";
         }
       } else {
-        error = "Invalid login";
+        error = "Invalid credentials";
       }
     } catch (e) {
       debugPrint("Login error: $e");

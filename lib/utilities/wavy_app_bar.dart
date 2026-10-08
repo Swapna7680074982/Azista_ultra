@@ -31,6 +31,7 @@ class WavyAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       leading: leading,
+      iconTheme: const IconThemeData(color: Colors.white),
       actions: actions,
       centerTitle: true,
       elevation: 0,

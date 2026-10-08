@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
@@ -489,10 +488,10 @@ class _OutletsScreenState extends State<OutletsScreen> {
               Expanded(
                 child: Text(
                   outlet.name.toUpperCase(),
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
-                    color: isBlocked ? Colors.grey.shade700 : Colors.black,
+                    color: Colors.black,
                   ),
                 ),
               ),
@@ -670,6 +669,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
               ),
             ],
           ),
+
         ],
       ),
     );
@@ -703,15 +703,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
           child: isBlocked
               ? Stack(
                   children: [
-                    ImageFiltered(
-                      imageFilter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
-                      child: cardContent,
-                    ),
-                    Positioned.fill(
-                      child: Container(
-                        color: Colors.white.withValues(alpha: 0.45),
-                      ),
-                    ),
+                    cardContent,
                     Positioned.fill(
                       child: Center(
                         child: Container(

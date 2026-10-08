@@ -182,6 +182,7 @@ class _MyGeoRequestsScreenState extends State<MyGeoRequestsScreen> {
     return Scaffold(
       appBar: WavyAppBar(
         title: "MY GEO REQUESTS",
+        leading: const BackButton(color: Colors.white),
         actions: [
           IconButton(
             tooltip: "Refresh Geo Requests",
