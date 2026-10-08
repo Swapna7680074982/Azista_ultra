@@ -300,7 +300,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                 child: InkWell(
                   onTap: () {
                     Navigator.pop(ctx);
-                    _handleCheckIn("Single Visit");
+                    _handleCheckIn("Individual");
                   },
                   borderRadius: BorderRadius.circular(14),
                   child: Container(
@@ -327,7 +327,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Single Visit",
+                                "Single / Individual Visit",
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -367,7 +367,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                 child: InkWell(
                   onTap: () {
                     Navigator.pop(ctx);
-                    _handleCheckIn("Combined Visit");
+                    _handleCheckIn("Combine");
                   },
                   borderRadius: BorderRadius.circular(14),
                   child: Container(
@@ -433,19 +433,24 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   }
 
   Future<void> _handleCheckIn(String visitType) async {
-    LoadingDialog.show(context, message: "Checking in ($visitType)...");
+    final displayLabel = visitType == "Combine" ? "Combined Visit" : "Individual Visit";
+    LoadingDialog.show(context, message: "Checking in ($displayLabel)...");
     try {
       final coords = await LocationService.getCoordinates();
       final currentLat = double.parse(coords[0]);
       final currentLng = double.parse(coords[1]);
 
       final outletId = int.tryParse(widget.outlet.id) ?? 0;
+      final outletAddress = widget.outlet.address.isNotEmpty 
+          ? widget.outlet.address 
+          : (widget.outlet.area.isNotEmpty ? widget.outlet.area : "");
 
       final response = await ApiServices.outletCheckIn(
         outletId: outletId,
         latitude: currentLat,
         longitude: currentLng,
-        remarks: "$visitType - Visited outlet",
+        address: outletAddress,
+        remarks: "$displayLabel - Visited outlet",
         visitType: visitType,
       );
 

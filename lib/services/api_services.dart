@@ -862,14 +862,23 @@ class ApiServices {
         }
       }
 
+      String normalizedVisitType = "Individual";
+      if (visitType != null && visitType.trim().isNotEmpty) {
+        if (visitType.toLowerCase().contains("comb")) {
+          normalizedVisitType = "Combine";
+        } else {
+          normalizedVisitType = "Individual";
+        }
+      }
+
       final payload = <String, dynamic>{
         "outlet_id": outletId,
-        "latitude": latitude,
-        "longitude": longitude,
-        if (finalDistId != null) "distributor_id": finalDistId,
-        if (address != null && address.isNotEmpty) "address": address,
-        if (remarks != null && remarks.isNotEmpty) "remarks": remarks,
-        if (visitType != null && visitType.isNotEmpty) "visit_type": visitType,
+        "distributor_id": finalDistId ?? 1,
+        "visit_type": normalizedVisitType,
+        "latitude": latitude.toString(),
+        "longitude": longitude.toString(),
+        "address": address ?? "",
+        "remarks": (remarks != null && remarks.isNotEmpty) ? remarks : "Visited outlet",
       };
 
       AppLogger.info("Outlet Check-In API called: ${AppUrls.outletCheckIn}");
