@@ -30,7 +30,7 @@ class SelectSoScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          "Select SO",
+          "Select FSE",
           style: TextStyle(color: Colors.white, fontSize: 18),
         ),
         actions: [
@@ -40,7 +40,7 @@ class SelectSoScreen extends StatelessWidget {
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text("SO list refreshed"),
+                  content: Text("FSE list refreshed"),
                   duration: Duration(seconds: 1),
                 ),
               );

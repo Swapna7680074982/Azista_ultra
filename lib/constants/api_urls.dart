@@ -58,4 +58,6 @@ class AppUrls {
   static const String teamMemberOutlets = "$astraBaseUrl/distribution/team_member_outlets";
   static const String outletPobHistory = "$astraBaseUrl/distribution/outlet_pob_history";
   static const String outletVisitActivityHistory = "$astraBaseUrl/distribution/outlet_visit_activity_history";
+  static const String teamOutletVisits = "$astraBaseUrl/distribution/team_outlet_visits";
+  static const String teamVisitsHistory = "$astraBaseUrl/distribution/team_visits_history";
 }

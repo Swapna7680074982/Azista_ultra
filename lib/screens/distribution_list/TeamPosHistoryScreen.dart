@@ -4,6 +4,7 @@ import '../../constants/app_colors.dart';
 import '../../services/api_services.dart';
 import '../../utilities/common_widgets.dart';
 import '../../utilities/date_formatter.dart';
+import '../../utilities/role_helper.dart';
 import '../../permissions/SessionManager.dart';
 import 'TeamMemberDetailScreen.dart';
 
@@ -65,51 +66,129 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
   Future<void> _loadOutletNames() async {
     if (!mounted) return;
     try {
-      final userOutletsRes = await ApiServices.getUserOutlets();
-      if (userOutletsRes != null && userOutletsRes["status"] == true) {
-        final list = userOutletsRes["data"] as List<dynamic>? ?? [];
-        for (var o in list) {
-          final id = o['outlet_id']?.toString();
-          final name = o['outlet_name']?.toString() ?? o['name']?.toString();
-          if (id != null && name != null) {
-            _outletNameLookup[id] = name;
+      // 0. Fetch candidate outlets from calls_info API (contains active outlet names)
+      try {
+        final now = DateTime.now();
+        final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+        final monthStr = "${now.month.toString().padLeft(2, '0')}-${now.year}";
+
+        final callsRes = await ApiServices.getCallsInfo(month: monthStr) ??
+            await ApiServices.getCallsInfo(date: dateStr);
+
+        if (callsRes != null && callsRes["data"] is List) {
+          for (var item in callsRes["data"]) {
+            if (item is Map) {
+              final id = (item["outlet_id"] ?? item["id"])?.toString();
+              final name = item["outlet_name"]?.toString() ?? item["name"]?.toString();
+              if (id != null && name != null && name.trim().isNotEmpty) {
+                _outletNameLookup[id] = name;
+              }
+            }
           }
         }
+      } catch (e) {
+        debugPrint("Error fetching calls info for lookup: $e");
       }
 
-      if (!mounted) return;
-      final summaryRes = await ApiServices.getTeamMembersSummary(
-        month: selectedDate.month,
-        year: selectedDate.year,
-      );
-      if (summaryRes != null && summaryRes["status"] == true) {
-        final List members = summaryRes["data"] ?? [];
-        for (var member in members) {
-          final memberRole = _normalizeRole(member['rolecode']?.toString() ?? member['role']?.toString() ?? '');
-          if (_currentUserRole == 'AM' && memberRole != 'SO') continue;
-          if (_currentUserRole == 'RM' && (memberRole == 'RM' || (memberRole != 'AM' && memberRole != 'SO'))) continue;
+      // 1. Fetch from team members' mapped outlets via getMyTeam
+      try {
+        final teamRes = await ApiServices.getMyTeam();
+        if (teamRes != null && (teamRes["status"] == true || teamRes["status"] == "success" || teamRes["status_code"] == 200)) {
+          final members = teamRes["data"] as List<dynamic>? ?? [];
+          for (var member in members) {
+            final userId = int.tryParse(member['user_id']?.toString() ?? '');
+            if (userId != null) {
+              final outletsRes = await ApiServices.getTeamMemberOutlets(
+                userId: userId,
+                month: selectedDate.month,
+                year: selectedDate.year,
+              );
+              if (outletsRes != null && outletsRes["status"] == true) {
+                final list = outletsRes["data"] as List<dynamic>? ?? [];
+                for (var o in list) {
+                  final id = o['outlet_id']?.toString();
+                  final name = o['outlet_name']?.toString() ?? o['name']?.toString();
+                  if (id != null && name != null && name.trim().isNotEmpty) {
+                    _outletNameLookup[id] = name;
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint("Error fetching team member outlets for lookup: $e");
+      }
 
-          final userId = int.tryParse(member['user_id']?.toString() ?? '');
-          if (userId != null) {
-            if (!mounted) return;
-            final outletsRes = await ApiServices.getTeamMemberOutlets(
-              userId: userId,
-              month: selectedDate.month,
-              year: selectedDate.year,
-            );
-            if (outletsRes != null && outletsRes["status"] == true) {
-              final list = outletsRes["data"] as List<dynamic>? ?? [];
+      // 2. Fetch from current user's routes & outlets
+      try {
+        final routesRes = await ApiServices.getRoutes();
+        if (routesRes != null && routesRes["status"] == true) {
+          final rawRoutes = routesRes["routes"] ?? routesRes["beats"] ?? routesRes["data"];
+          final List<int> routeIds = [];
+          if (rawRoutes is Map) {
+            for (var k in rawRoutes.keys) {
+              final id = int.tryParse(k.toString()) ?? int.tryParse(rawRoutes[k]?["ROUTE_ID"]?.toString() ?? '');
+              if (id != null) routeIds.add(id);
+            }
+          } else if (rawRoutes is List) {
+            for (var r in rawRoutes) {
+              final id = int.tryParse(r["ROUTE_ID"]?.toString() ?? r["route_id"]?.toString() ?? '');
+              if (id != null) routeIds.add(id);
+            }
+          }
+          for (var routeIdInt in routeIds) {
+            final oRes = await ApiServices.getUserOutlets(routeId: routeIdInt);
+            if (oRes != null && oRes["status"] == true) {
+              final list = oRes["data"] as List<dynamic>? ?? [];
               for (var o in list) {
                 final id = o['outlet_id']?.toString();
                 final name = o['outlet_name']?.toString() ?? o['name']?.toString();
-                if (id != null && name != null) {
+                if (id != null && name != null && name.trim().isNotEmpty) {
                   _outletNameLookup[id] = name;
                 }
               }
             }
           }
         }
+      } catch (e) {
+        debugPrint("Error fetching routes outlets for lookup: $e");
       }
+
+      // 3. Fallback from getTeamMembersSummary
+      try {
+        final summaryRes = await ApiServices.getTeamMembersSummary(
+          month: selectedDate.month,
+          year: selectedDate.year,
+        );
+        if (summaryRes != null && summaryRes["status"] == true) {
+          final List members = summaryRes["data"] ?? [];
+          for (var member in members) {
+            final memberRole = _normalizeRole(member['rolecode']?.toString() ?? member['role']?.toString() ?? '');
+            if (_currentUserRole == 'AM' && memberRole != 'SO') continue;
+            if (_currentUserRole == 'RM' && (memberRole == 'RM' || (memberRole != 'AM' && memberRole != 'SO'))) continue;
+
+            final userId = int.tryParse(member['user_id']?.toString() ?? '');
+            if (userId != null) {
+              final outletsRes = await ApiServices.getTeamMemberOutlets(
+                userId: userId,
+                month: selectedDate.month,
+                year: selectedDate.year,
+              );
+              if (outletsRes != null && outletsRes["status"] == true) {
+                final list = outletsRes["data"] as List<dynamic>? ?? [];
+                for (var o in list) {
+                  final id = o['outlet_id']?.toString();
+                  final name = o['outlet_name']?.toString() ?? o['name']?.toString();
+                  if (id != null && name != null && name.trim().isNotEmpty) {
+                    _outletNameLookup[id] = name;
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (_) {}
     } catch (e) {
       debugPrint("Error loading outlet names lookup: $e");
     } finally {
@@ -158,9 +237,72 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
         data = await ApiServices.getTeamPosHistory(posType: type);
       }
       if (mounted) {
+        final List txList = data is List ? data : [];
         setState(() {
-          _transactions = data ?? [];
+          _transactions = txList;
         });
+
+        // 1. Resolve missing outlet names by fetching getOutletHistory directly
+        final Set<int> missingOutletIds = {};
+        for (var tx in txList) {
+          final oId = int.tryParse(tx['outlet_id']?.toString() ?? '');
+          if (oId != null && !_outletNameLookup.containsKey(oId.toString())) {
+            missingOutletIds.add(oId);
+          }
+        }
+        for (var oId in missingOutletIds) {
+          ApiServices.getOutletHistory(outletId: oId).then((hist) {
+            if (hist != null &&
+                (hist['status'] == true ||
+                    hist['status'] == 1 ||
+                    hist['status'] == '1' ||
+                    hist['status'] == 'success' ||
+                    hist['status_code'] == 200)) {
+              final details = hist['outlet_details'] is Map ? Map<String, dynamic>.from(hist['outlet_details']) : null;
+              final name = details?['outlet_name']?.toString() ??
+                  details?['name']?.toString() ??
+                  hist['outlet_name']?.toString() ??
+                  hist['name']?.toString();
+              if (name != null && name.trim().isNotEmpty) {
+                _outletNameLookup[oId.toString()] = name;
+                if (mounted) setState(() {});
+              }
+            }
+          }).catchError((_) {});
+        }
+
+        // 2. Resolve any missing outlet names for user IDs in transactions
+        final Set<int> missingUserIds = {};
+        for (var tx in txList) {
+          final oId = tx['outlet_id']?.toString();
+          if (oId != null && !_outletNameLookup.containsKey(oId)) {
+            final uId = int.tryParse(tx['user_id']?.toString() ?? '');
+            if (uId != null) missingUserIds.add(uId);
+          }
+        }
+        for (var uId in missingUserIds) {
+          ApiServices.getTeamMemberOutlets(
+            userId: uId,
+            month: selectedDate.month,
+            year: selectedDate.year,
+          ).then((outletsRes) {
+            if (outletsRes != null && outletsRes["status"] == true) {
+              final list = outletsRes["data"] as List<dynamic>? ?? [];
+              bool updated = false;
+              for (var o in list) {
+                final id = o['outlet_id']?.toString();
+                final name = o['outlet_name']?.toString() ?? o['name']?.toString();
+                if (id != null && name != null && name.trim().isNotEmpty) {
+                  _outletNameLookup[id] = name;
+                  updated = true;
+                }
+              }
+              if (updated && mounted) {
+                setState(() {});
+              }
+            }
+          }).catchError((_) {});
+        }
       }
     } catch (e) {
       debugPrint("Error fetching team history: $e");
@@ -473,14 +615,38 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
   Widget _buildPobTransactionCard(dynamic pob) {
     final pobNumber = pob["pob_number"]?.toString() ?? "POB-${pob["pob_id"] ?? ""}";
     final outletIdStr = pob["outlet_id"]?.toString() ?? "";
-    final outletName = pob["outlet_name"]?.toString() ?? _outletNameLookup[outletIdStr] ?? "Unknown Outlet";
+    final outletName = (pob["outlet_name"]?.toString().trim().isNotEmpty == true ? pob["outlet_name"].toString() : null) ??
+        _outletNameLookup[outletIdStr] ??
+        (outletIdStr.isNotEmpty ? "Outlet #$outletIdStr" : "Unknown Outlet");
     final empName = pob["employee_name"]?.toString() ?? pob["fullname"]?.toString() ?? "Unknown";
     final empId = pob["employee_id"]?.toString() ?? pob["user_id"]?.toString() ?? "-";
     final role = _normalizeRole(pob["rolecode"]?.toString() ?? "SO");
     final status = (pob["status"]?.toString() ?? "supplied").toUpperCase();
     final createdAt = pob["created_at"]?.toString() ?? "";
     final items = (pob["items"] as List<dynamic>?) ?? [];
-    final totalAmount = pob["ptr_incl_gst_total_amount"]?.toString() ?? pob["ptr_total_amount"]?.toString() ?? "0.00";
+    double totalAmountDouble = double.tryParse(pob["ptr_incl_gst_total_amount"]?.toString() ??
+        pob["ptr_total_amount"]?.toString() ??
+        pob["sale_value"]?.toString() ?? '') ?? 0.0;
+    if (totalAmountDouble == 0.0 && items.isNotEmpty) {
+      for (var item in items) {
+        final sub = double.tryParse(item["pts_subtotal"]?.toString() ??
+            item["ptr_subtotal"]?.toString() ??
+            item["subtotal"]?.toString() ??
+            item["sale_value"]?.toString() ?? '');
+        if (sub != null && sub > 0) {
+          totalAmountDouble += sub;
+        } else {
+          final price = double.tryParse(item["pts"]?.toString() ??
+              item["pts_price"]?.toString() ??
+              item["ptr_price"]?.toString() ??
+              item["price"]?.toString() ??
+              item["sku_retailerprice"]?.toString() ?? '') ?? 0.0;
+          final qty = int.tryParse(item["quantity"]?.toString() ?? '') ?? 0;
+          totalAmountDouble += price * qty;
+        }
+      }
+    }
+    final totalAmount = totalAmountDouble.toStringAsFixed(2);
 
     Color roleColor;
     if (role == "RM") {
@@ -563,7 +729,7 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
                           ),
                         ),
                         Text(
-                          "Submitted by: $empName ($role) - ID: $empId",
+                          "Submitted by: $empName (${RoleHelper.formatRole(role)}) - ID: $empId",
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey.shade600,
@@ -791,7 +957,9 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     final createdOn = first["created_on"]?.toString() ?? first["created_at"]?.toString() ?? "";
     final totalSkus = items.length;
     final outletIdStr = first["outlet_id"]?.toString() ?? "";
-    final outletName = first["outlet_name"]?.toString() ?? _outletNameLookup[outletIdStr] ?? "Unknown Outlet";
+    final outletName = (first["outlet_name"]?.toString().trim().isNotEmpty == true ? first["outlet_name"].toString() : null) ??
+        _outletNameLookup[outletIdStr] ??
+        (outletIdStr.isNotEmpty ? "Outlet #$outletIdStr" : "Unknown Outlet");
 
     Color roleColor;
     if (role.toUpperCase() == "RM") {
@@ -842,7 +1010,7 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          "Submitted by: $empName ($role)",
+                          "Submitted by: $empName (${RoleHelper.formatRole(role)})",
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey.shade700,
@@ -971,8 +1139,13 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
                             ...entry.value.map((item) {
                               String qty = item['quantity']?.toString() ?? '0';
                               String sku = item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'N/A';
-                              String val = item['sale_value']?.toString() ?? item['subtotal']?.toString() ?? '0.00';
-                              String price = item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.00';
+                              String price = item['pts']?.toString() ?? item['pts_price']?.toString() ?? item['ptr_price']?.toString() ?? item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.00';
+                              double priceVal = double.tryParse(price) ?? 0.0;
+                              int qtyVal = int.tryParse(qty) ?? 0;
+                              String val = item['pts_subtotal']?.toString() ?? item['ptr_subtotal']?.toString() ?? item['sale_value']?.toString() ?? item['subtotal']?.toString() ?? (priceVal * qtyVal).toStringAsFixed(2);
+                              if ((double.tryParse(val) ?? 0.0) == 0.0 && priceVal > 0 && qtyVal > 0) {
+                                val = (priceVal * qtyVal).toStringAsFixed(2);
+                              }
                               String supplied = item['supplied_qty']?.toString() ?? '0';
                               String remaining = item['remaining_qty']?.toString() ?? '0';
                               return _skuRow(sku, qty, price, val, isPob: isPob, supplied: supplied, remaining: remaining);

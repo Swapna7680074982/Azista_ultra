@@ -103,7 +103,7 @@ class _RmDashboardScreenState extends State<RmDashboardScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             const Text(
-                              "ULTRA RM",
+                              "ULTRA RSM",
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 40,

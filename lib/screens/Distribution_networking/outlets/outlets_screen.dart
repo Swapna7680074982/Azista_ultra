@@ -11,6 +11,7 @@ import 'NewOutletScreen.dart';
 import 'PobScreen.dart';
 import 'PosBaseScreen.dart';
 import 'outlet_provider.dart';
+import 'outlet_visit_history_sheet.dart';
 import '../../../utilities/date_formatter.dart';
 import '../../../services/api_services.dart';
 import '../../../utilities/common_widgets.dart';
@@ -629,13 +630,14 @@ class _OutletsScreenState extends State<OutletsScreen> {
                       style: TextStyle(
                         color: AppColors.green,
                         fontWeight: FontWeight.w600,
+                        fontSize: 12,
                       ),
                     ),
                   ),
                 ),
               ),
 
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Container(
                   height: 35,
@@ -662,6 +664,40 @@ class _OutletsScreenState extends State<OutletsScreen> {
                       style: TextStyle(
                         color: AppColors.green,
                         fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  height: 35,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.green),
+                    borderRadius: BorderRadius.circular(6),
+                    color: AppColors.green.withValues(alpha: 0.05),
+                  ),
+                  child: TextButton(
+                    onPressed: () {
+                      final oId = int.tryParse(outlet.id) ?? 0;
+                      if (oId > 0) {
+                        OutletVisitHistorySheet.show(
+                          context,
+                          outletId: oId,
+                          outletName: outlet.name,
+                          initialVisits: outlet.visitHistory,
+                        );
+                      }
+                    },
+                    child: const Text(
+                      "VISIT HISTORY",
+                      style: TextStyle(
+                        color: AppColors.green,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
                       ),
                     ),
                   ),

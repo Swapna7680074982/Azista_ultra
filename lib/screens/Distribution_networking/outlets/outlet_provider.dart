@@ -4,6 +4,68 @@ import '../../../permissions/SessionManager.dart';
 import '../../../services/api_services.dart';
 import '../../../services/location_service.dart';
 
+class VisitHistoryItem {
+  final String visitId;
+  final String visitDate;
+  final String visitType;
+  final String checkinTime;
+  final String? checkoutTime;
+  final String remarks;
+  final List<dynamic> activityHistory;
+
+  VisitHistoryItem({
+    required this.visitId,
+    required this.visitDate,
+    required this.visitType,
+    required this.checkinTime,
+    this.checkoutTime,
+    this.remarks = '',
+    this.activityHistory = const [],
+  });
+
+  factory VisitHistoryItem.fromJson(Map<String, dynamic> json) {
+    final vDate = (json['visit_date'] ??
+            json['date'] ??
+            json['checkin_time'] ??
+            json['check_in_time'] ??
+            json['check_in'] ??
+            json['last_visit_date'] ??
+            json['last_visited_date'] ??
+            json['created_on'] ??
+            json['created_at'] ??
+            '')
+        .toString();
+
+    final cInTime = (json['checkin_time'] ??
+            json['check_in_time'] ??
+            json['check_in'] ??
+            json['visit_date'] ??
+            json['date'] ??
+            '')
+        .toString();
+
+    return VisitHistoryItem(
+      visitId: (json['visit_id'] ?? json['id'] ?? '').toString(),
+      visitDate: vDate == 'null' ? '' : vDate,
+      visitType: (json['visit_type'] ?? json['type'] ?? json['call_type'] ?? 'INDIVIDUAL').toString(),
+      checkinTime: cInTime == 'null' ? '' : cInTime,
+      checkoutTime: json['checkout_time']?.toString() ?? json['check_out_time']?.toString(),
+      remarks: (json['remarks'] ?? json['remark'] ?? '').toString(),
+      activityHistory: (json['activity_history'] as List<dynamic>?) ?? [],
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'visit_id': visitId,
+    'visit_date': visitDate,
+    'visit_type': visitType,
+    'checkin_time': checkinTime,
+    'checkout_time': checkoutTime,
+    'remarks': remarks,
+    'activity_history': activityHistory,
+  };
+}
+
 class Outlet {
   final String name;
   final String owner;
@@ -16,6 +78,11 @@ class Outlet {
   final String address;
   final String area;
   final double? distanceKm;
+  final List<VisitHistoryItem> visitHistory;
+  final int totalVisits;
+  final int totalActivities;
+  final int totalPobs;
+  final double saleValue;
 
   Outlet({
     required this.name,
@@ -29,60 +96,212 @@ class Outlet {
     this.address = "",
     this.area = "",
     this.distanceKm,
+    this.visitHistory = const [],
+    this.totalVisits = 0,
+    this.totalActivities = 0,
+    this.totalPobs = 0,
+    this.saleValue = 0.0,
   });
 
+  VisitHistoryItem? get latestVisit =>
+      visitHistory.isNotEmpty ? visitHistory.first : null;
+
+  Outlet copyWith({
+    String? name,
+    String? owner,
+    String? phone,
+    String? id,
+    String? type,
+    double? latitude,
+    double? longitude,
+    String? status,
+    String? address,
+    String? area,
+    double? distanceKm,
+    List<VisitHistoryItem>? visitHistory,
+    int? totalVisits,
+    int? totalActivities,
+    int? totalPobs,
+    double? saleValue,
+  }) {
+    return Outlet(
+      name: name ?? this.name,
+      owner: owner ?? this.owner,
+      phone: phone ?? this.phone,
+      id: id ?? this.id,
+      type: type ?? this.type,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      status: status ?? this.status,
+      address: address ?? this.address,
+      area: area ?? this.area,
+      distanceKm: distanceKm ?? this.distanceKm,
+      visitHistory: visitHistory ?? this.visitHistory,
+      totalVisits: totalVisits ?? this.totalVisits,
+      totalActivities: totalActivities ?? this.totalActivities,
+      totalPobs: totalPobs ?? this.totalPobs,
+      saleValue: saleValue ?? this.saleValue,
+    );
+  }
+
   factory Outlet.fromJson(Map<String, dynamic> json) {
+    // If json has nested "outlet_details", unpack it
+    final outletData = (json['outlet_details'] is Map<String, dynamic>)
+        ? json['outlet_details'] as Map<String, dynamic>
+        : json;
+
     // Resolve the category/type name from multiple possible API field names
-    final type = (json['outlet_category_name']
-            ?? json['category_name']
-            ?? json['outlet_type']
-            ?? json['outlet_category'])
+    final type = (outletData['outlet_category_name']
+            ?? outletData['category_name']
+            ?? outletData['outlet_type']
+            ?? outletData['outlet_category'])
         ?.toString()
         ?? '';
 
     double lat = 0.0;
-    final rawLat = json['location']?['latitude'] ??
-        json['location']?['lat'] ??
-        json['latitude'] ??
-        json['lat'] ??
-        json['outlet_latitude'];
+    final rawLat = outletData['location']?['latitude'] ??
+        outletData['location']?['lat'] ??
+        outletData['latitude'] ??
+        outletData['lat'] ??
+        outletData['outlet_latitude'];
     if (rawLat != null) {
       lat = double.tryParse(rawLat.toString()) ?? 0.0;
     }
 
     double lng = 0.0;
-    final rawLng = json['location']?['longitude'] ??
-        json['location']?['lng'] ??
-        json['longitude'] ??
-        json['lng'] ??
-        json['outlet_longitude'];
+    final rawLng = outletData['location']?['longitude'] ??
+        outletData['location']?['lng'] ??
+        outletData['longitude'] ??
+        outletData['lng'] ??
+        outletData['outlet_longitude'];
     if (rawLng != null) {
       lng = double.tryParse(rawLng.toString()) ?? 0.0;
     }
 
-    if (lat == 0.0 && lng == 0.0 && json['coordinates'] is List && (json['coordinates'] as List).length >= 2) {
-      lat = double.tryParse(json['coordinates'][0].toString()) ?? 0.0;
-      lng = double.tryParse(json['coordinates'][1].toString()) ?? 0.0;
+    if (lat == 0.0 && lng == 0.0 && outletData['coordinates'] is List && (outletData['coordinates'] as List).length >= 2) {
+      lat = double.tryParse(outletData['coordinates'][0].toString()) ?? 0.0;
+      lng = double.tryParse(outletData['coordinates'][1].toString()) ?? 0.0;
     }
 
     double? distKm;
-    final rawDist = json['distance_km'] ?? json['distance'] ?? json['dist_km'];
+    final rawDist = json['distance_km'] ?? json['distance'] ?? json['dist_km'] ?? outletData['distance_km'] ?? outletData['distance'] ?? outletData['dist_km'];
     if (rawDist != null) {
       distKm = double.tryParse(rawDist.toString());
     }
 
+    // Parse visit history if present in either root json or outletData
+    final rawVisits = (json['visit_history'] ??
+        outletData['visit_history'] ??
+        json['visits'] ??
+        outletData['visits']);
+    List<VisitHistoryItem> parsedVisits = [];
+    if (rawVisits is List) {
+      for (var v in rawVisits) {
+        if (v is Map<String, dynamic>) {
+          parsedVisits.add(VisitHistoryItem.fromJson(v));
+        } else if (v is Map) {
+          parsedVisits.add(VisitHistoryItem.fromJson(Map<String, dynamic>.from(v)));
+        }
+      }
+    }
+
+    // Direct last visit field check from multiple possible API keys
+    String? lVisitDate = (json['last_visit_date'] ??
+            outletData['last_visit_date'] ??
+            json['last_visited_date'] ??
+            outletData['last_visited_date'] ??
+            json['last_visit_on'] ??
+            outletData['last_visit_on'] ??
+            json['last_visited_on'] ??
+            outletData['last_visited_on'] ??
+            json['last_visit_time'] ??
+            outletData['last_visit_time'] ??
+            json['last_visit_datetime'] ??
+            outletData['last_visit_datetime'] ??
+            json['last_visit_date_time'] ??
+            outletData['last_visit_date_time'] ??
+            json['last_checkin_time'] ??
+            outletData['last_checkin_time'] ??
+            json['last_checkin'] ??
+            outletData['last_checkin'] ??
+            json['visit_date'] ??
+            outletData['visit_date'] ??
+            json['checkin_time'] ??
+            outletData['checkin_time'])
+        ?.toString();
+
+    String? lVisitType = (json['last_visit_type'] ??
+            outletData['last_visit_type'] ??
+            json['visit_type'] ??
+            outletData['visit_type'] ??
+            json['call_type'] ??
+            outletData['call_type'])
+        ?.toString();
+
+    final rawLastVisit = json['last_visit'] ??
+        outletData['last_visit'] ??
+        json['latest_visit'] ??
+        outletData['latest_visit'] ??
+        json['last_visited'] ??
+        outletData['last_visited'];
+    if (rawLastVisit is Map) {
+      final map = Map<String, dynamic>.from(rawLastVisit);
+      lVisitDate ??= (map['visit_date'] ?? map['checkin_time'] ?? map['date'] ?? map['check_in_time'] ?? map['last_visit_date'] ?? map['created_on'])?.toString();
+      lVisitType ??= (map['visit_type'] ?? map['type'] ?? map['call_type'])?.toString();
+      if (parsedVisits.isEmpty) {
+        parsedVisits.add(VisitHistoryItem.fromJson(map));
+      }
+    } else if (rawLastVisit != null && rawLastVisit.toString().trim().isNotEmpty && rawLastVisit.toString() != 'null' && rawLastVisit.toString() != 'N/A') {
+      lVisitDate ??= rawLastVisit.toString();
+    }
+
+    if (parsedVisits.isEmpty && lVisitDate != null && lVisitDate.trim().isNotEmpty && lVisitDate != 'null' && lVisitDate != 'N/A' && lVisitDate != '-') {
+      parsedVisits.add(VisitHistoryItem(
+        visitId: (json['last_visit_id'] ?? outletData['last_visit_id'] ?? json['visit_id'] ?? outletData['visit_id'] ?? '').toString(),
+        visitDate: lVisitDate,
+        visitType: (lVisitType != null && lVisitType.isNotEmpty && lVisitType != 'null') ? lVisitType : 'INDIVIDUAL',
+        checkinTime: lVisitDate,
+      ));
+    }
+
+    int totalV = int.tryParse((json['total_visits'] ??
+            outletData['total_visits'] ??
+            json['visit_count'] ??
+            outletData['visit_count'] ??
+            json['visits_count'] ??
+            outletData['visits_count'] ??
+            json['total_visit'] ??
+            outletData['total_visit'] ??
+            json['total_calls'] ??
+            outletData['total_calls'] ??
+            json['calls_count'] ??
+            outletData['calls_count'] ??
+            '')
+        .toString()) ?? (parsedVisits.isNotEmpty ? parsedVisits.length : 0);
+    if (totalV == 0 && parsedVisits.isNotEmpty) {
+      totalV = parsedVisits.length;
+    }
+    final int totalAct = int.tryParse((json['total_activities'] ?? outletData['total_activities'] ?? '').toString()) ?? 0;
+    final int totalPob = int.tryParse((json['total_pobs'] ?? outletData['total_pobs'] ?? '').toString()) ?? 0;
+    final double saleVal = double.tryParse((json['sale_value'] ?? outletData['sale_value'] ?? '').toString()) ?? 0.0;
+
     return Outlet(
-      id: (json['outlet_id'] ?? json['id'] ?? '').toString(),
-      name: (json['outlet_name'] ?? json['name'] ?? 'Unknown').toString(),
-      owner: (json['owner_name'] ?? json['owner'] ?? json['contact_person'] ?? json['contact_name'] ?? 'Unknown').toString(),
-      phone: (json['mobile'] ?? json['phone'] ?? json['mobile_number'] ?? json['contact_number'] ?? '').toString(),
+      id: (outletData['outlet_id'] ?? outletData['id'] ?? json['outlet_id'] ?? json['id'] ?? '').toString(),
+      name: (outletData['outlet_name'] ?? outletData['name'] ?? 'Unknown').toString(),
+      owner: (outletData['owner_name'] ?? outletData['owner'] ?? outletData['contact_person'] ?? outletData['contact_name'] ?? 'Unknown').toString(),
+      phone: (outletData['mobile'] ?? outletData['phone'] ?? outletData['mobile_number'] ?? outletData['contact_number'] ?? '').toString(),
       type: type,
       latitude: lat,
       longitude: lng,
-      status: json['status']?.toString() ?? 'ACTIVE',
-      address: json['address']?.toString() ?? '',
-      area: json['area']?.toString() ?? '',
+      status: (outletData['status'] ?? json['status'] ?? 'ACTIVE').toString(),
+      address: (outletData['address'] ?? json['address'] ?? '').toString(),
+      area: (outletData['area'] ?? json['area'] ?? '').toString(),
       distanceKm: distKm,
+      visitHistory: parsedVisits,
+      totalVisits: totalV,
+      totalActivities: totalAct,
+      totalPobs: totalPob,
+      saleValue: saleVal,
     );
   }
 }
@@ -157,6 +376,35 @@ class OutletProvider extends ChangeNotifier {
     _checkedInVisitId = null;
     notifyListeners();
     SessionManager.clearOutletCheckIn();
+  }
+
+  void updateOutletVisits(String outletId, {List<VisitHistoryItem>? visits, int? totalVisits}) {
+    bool updated = false;
+    _outlets = _outlets.map((o) {
+      if (o.id == outletId) {
+        updated = true;
+        return o.copyWith(
+          visitHistory: visits ?? o.visitHistory,
+          totalVisits: totalVisits ?? o.totalVisits,
+        );
+      }
+      return o;
+    }).toList();
+
+    _nearbyOutlets = _nearbyOutlets.map((o) {
+      if (o.id == outletId) {
+        updated = true;
+        return o.copyWith(
+          visitHistory: visits ?? o.visitHistory,
+          totalVisits: totalVisits ?? o.totalVisits,
+        );
+      }
+      return o;
+    }).toList();
+
+    if (updated) {
+      notifyListeners();
+    }
   }
 
   List<OutletCategory> _categories = [];

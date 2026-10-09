@@ -2620,6 +2620,59 @@ class ApiServices {
     }
   }
 
+  /// Get Team Outlet Visits (For ASM, RSM)
+  static Future<Map<String, dynamic>?> getTeamOutletVisits({
+    int? userId,
+    int? outletId,
+    String? fromDate,
+    String? toDate,
+    int? month,
+    int? year,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getTeamOutletVisits");
+        return null;
+      }
+
+      final body = <String, dynamic>{};
+      if (userId != null) body["user_id"] = userId;
+      if (outletId != null) body["outlet_id"] = outletId;
+      if (fromDate != null) body["from_date"] = fromDate;
+      if (toDate != null) body["to_date"] = toDate;
+      if (month != null) body["month"] = month;
+      if (year != null) body["year"] = year;
+
+      AppLogger.info("Get Team Outlet Visits API called: ${AppUrls.teamOutletVisits}");
+      AppLogger.info("Payload: ${jsonEncode(body)}");
+
+      final response = await _dio.post(
+        AppUrls.teamOutletVisits,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Get Team Outlet Visits response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Get Team Outlet Visits error", e);
+      return null;
+    }
+  }
+
   // ==========================================
   // OUTLET GEO REQUEST & COORDINATE APIS
   // ==========================================

@@ -68,6 +68,10 @@ class DateFormatter {
     }
   }
 
+  static String formatDate(String? dateString) {
+    return formatDateOnly(dateString);
+  }
+
   static String formatDateOnly(String? dateString) {
     if (dateString == null || dateString.isEmpty || dateString == 'N/A' || dateString == '-') {
       return 'N/A';

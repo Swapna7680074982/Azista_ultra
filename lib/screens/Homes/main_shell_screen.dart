@@ -7,7 +7,7 @@ import '../attendance/Attendancescreen.dart';
 import 'HomeScreen.dart';
 import 'custom_bottom_nav.dart';
 import 'main_tab_provider.dart';
-// import 'near_me_screen.dart';
+import '../Distribution_networking/outlets/user_outlet_visits_screen.dart';
 
 class MainShellScreen extends StatefulWidget {
   const MainShellScreen({super.key});
@@ -69,8 +69,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
               children: [
                 const HomeScreen(),
                 _loadedTabs.contains(1) ? const UserTransactionScreen() : const SizedBox.shrink(),
-                // _loadedTabs.contains(2) ? const NearMeScreen() : const SizedBox.shrink(),
-                const SizedBox.shrink(),
+                _loadedTabs.contains(2) ? const UserOutletVisitsScreen() : const SizedBox.shrink(),
                 _loadedTabs.contains(3) ? const DistributionNetworkScreen() : const SizedBox.shrink(),
                 _loadedTabs.contains(4) ? const AttendanceScreen() : const SizedBox.shrink(),
               ],

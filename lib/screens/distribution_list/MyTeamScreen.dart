@@ -4,6 +4,7 @@ import '../../constants/app_colors.dart';
 import '../../services/api_services.dart';
 import '../../services/call_service.dart';
 import '../../utilities/common_widgets.dart';
+import '../../utilities/role_helper.dart';
 import '../../permissions/SessionManager.dart';
 import '../attendance/TeamAttendanceScreen.dart';
 import 'TeamMemberDetailScreen.dart';
@@ -19,6 +20,7 @@ class MyTeamScreen extends StatefulWidget {
 class _MyTeamScreenState extends State<MyTeamScreen> {
   bool _isLoading = true;
   List<dynamic> _teamMembers = [];
+  Map<String, int> _visitsCountMap = {};
   String? _errorMessage;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
@@ -64,14 +66,61 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
 
     try {
       final res = await ApiServices.getMyTeam();
+      final now = DateTime.now();
+      final Map<String, int> visitsMap = {};
+
+      if (res != null && (res["status"] == true || res["status"] == "success" || res["status_code"] == 200)) {
+        final members = res["data"] as List<dynamic>? ?? [];
+        _teamMembers = members;
+
+        // Try getting summary first
+        try {
+          final summaryRes = await ApiServices.getTeamMembersSummary(
+            month: now.month,
+            year: now.year,
+          );
+          if (summaryRes != null && summaryRes["status"] == true) {
+            final List sumList = summaryRes["data"] ?? [];
+            for (var s in sumList) {
+              final id = s["user_id"]?.toString();
+              final v = int.tryParse((s["total_visits"] ?? s["outlet_visits"] ?? '0').toString()) ?? 0;
+              if (id != null) visitsMap[id] = v;
+            }
+          }
+        } catch (_) {}
+
+        // Fallback for members not in summary
+        for (var member in members) {
+          final uId = member["user_id"]?.toString();
+          if (uId != null && !visitsMap.containsKey(uId)) {
+            final uIdInt = int.tryParse(uId);
+            if (uIdInt != null) {
+              try {
+                final outletsRes = await ApiServices.getTeamMemberOutlets(
+                  userId: uIdInt,
+                  month: now.month,
+                  year: now.year,
+                );
+                if (outletsRes != null && outletsRes["status"] == true) {
+                  final List oList = outletsRes["data"] ?? [];
+                  int sum = 0;
+                  for (var o in oList) {
+                    sum += int.tryParse(o["total_visits"]?.toString() ?? '0') ?? 0;
+                  }
+                  visitsMap[uId] = sum;
+                }
+              } catch (_) {}
+            }
+          }
+        }
+      } else {
+        _teamMembers = [];
+        _errorMessage = res?["message"]?.toString() ?? "No team members found";
+      }
+
       if (mounted) {
         setState(() {
-          if (res != null && (res["status"] == true || res["status"] == "success" || res["status_code"] == 200)) {
-            _teamMembers = res["data"] as List<dynamic>? ?? [];
-          } else {
-            _teamMembers = [];
-            _errorMessage = res?["message"]?.toString() ?? "No team members found";
-          }
+          _visitsCountMap = visitsMap;
           _isLoading = false;
         });
       }
@@ -239,17 +288,17 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
                       if (_currentUserRole == 'RM') ...[
                         _buildFilterChip("ALL"),
                         const SizedBox(width: 8),
-                        _buildFilterChip("AM"),
+                        _buildFilterChip("AM", displayLabel: "ASM"),
                         const SizedBox(width: 8),
-                        _buildFilterChip("SO"),
+                        _buildFilterChip("SO", displayLabel: "FSE"),
                       ] else if (_currentUserRole == 'AM') ...[
-                        _buildFilterChip("SO"),
+                        _buildFilterChip("SO", displayLabel: "FSE"),
                       ] else ...[
                         _buildFilterChip("ALL"),
                         const SizedBox(width: 8),
-                        _buildFilterChip("AM"),
+                        _buildFilterChip("AM", displayLabel: "ASM"),
                         const SizedBox(width: 8),
-                        _buildFilterChip("SO"),
+                        _buildFilterChip("SO", displayLabel: "FSE"),
                       ],
                     ],
                   ),
@@ -275,7 +324,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  _currentUserRole == 'AM' ? "SO MEMBERS (${members.length})" : "TEAM MEMBERS (${members.length})",
+                  _currentUserRole == 'AM' ? "FSE MEMBERS (${members.length})" : "TEAM MEMBERS (${members.length})",
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -339,7 +388,8 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     );
   }
 
-  Widget _buildFilterChip(String role) {
+  Widget _buildFilterChip(String role, {String? displayLabel}) {
+    final label = displayLabel ?? (role == "ALL" ? "ALL" : RoleHelper.formatRole(role));
     final isSelected = _selectedRole == role;
     return GestureDetector(
       onTap: () {
@@ -358,7 +408,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
           ),
         ),
         child: Text(
-          role,
+          label,
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
@@ -376,6 +426,11 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     final mobile = member["mobile"]?.toString() ?? "";
     final email = member["email"]?.toString() ?? "";
     final repManagerName = member["reporting_manager_name"]?.toString() ?? "";
+
+    final userIdStr = member['user_id']?.toString() ?? '';
+    final visitsCount = _visitsCountMap[userIdStr] ??
+        int.tryParse(member['total_visits']?.toString() ?? member['outlet_visits']?.toString() ?? '0') ??
+        0;
 
     Color roleColor;
     if (role == "RM") {
@@ -446,6 +501,36 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
                               ),
                             ),
                             Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: visitsCount > 0 ? Colors.orange.shade50 : Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: visitsCount > 0 ? Colors.orange.shade300 : Colors.grey.shade300,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.directions_walk,
+                                    size: 12,
+                                    color: visitsCount > 0 ? Colors.orange.shade800 : Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    "$visitsCount Visits",
+                                    style: TextStyle(
+                                      color: visitsCount > 0 ? Colors.orange.shade800 : Colors.grey.shade600,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
                                 color: roleColor.withValues(alpha: 0.1),
@@ -453,7 +538,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
                                 border: Border.all(color: roleColor.withValues(alpha: 0.3)),
                               ),
                               child: Text(
-                                role,
+                                RoleHelper.formatRole(role),
                                 style: TextStyle(
                                   color: roleColor,
                                   fontSize: 11,

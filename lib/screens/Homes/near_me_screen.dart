@@ -8,6 +8,7 @@ import '../../services/location_service.dart';
 import '../Distribution_networking/outlets/outlet_provider.dart';
 import '../Distribution_networking/outlets/PobScreen.dart';
 import '../Distribution_networking/outlets/PosBaseScreen.dart';
+import '../Distribution_networking/outlets/outlet_visit_history_sheet.dart';
 import '../../services/directions_map_screen.dart';
 import '../../utilities/wavy_app_bar.dart';
 import '../../permissions/SessionManager.dart';
@@ -551,21 +552,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
           ),
           
           const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text("OUTLET ID: ${outlet.id}", style: TextStyle(color: Colors.grey.shade700, fontSize: 15)),
-              if (distance != null)
-                Text(
-                  "${distance < 1000 ? '${distance.toStringAsFixed(0)} m' : '${(distance / 1000).toStringAsFixed(1)} km'} ${distance > 250 ? '(> 250m limit)' : '(In range)'}",
-                  style: TextStyle(
-                    color: distance > 250 ? Colors.red.shade700 : Colors.green.shade700,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-            ],
-          ),
+          Text("OUTLET ID: ${outlet.id}", style: TextStyle(color: Colors.grey.shade700, fontSize: 15)),
           if (isCheckedIn && activeTime != null) ...[
             const SizedBox(height: 4),
             Text(
@@ -573,6 +560,16 @@ class _NearMeScreenState extends State<NearMeScreen> {
               style: TextStyle(
                 color: Colors.green.shade700,
                 fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ] else if (distance != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              "DISTANCE: ${distance < 1000 ? '${distance.toStringAsFixed(0)} m' : '${(distance / 1000).toStringAsFixed(1)} km'} ${distance > 250 ? '(> 250m limit)' : '(In range)'}",
+              style: TextStyle(
+                color: distance > 250 ? Colors.red.shade700 : Colors.green.shade700,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -653,13 +650,14 @@ class _NearMeScreenState extends State<NearMeScreen> {
                       style: TextStyle(
                         color: AppColors.green,
                         fontWeight: FontWeight.w600,
+                        fontSize: 12,
                       ),
                     ),
                   ),
                 ),
               ),
 
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Container(
                   height: 35,
@@ -686,6 +684,40 @@ class _NearMeScreenState extends State<NearMeScreen> {
                       style: TextStyle(
                         color: AppColors.green,
                         fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  height: 35,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.green),
+                    borderRadius: BorderRadius.circular(6),
+                    color: AppColors.green.withValues(alpha: 0.05),
+                  ),
+                  child: TextButton(
+                    onPressed: () {
+                      final oId = int.tryParse(outlet.id) ?? 0;
+                      if (oId > 0) {
+                        OutletVisitHistorySheet.show(
+                          context,
+                          outletId: oId,
+                          outletName: outlet.name,
+                          initialVisits: outlet.visitHistory,
+                        );
+                      }
+                    },
+                    child: const Text(
+                      "VISIT HISTORY",
+                      style: TextStyle(
+                        color: AppColors.green,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
                       ),
                     ),
                   ),

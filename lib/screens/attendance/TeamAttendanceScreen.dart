@@ -7,6 +7,7 @@ import '../../utilities/common_widgets.dart';
 import '../../permissions/AppStateProvider.dart';
 import '../../permissions/SessionManager.dart';
 import '../../utilities/date_formatter.dart';
+import '../../utilities/role_helper.dart';
 import 'team_attendance_provider.dart';
 
 class TeamAttendanceScreen extends StatefulWidget {
@@ -124,7 +125,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
                                   subtitle: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text("Role: ${user.roleCode}", style: const TextStyle(fontSize: 12)),
+                                      Text("Role: ${RoleHelper.formatRole(user.roleCode)}", style: const TextStyle(fontSize: 12)),
                                       Text("Date: ${DateFormatter.formatDateOnly(user.attendanceDate)}", style: const TextStyle(fontSize: 11, color: Colors.grey)),
                                     ],
                                   ),
@@ -385,7 +386,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: ChoiceChip(
-                label: const Text("SO"),
+                label: const Text("FSE"),
                 selected: true,
                 showCheckmark: false,
                 onSelected: (_) {},
@@ -441,7 +442,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: ChoiceChip(
-                  label: Text(role),
+                  label: Text(RoleHelper.formatRole(role)),
                   selected: isSelected,
                   showCheckmark: false,
                   onSelected: (selected) {

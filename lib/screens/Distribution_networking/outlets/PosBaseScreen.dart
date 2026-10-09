@@ -15,6 +15,7 @@ import 'SamplingScreen.dart';
 import 'StockScreen.dart';
 import 'SaleScreen.dart';
 import 'outlet_provider.dart';
+import 'outlet_visit_history_sheet.dart';
 import '../../../services/api_services.dart';
 import '../../../utilities/common_widgets.dart';
 import '../../../permissions/AppStateProvider.dart';
@@ -47,6 +48,8 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   bool _isCheckedIn = false;
   DateTime? _checkInTime;
   int? _visitId;
+  List<VisitHistoryItem> _visits = [];
+  int _totalVisits = 0;
 
   void _buildTabViews() {
     _tabViews = dynamicTabs.map((tab) => _getModuleBody(tab['module_code'], selectedTab)).toList();
@@ -55,9 +58,20 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   @override
   void initState() {
     super.initState();
+    // 1. Synchronously initialize from cache/provider if available
+    final outletProv = context.read<OutletProvider>();
+    final cachedOutlet = outletProv.outlets.where((o) => o.id == widget.outlet.id).firstOrNull ??
+        outletProv.nearbyOutlets.where((o) => o.id == widget.outlet.id).firstOrNull;
+    if (cachedOutlet != null && cachedOutlet.visitHistory.isNotEmpty) {
+      _visits = List.from(cachedOutlet.visitHistory);
+      _totalVisits = cachedOutlet.totalVisits > 0 ? cachedOutlet.totalVisits : _visits.length;
+    } else {
+      _visits = List.from(widget.outlet.visitHistory);
+      _totalVisits = widget.outlet.totalVisits > 0 ? widget.outlet.totalVisits : _visits.length;
+    }
+
     // Synchronously initialize check-in status from provider so there is 0ms delay / no UI flicker
     final currentOutletId = int.tryParse(widget.outlet.id);
-    final outletProv = context.read<OutletProvider>();
     if (currentOutletId != null && outletProv.checkedInOutletId == currentOutletId) {
       _isCheckedIn = true;
       _visitId = outletProv.checkedInVisitId;
@@ -66,9 +80,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _fetchModules();
-        _checkLocation();
-        _loadOutletCheckInStatus();
+        _syncData();
       }
     });
   }
@@ -96,19 +108,113 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
           _buildTabViews();
         });
       }
-      return;
     }
 
-    // 2. Query history API in background as fallback only if not in local session
-    try {
-      final history = await ApiServices.getOutletHistory(outletId: currentOutletId);
-      if (history != null && history['status'] == true) {
-        final List visits = history['visit_history'] ?? [];
-        final activeVisit = visits.where(
-          (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
-        ).firstOrNull;
+    // 2. Query history API in background to sync active visit and history records (with retry for server race conditions)
+    Map<String, dynamic>? history;
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        history = await ApiServices.getOutletHistory(outletId: currentOutletId);
+        if (history != null &&
+            (history['status'] == true ||
+                history['status'] == 1 ||
+                history['status'] == '1' ||
+                history['status'] == 'success' ||
+                history['status_code'] == 200)) {
+          break; // Successfully received history
+        }
+      } catch (e) {
+        debugPrint("Attempt $attempt: Error fetching outlet history: $e");
+      }
+      if (attempt < 2) {
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+    }
 
-        if (activeVisit != null) {
+    try {
+      if (history != null &&
+          (history['status'] == true ||
+              history['status'] == 1 ||
+              history['status'] == '1' ||
+              history['status'] == 'success' ||
+              history['status_code'] == 200)) {
+        final rawVisits = (history['visit_history'] ??
+            history['visits'] ??
+            history['data']?['visit_history'] ??
+            history['data']?['visits'] ??
+            (history['data'] is List ? history['data'] : null) ??
+            []) as List;
+        final List<VisitHistoryItem> parsed = [];
+        for (var v in rawVisits) {
+          if (v is Map) {
+            parsed.add(VisitHistoryItem.fromJson(Map<String, dynamic>.from(v)));
+          }
+        }
+
+        // Check if outlet_details or other fields have last visit info
+        final rawDetails = history['outlet_details'];
+        if (rawDetails is Map) {
+          final detailsMap = Map<String, dynamic>.from(rawDetails);
+          if (parsed.isEmpty) {
+            final lvDate = detailsMap['last_visit_date'] ??
+                detailsMap['last_visited_date'] ??
+                detailsMap['last_visit'] ??
+                detailsMap['visit_date'] ??
+                detailsMap['last_visit_on'] ??
+                detailsMap['last_visited_on'];
+            final lvType = detailsMap['last_visit_type'] ?? detailsMap['visit_type'] ?? 'INDIVIDUAL';
+            if (lvDate != null &&
+                lvDate.toString().trim().isNotEmpty &&
+                lvDate.toString() != 'null' &&
+                lvDate.toString() != 'N/A' &&
+                lvDate.toString() != '-') {
+              parsed.add(VisitHistoryItem(
+                visitId: (detailsMap['last_visit_id'] ?? detailsMap['visit_id'] ?? '').toString(),
+                visitDate: lvDate.toString(),
+                visitType: (lvType != null && lvType.toString().isNotEmpty) ? lvType.toString() : 'INDIVIDUAL',
+                checkinTime: lvDate.toString(),
+              ));
+            }
+          }
+        }
+
+        final activeVisit = rawVisits.where((v) {
+          if (v is! Map) return false;
+          final cTime = v['checkout_time'];
+          return cTime == null || cTime.toString().isEmpty || cTime == 'N/A' || cTime == 'null';
+        }).firstOrNull;
+
+        final fetchedTotal = int.tryParse((history['total_visits'] ??
+                history['visit_count'] ??
+                history['visits_count'] ??
+                history['total'] ??
+                (history['outlet_details'] is Map
+                    ? (history['outlet_details']['total_visits'] ?? history['outlet_details']['visit_count'])
+                    : null) ??
+                '')
+            .toString()) ??
+            (parsed.isNotEmpty ? parsed.length : _totalVisits);
+
+        if (mounted) {
+          setState(() {
+            if (parsed.isNotEmpty) {
+              _visits = parsed;
+            }
+            if (fetchedTotal > 0) {
+              _totalVisits = fetchedTotal;
+            } else if (_visits.isNotEmpty) {
+              _totalVisits = _visits.length;
+            }
+          });
+          // Keep outlet provider updated in memory
+          context.read<OutletProvider>().updateOutletVisits(
+                widget.outlet.id,
+                visits: _visits,
+                totalVisits: _totalVisits,
+              );
+        }
+
+        if (activeVisit != null && activeVisit is Map && !_isCheckedIn) {
           final visitId = int.tryParse(activeVisit['visit_id']?.toString() ?? "") ?? 0;
           final checkInTimeStr = activeVisit['checkin_time']?.toString() ?? "";
           final checkInTime = DateTime.tryParse(checkInTimeStr);
@@ -126,11 +232,10 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
               _buildTabViews();
             });
           }
-          return;
         }
       }
     } catch (e) {
-      debugPrint("Error loading check-in status from API: $e");
+      debugPrint("Error loading check-in status and history from API: $e");
     }
   }
 
@@ -228,55 +333,25 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       context: context,
       barrierDismissible: true,
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 6,
         backgroundColor: Colors.white,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primary, AppColors.button],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.storefront, color: Colors.white, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Select Visit Type",
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          "Check-in at ${widget.outlet.name.toUpperCase()}",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                  const Text(
+                    "Select Visit Type",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
                   ),
                   IconButton(
@@ -288,11 +363,6 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              const Text(
-                "Please select your visit type to proceed with check-in:",
-                style: TextStyle(fontSize: 13, color: Colors.black54),
-              ),
-              const SizedBox(height: 14),
 
               // Single Visit Card
               Material(
@@ -302,57 +372,36 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                     Navigator.pop(ctx);
                     _handleCheckIn("Individual");
                   },
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
                     ),
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.blue.shade100),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(Icons.person, color: Colors.blue.shade700, size: 22),
                         ),
                         const SizedBox(width: 14),
                         const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Single / Individual Visit",
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                "Individual representative visit",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            "Single Visit",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(Icons.arrow_forward_ios, size: 12, color: Colors.blue.shade700),
-                        ),
+                        Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400),
                       ],
                     ),
                   ),
@@ -369,57 +418,36 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                     Navigator.pop(ctx);
                     _handleCheckIn("Combine");
                   },
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
                     ),
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: Colors.teal.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.teal.shade100),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(Icons.groups_rounded, color: Colors.teal.shade700, size: 22),
                         ),
                         const SizedBox(width: 14),
                         const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Combined Visit",
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                "Joint visit with manager or colleague",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            "Combined Visit",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.teal.shade50,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(Icons.arrow_forward_ios, size: 12, color: Colors.teal.shade700),
-                        ),
+                        Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400),
                       ],
                     ),
                   ),
@@ -907,7 +935,39 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      Text("OUTLET ID: ${outlet.id}", style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Text("OUTLET ID: ${outlet.id}", style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+                          const SizedBox(width: 8),
+                          if (_totalVisits > 0 || _visits.isNotEmpty || outlet.totalVisits > 0)
+                            GestureDetector(
+                              onTap: () {
+                                final oId = int.tryParse(widget.outlet.id) ?? 0;
+                                if (oId > 0) {
+                                  OutletVisitHistorySheet.show(
+                                    context,
+                                    outletId: oId,
+                                    outletName: widget.outlet.name,
+                                    initialVisits: _visits.isNotEmpty ? _visits : widget.outlet.visitHistory,
+                                  );
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: Colors.blue.shade200),
+                                ),
+                                child: Text(
+                                  "${_totalVisits > 0 ? _totalVisits : outlet.totalVisits} VISITS",
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -956,6 +1016,26 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                 Text(outlet.phone, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
               ],
             ),
+            if ((_visits.isNotEmpty ? _visits.first : outlet.latestVisit) != null) ...[
+              const SizedBox(height: 4),
+              Builder(builder: (context) {
+                final latest = _visits.isNotEmpty ? _visits.first : outlet.latestVisit!;
+                return Row(
+                  children: [
+                    Icon(Icons.history, size: 16, color: Colors.indigo.shade700),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "LAST VISIT: ${latest.visitDate.isNotEmpty ? DateFormatter.formatDate(latest.visitDate) : 'N/A'} (${latest.visitType})",
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.indigo.shade800),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ],
             const SizedBox(height: 6),
             if (outlet.type.isNotEmpty)
               Align(
@@ -990,77 +1070,79 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
               ),
             const SizedBox(height: 8),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Container(
-                  height: 30,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(4),
-                    color: Colors.white,
-                  ),
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                Expanded(
+                  child: Container(
+                    height: 32,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.blue.shade300),
+                      borderRadius: BorderRadius.circular(6),
+                      color: Colors.blue.shade50,
                     ),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Feature will be implemented in future"),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      "JOINT CALL",
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 12,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
+                      icon: Icon(Icons.history, size: 15, color: Colors.blue.shade800),
+                      label: Text(
+                        "VISIT HISTORY",
+                        style: TextStyle(
+                          color: Colors.blue.shade800,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      onPressed: () {
+                        final oId = int.tryParse(widget.outlet.id) ?? 0;
+                        if (oId > 0) {
+                          OutletVisitHistorySheet.show(
+                            context,
+                            outletId: oId,
+                            outletName: widget.outlet.name,
+                            initialVisits: _visits.isNotEmpty ? _visits : widget.outlet.visitHistory,
+                          );
+                        }
+                      },
                     ),
                   ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      height: 30,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(4),
-                        color: Colors.white,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    height: 32,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(6),
+                      color: Colors.white,
+                    ),
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => StockSalePosScreen(
-                                outletId: int.tryParse(widget.outlet.id) ?? 0,
-                              ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => StockSalePosScreen(
+                              outletId: int.tryParse(widget.outlet.id) ?? 0,
                             ),
-                          );
-                        },
-                        child: const Text(
-                          "PREVIOUS TRANSACTIONS",
-                          style: TextStyle(
-                            color: Colors.black87,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 12,
                           ),
+                        );
+                      },
+                      child: const Text(
+                        "TRANSACTIONS",
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -1312,7 +1394,7 @@ class RestrictedModuleView extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 20,
                 offset: const Offset(0, 6),
               ),

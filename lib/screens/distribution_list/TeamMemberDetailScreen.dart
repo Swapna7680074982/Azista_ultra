@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_services.dart';
 import '../../utilities/common_widgets.dart';
+import '../../utilities/role_helper.dart';
 import 'TeamOutletHistoryScreen.dart';
 
 class TeamMemberDetailScreen extends StatefulWidget {
@@ -284,7 +285,7 @@ class _TeamMemberDetailScreenState extends State<TeamMemberDetailScreen> {
               const Icon(Icons.badge_outlined, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text(
-                "Role: ${widget.rolecode.toUpperCase()}",
+                "Role: ${RoleHelper.formatRole(widget.rolecode)}",
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ],
@@ -382,14 +383,14 @@ class _TeamMemberDetailScreenState extends State<TeamMemberDetailScreen> {
     final owner = outlet["owner_name"]?.toString() ?? "N/A";
     final mobile = outlet["mobile"]?.toString() ?? "N/A";
     final address = outlet["address"]?.toString() ?? "No Address Provided";
-    final visits = outlet["total_visits"]?.toString() ?? "0";
-    final activities = outlet["total_activities"]?.toString() ?? "0";
-    final pobs = outlet["total_pobs"]?.toString() ?? "0";
+    final visits = int.tryParse(outlet["total_visits"]?.toString() ?? '') ?? 0;
+    final activities = int.tryParse(outlet["total_activities"]?.toString() ?? '') ?? 0;
+    final pobs = int.tryParse(outlet["total_pobs"]?.toString() ?? '') ?? 0;
     final value = double.tryParse(outlet["sale_value"]?.toString() ?? '') ?? 0.0;
 
     return Card(
       color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -407,21 +408,59 @@ class _TeamMemberDetailScreenState extends State<TeamMemberDetailScreen> {
             ),
           );
         },
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                name.toUpperCase(),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: AppColors.primary,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      name.toUpperCase(),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: visits > 0 ? Colors.orange.shade50 : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: visits > 0 ? Colors.orange.shade300 : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.directions_walk,
+                          size: 13,
+                          color: visits > 0 ? Colors.orange.shade800 : Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          "$visits Visits",
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: visits > 0 ? Colors.orange.shade800 : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Row(
                 children: [
                   const Icon(Icons.person, size: 14, color: Colors.grey),
@@ -456,9 +495,9 @@ class _TeamMemberDetailScreenState extends State<TeamMemberDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildOutletStat("Visits", visits),
-                  _buildOutletStat("Activities", activities),
-                  _buildOutletStat("POBs", pobs),
+                  _buildOutletStat("Visits", "$visits"),
+                  _buildOutletStat("Activities", "$activities"),
+                  _buildOutletStat("POBs", "$pobs"),
                   _buildOutletStat("Sale Value", "₹${value.toStringAsFixed(2)}"),
                 ],
               ),

@@ -9,6 +9,7 @@ import 'login/login_screen.dart';
 // import 'Homes/change_password.dart';
 import '../utilities/common_widgets.dart';
 import '../utilities/delete_account_dialog.dart';
+import '../utilities/role_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -189,7 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 15),
           _buildInfoTile(Icons.phone_android, "Mobile Number", userInfo?['mobile']),
           _buildInfoTile(Icons.email_outlined, "Email Address", userInfo?['email']),
-          _buildInfoTile(Icons.work_outline, "Role", userInfo?['rolecode']),
+          _buildInfoTile(Icons.work_outline, "Role", RoleHelper.formatRole(userInfo?['rolecode'])),
           const Divider(height: 30),
           const Text(
             "Office Information",

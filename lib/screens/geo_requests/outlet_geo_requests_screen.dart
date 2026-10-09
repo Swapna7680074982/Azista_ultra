@@ -550,7 +550,7 @@ class _OutletGeoRequestsScreenState extends State<OutletGeoRequestsScreen> {
                     Icon(Icons.person_pin_circle_outlined, size: 14, color: Colors.grey.shade600),
                     const SizedBox(width: 4),
                     Text(
-                      "By SO #$requestedBy",
+                      "By FSE #$requestedBy",
                       style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
                     ),
                   ],

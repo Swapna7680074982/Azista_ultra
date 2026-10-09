@@ -20,6 +20,7 @@ import '../attendance/TeamAttendanceScreen.dart';
 import '../distribution_list/MyTeamScreen.dart';
 import '../distribution_list/TeamPosHistoryScreen.dart';
 import '../geo_requests/outlet_geo_requests_screen.dart';
+import '../../utilities/role_helper.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -1055,7 +1056,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       child: Text(
-                        appState.userRole ?? "AM",
+                        RoleHelper.formatRole(appState.userRole ?? "AM"),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,

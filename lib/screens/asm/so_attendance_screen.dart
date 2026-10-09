@@ -15,7 +15,7 @@ class SoAttendanceScreen extends StatelessWidget {
       builder: (context, amProvider, child) {
         return Scaffold(
           appBar: WavyAppBar(
-            title: "SO Attendance",
+            title: "FSE Attendance",
             actions: [
               IconButton(
                 icon: const Icon(Icons.sync, color: Colors.white),
@@ -23,7 +23,7 @@ class SoAttendanceScreen extends StatelessWidget {
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text("SO attendance refreshed"),
+                      content: Text("FSE attendance refreshed"),
                       duration: Duration(seconds: 1),
                     ),
                   );
