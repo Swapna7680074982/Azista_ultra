@@ -33,6 +33,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   int selectedTab = 0;
   List<Map<String, dynamic>> dynamicTabs = [];
   bool isLoadingTabs = true;
+  bool isLoadingCheckIn = true;
   bool? isLocationValid;
   String locationError = "";
   List<Widget> _tabViews = [];
@@ -51,7 +52,10 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
 
   Future<void> _loadOutletCheckInStatus() async {
     final currentOutletId = int.tryParse(widget.outlet.id);
-    if (currentOutletId == null) return;
+    if (currentOutletId == null) {
+      if (mounted) setState(() => isLoadingCheckIn = false);
+      return;
+    }
 
     try {
       final history = await ApiServices.getOutletHistory(outletId: currentOutletId);
@@ -78,6 +82,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
               _isCheckedIn = true;
               _visitId = visitId;
               _checkInTime = checkInTime;
+              isLoadingCheckIn = false;
               _buildTabViews();
             });
           }
@@ -97,6 +102,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         _isCheckedIn = false;
         _visitId = null;
         _checkInTime = null;
+        isLoadingCheckIn = false;
       });
     }
   }
@@ -192,6 +198,12 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         );
 
         if (mounted) {
+          Provider.of<OutletProvider>(context, listen: false).updateLocalCheckIn(
+            outletId: outletId,
+            visitId: visitId,
+            checkInTime: checkInTime.toIso8601String(),
+          );
+
           setState(() {
             _isCheckedIn = true;
             _visitId = visitId;
@@ -242,6 +254,8 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         await SessionManager.clearOutletCheckIn();
 
         if (mounted) {
+          Provider.of<OutletProvider>(context, listen: false).clearLocalCheckIn();
+
           setState(() {
             _isCheckedIn = false;
             _visitId = null;
@@ -372,14 +386,12 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
           color: AppColors.white,
         ),
       ),
-      body: isLoadingTabs 
+      body: (isLoadingTabs || isLoadingCheckIn || isLocationValid == null)
           ? const Center(child: LogoProgressIndicator()) 
           : Column(
         children: [
           outletCard(widget.outlet),
-          if (isLocationValid == null)
-            const Expanded(child: Center(child: LogoProgressIndicator()))
-          else if (_isCheckedIn) ...[
+          if (_isCheckedIn) ...[
             Container(
               color: Colors.green.shade50,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -766,127 +778,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       ),
     );
   }
-  void _showLocationPopup() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          elevation: 8,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    height: 120,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFD32F2F),
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(12),
-                      ),
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.location_pin,
-                        color: Colors.white,
-                        size: 40,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        height: 28,
-                        width: 28,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.close,
-                          size: 18,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
 
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 20),
-                child: Column(
-                  children: [
-                    const Text(
-                      "Would you like to update the latitude\nand longitude of this OUTLET",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        height: 1.4,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD32F2F),
-                        elevation: 4,
-                        shadowColor: Colors.black26,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 40, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                      ),
-                      onPressed: () async {
-                        Navigator.pop(context);
-                        _updateLocation();
-                      },
-                      child: const Text(
-                        "YES",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,color: AppColors.white,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-  void _updateLocation() async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Updating location..."),
-      ),
-    );
-
-    await Future.delayed(const Duration(seconds: 2));
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Location updated successfully"),
-      ),
-    );
-  }
 }
 
 class RestrictedModuleView extends StatelessWidget {

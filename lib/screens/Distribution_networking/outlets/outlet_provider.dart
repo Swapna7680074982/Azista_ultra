@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../services/api_services.dart';
 import '../../../services/location_service.dart';
+import '../../../permissions/SessionManager.dart';
 
 class Outlet {
   final String name;
@@ -81,6 +82,14 @@ class OutletProvider extends ChangeNotifier {
   bool isLoading = false;
   String _searchQuery = "";
 
+  int? _checkedInOutletId;
+  String? _checkInTimeAndDate;
+  int? _checkedInVisitId;
+
+  int? get checkedInOutletId => _checkedInOutletId;
+  String? get checkInTimeAndDate => _checkInTimeAndDate;
+  int? get checkedInVisitId => _checkedInVisitId;
+
   List<OutletCategory> _categories = [];
   bool isCategoriesLoading = false;
 
@@ -89,6 +98,126 @@ class OutletProvider extends ChangeNotifier {
   void updateSearch(String value) {
     _searchQuery = value.toLowerCase();
     notifyListeners();
+  }
+
+  void updateLocalCheckIn({required int outletId, required int visitId, required String checkInTime}) {
+    _checkedInOutletId = outletId;
+    _checkedInVisitId = visitId;
+    _checkInTimeAndDate = checkInTime;
+    notifyListeners();
+  }
+
+  void clearLocalCheckIn() {
+    _checkedInOutletId = null;
+    _checkedInVisitId = null;
+    _checkInTimeAndDate = null;
+    notifyListeners();
+  }
+
+  Future<void> syncCheckInStatus({List<Outlet>? checkOutlets}) async {
+    final id = await SessionManager.getOutletCheckInOutletId();
+    final savedTime = await SessionManager.getOutletCheckInTime();
+    final visitId = await SessionManager.getOutletCheckInVisitId();
+
+    if (id != null) {
+      _checkedInOutletId = id;
+      _checkedInVisitId = visitId;
+      _checkInTimeAndDate = savedTime?.toIso8601String();
+      notifyListeners();
+
+      try {
+        final history = await ApiServices.getOutletHistory(outletId: id);
+        if (history != null && (history['status'] == true || history['status'] == 'success' || history['visit_history'] != null)) {
+          final List visits = history['visit_history'] ?? [];
+          final activeVisit = visits.firstWhere(
+            (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
+            orElse: () => null,
+          );
+
+          if (activeVisit != null) {
+            final checkinTime = activeVisit['checkin_time']?.toString();
+            final vId = int.tryParse(activeVisit['visit_id']?.toString() ?? "") ?? 0;
+            final parsedTime = DateTime.tryParse(checkinTime ?? "");
+
+            await SessionManager.saveOutletCheckIn(
+              outletId: id,
+              visitId: vId,
+              checkInTime: parsedTime ?? DateTime.now(),
+            );
+
+            _checkedInOutletId = id;
+            _checkedInVisitId = vId;
+            _checkInTimeAndDate = checkinTime;
+            notifyListeners();
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint("Error verifying check-in with server: $e");
+      }
+
+      // If active visit was not found for this outlet, clear local check-in
+      await SessionManager.clearOutletCheckIn();
+      _checkedInOutletId = null;
+      _checkedInVisitId = null;
+      _checkInTimeAndDate = null;
+      notifyListeners();
+    }
+
+    final targetList = checkOutlets ?? (_nearbyOutlets.isNotEmpty ? _nearbyOutlets : _outlets);
+    if (targetList.isNotEmpty) {
+      try {
+        final futures = targetList.map((outlet) async {
+          final currentId = int.tryParse(outlet.id);
+          if (currentId == null) return null;
+          final history = await ApiServices.getOutletHistory(outletId: currentId);
+          if (history != null && (history['status'] == true || history['status'] == 'success' || history['visit_history'] != null)) {
+            final List visits = history['visit_history'] ?? [];
+            final activeVisit = visits.firstWhere(
+              (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
+              orElse: () => null,
+            );
+            if (activeVisit != null) {
+              return {
+                'outlet_id': currentId,
+                'visit_id': int.tryParse(activeVisit['visit_id']?.toString() ?? "") ?? 0,
+                'checkin_time': activeVisit['checkin_time']?.toString(),
+              };
+            }
+          }
+          return null;
+        }).toList();
+
+        final results = await Future.wait(futures);
+        final activeCheckIn = results.firstWhere((r) => r != null, orElse: () => null);
+
+        if (activeCheckIn != null) {
+          final outletId = activeCheckIn['outlet_id'] as int;
+          final vId = activeCheckIn['visit_id'] as int;
+          final checkinTimeStr = activeCheckIn['checkin_time'] as String?;
+          final checkInTime = DateTime.tryParse(checkinTimeStr ?? "");
+
+          await SessionManager.saveOutletCheckIn(
+            outletId: outletId,
+            visitId: vId,
+            checkInTime: checkInTime ?? DateTime.now(),
+          );
+
+          _checkedInOutletId = outletId;
+          _checkedInVisitId = vId;
+          _checkInTimeAndDate = checkinTimeStr;
+          notifyListeners();
+        } else {
+          await SessionManager.clearOutletCheckIn();
+          _checkedInOutletId = null;
+          _checkedInVisitId = null;
+          _checkInTimeAndDate = null;
+          notifyListeners();
+        }
+      } catch (e) {
+        debugPrint("Error checking server check-in status: $e");
+      }
+    }
   }
 
   List<Outlet> get outlets {
@@ -123,6 +252,7 @@ class OutletProvider extends ChangeNotifier {
       } else {
         _outlets = [];
       }
+      await syncCheckInStatus(checkOutlets: _outlets);
     } catch (e) {
       debugPrint("Error fetching outlets: $e");
       _outlets = [];
@@ -137,6 +267,7 @@ class OutletProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await _fetchNearbyOutletsInternal(latitude, longitude, radius: radius, routeId: routeId);
+      await syncCheckInStatus(checkOutlets: _nearbyOutlets);
     } catch (e) {
       debugPrint("Error fetching nearby outlets: $e");
       _nearbyOutlets = [];
@@ -175,6 +306,7 @@ class OutletProvider extends ChangeNotifier {
       final lat = double.parse(coords[0]);
       final lng = double.parse(coords[1]);
       await _fetchNearbyOutletsInternal(lat, lng, radius: 5, routeId: routeId);
+      await syncCheckInStatus(checkOutlets: _nearbyOutlets);
     } catch (e) {
       debugPrint("Error refreshing location/outlets: $e");
     } finally {
