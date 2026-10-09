@@ -459,7 +459,24 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       }
 
       if (response != null && response['status'] == true) {
-        final visitId = response['visit_id'] ?? 0;
+        int visitId = int.tryParse(response['visit_id']?.toString() ?? response['id']?.toString() ?? '') ?? 0;
+        
+        // If API returned visit_id: 0, query outlet history to resolve the active visit_id
+        if (visitId <= 0) {
+          try {
+            final history = await ApiServices.getOutletHistory(outletId: outletId);
+            if (history != null && history['status'] == true) {
+              final List visits = history['visit_history'] ?? [];
+              final activeVisit = visits.where(
+                (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
+              ).firstOrNull ?? (visits.isNotEmpty ? visits.first : null);
+              if (activeVisit != null) {
+                visitId = int.tryParse(activeVisit['visit_id']?.toString() ?? '') ?? 0;
+              }
+            }
+          } catch (_) {}
+        }
+
         final checkInTime = DateTime.now();
 
         if (mounted) {
@@ -493,8 +510,46 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   }
 
   Future<void> _handleCheckOut() async {
-    if (_visitId == null) {
-      _showErrorSnackBar("No active visit ID found.");
+    final outletId = int.tryParse(widget.outlet.id) ?? 0;
+    int? resolvedVisitId = _visitId;
+    
+    if (resolvedVisitId == null || resolvedVisitId <= 0) {
+      resolvedVisitId = await SessionManager.getOutletCheckInVisitId();
+    }
+
+    // If still 0 or null, query outlet history to find active visit
+    if ((resolvedVisitId == null || resolvedVisitId <= 0) && outletId > 0) {
+      try {
+        final history = await ApiServices.getOutletHistory(outletId: outletId);
+        if (history != null && history['status'] == true) {
+          final List visits = history['visit_history'] ?? [];
+          final activeVisit = visits.where(
+            (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
+          ).firstOrNull ?? (visits.isNotEmpty ? visits.first : null);
+          if (activeVisit != null) {
+            resolvedVisitId = int.tryParse(activeVisit['visit_id']?.toString() ?? '') ?? 0;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // If no active visit exists on server, simply clear local check-in
+    if (resolvedVisitId == null || resolvedVisitId <= 0) {
+      if (mounted) {
+        context.read<OutletProvider>().clearCheckIn();
+        setState(() {
+          _isCheckedIn = false;
+          _visitId = null;
+          _checkInTime = null;
+        });
+        SuccessDialog.show(
+          context,
+          message: "Check-in cleared successfully",
+          onDismiss: () {
+            Navigator.pop(context);
+          },
+        );
+      }
       return;
     }
 
@@ -505,7 +560,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       final currentLng = double.parse(coords[1]);
 
       final response = await ApiServices.outletCheckOut(
-        visitId: _visitId!,
+        visitId: resolvedVisitId,
         latitude: currentLat,
         longitude: currentLng,
       );

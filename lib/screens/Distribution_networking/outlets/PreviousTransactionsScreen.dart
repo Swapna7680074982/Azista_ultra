@@ -320,12 +320,17 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
 
             double totalAmount = 0.0;
             for (var item in items) {
-              final price = double.tryParse(item['ptr_incl_gst_price']?.toString() ?? item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
-              final qty = int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
-              totalAmount += qty * price;
+              final subtotal = double.tryParse(item['pts_subtotal']?.toString() ?? item['ptr_incl_gst_subtotal']?.toString() ?? '');
+              if (subtotal != null && subtotal > 0) {
+                totalAmount += subtotal;
+              } else {
+                final price = double.tryParse(item['pts']?.toString() ?? item['ptr_incl_gst_price']?.toString() ?? item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
+                final qty = int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
+                totalAmount += qty * price;
+              }
             }
             if (totalAmount == 0.0) {
-              final fallbackAmt = pob['ptr_incl_gst_total_amount'] ?? pob['total_amount'] ?? pob['order_value'] ?? pob['total_value'] ?? 0.0;
+              final fallbackAmt = pob['pts_total_amount'] ?? pob['ptr_incl_gst_total_amount'] ?? pob['ptr_total_amount'] ?? pob['total_amount'] ?? pob['order_value'] ?? pob['total_value'] ?? 0.0;
               totalAmount = double.tryParse(fallbackAmt.toString()) ?? 0.0;
             }
             
@@ -559,7 +564,9 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
                             ...entry.value.map((item) {
                               String qty = item['quantity']?.toString() ?? '0';
                               String sku = item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'N/A';
-                              return _skuRow(sku, qty);
+                              final subtotal = double.tryParse(item['pts_subtotal']?.toString() ?? item['ptr_incl_gst_subtotal']?.toString() ?? '');
+                              final unitPrice = double.tryParse(item['pts']?.toString() ?? item['ptr_incl_gst_price']?.toString() ?? item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '');
+                              return _skuRow(sku, qty, unitPrice: unitPrice, subtotal: subtotal);
                             }).toList(),
                             const SizedBox(height: 20),
                           ],
@@ -572,7 +579,7 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child:  Text(
+                    child:  const Text(
                       "CLOSE",
                       style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
                     ),
@@ -630,29 +637,40 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
     }
   }
 
-  Widget _skuRow(String sku, String qty) {
+  Widget _skuRow(String sku, String qty, {double? unitPrice, double? subtotal}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              sku,
-              style: const TextStyle(fontSize: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  sku,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                if (unitPrice != null && unitPrice > 0)
+                  Text(
+                    "Unit: ₹${unitPrice.toStringAsFixed(2)}${subtotal != null && subtotal > 0 ? ' | Total: ₹${subtotal.toStringAsFixed(2)}' : ''}",
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+              ],
             ),
           ),
+          const SizedBox(width: 8),
           Container(
             width: 70,
-            height: 40,
+            height: 38,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: Colors.lightBlue.shade50,
               border: Border.all(color: Colors.grey.shade400),
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
               qty,
-              style: const TextStyle(fontSize: 14),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
           ),
         ],

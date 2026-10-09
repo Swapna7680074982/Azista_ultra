@@ -66,7 +66,8 @@ class ApiServices {
       }
       try {
         return jsonDecode(text);
-      } catch (_) {
+      } catch (e) {
+        AppLogger.warning("Direct JSON decode failed: $e | Raw Body: $text");
         final firstBrace = text.indexOf('{');
         final firstBracket = text.indexOf('[');
         int start = -1;
@@ -2138,6 +2139,9 @@ class ApiServices {
 
       final parsed = _safeParseJson(response.data);
       AppLogger.info("Get Outlet History response: ${response.statusCode} - $parsed");
+      if (parsed == null) {
+        AppLogger.warning("Get Outlet History RAW RESPONSE: [${response.data}]");
+      }
 
       if (parsed is Map) {
         return Map<String, dynamic>.from(parsed);

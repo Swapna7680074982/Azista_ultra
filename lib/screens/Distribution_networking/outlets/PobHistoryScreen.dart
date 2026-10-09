@@ -352,18 +352,23 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
     double suppliedAmount = 0.0;
     double remainingAmount = 0.0;
     for (var item in items) {
-      final price = double.tryParse(item['ptr_incl_gst_price']?.toString() ?? item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
+      final price = double.tryParse(item['pts']?.toString() ?? item['ptr_incl_gst_price']?.toString() ?? item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
       final qty = int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
       final suppliedQty = int.tryParse(item['supplied_qty']?.toString() ?? '0') ?? 0;
       final remainingQty = int.tryParse(item['remaining_qty']?.toString() ?? '0') ?? 0;
 
-      totalAmount += qty * price;
+      final subtotal = double.tryParse(item['pts_subtotal']?.toString() ?? item['ptr_incl_gst_subtotal']?.toString() ?? '');
+      if (subtotal != null && subtotal > 0) {
+        totalAmount += subtotal;
+      } else {
+        totalAmount += qty * price;
+      }
       suppliedAmount += suppliedQty * price;
       remainingAmount += remainingQty * price;
     }
 
     if (totalAmount == 0.0) {
-      final fallbackAmt = pob['ptr_incl_gst_total_amount'] ?? pob['total_amount'] ?? pob['order_value'] ?? pob['total_value'] ?? 0.0;
+      final fallbackAmt = pob['pts_total_amount'] ?? pob['ptr_incl_gst_total_amount'] ?? pob['ptr_total_amount'] ?? pob['total_amount'] ?? pob['order_value'] ?? pob['total_value'] ?? 0.0;
       totalAmount = double.tryParse(fallbackAmt.toString()) ?? 0.0;
     }
 

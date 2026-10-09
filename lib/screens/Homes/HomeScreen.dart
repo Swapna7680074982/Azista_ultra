@@ -268,11 +268,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                           action: SnackBarAction(
                                             label: "REFRESH",
                                             textColor: Colors.amberAccent,
-                                            onPressed: () {
-                                              homeProvider.loadDistributors(appState);
+                                            onPressed: () async {
+                                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text("Refreshing distributors..."),
+                                                  duration: Duration(seconds: 2),
+                                                ),
+                                              );
+                                              await homeProvider.loadDistributors(appState);
                                             },
                                           ),
-                                          duration: const Duration(seconds: 4),
+                                          duration: const Duration(seconds: 3),
                                         ),
                                       );
                                     }
@@ -347,10 +354,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                 action: SnackBarAction(
                                   label: "REFRESH",
                                   textColor: Colors.amberAccent,
-                                  onPressed: () {
-                                    homeProvider.loadDistributors(appState);
+                                  onPressed: () async {
+                                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Refreshing distributors..."),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                    await homeProvider.loadDistributors(appState);
                                   },
                                 ),
+                                duration: const Duration(seconds: 3),
                               ),
                             );
                             return;
@@ -358,7 +373,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (appState.selectedDistributor == null) {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Please select a distributor first.")),
+                              const SnackBar(
+                                content: Text("Please select a distributor first."),
+                                duration: Duration(seconds: 3),
+                              ),
                             );
                             return;
                           }
