@@ -1022,7 +1022,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            if (appState.userRole == 'AM' || appState.userRole == 'ASM' || appState.userRole == 'RM') ...[
+            if (appState.userRole == 'AM' || appState.userRole == 'ASM' || appState.userRole == 'RM' || appState.userRole == 'RSM') ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Row(
@@ -1049,18 +1049,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: (appState.userRole == 'RM' ? Colors.purple : Colors.orange).withValues(alpha: 0.12),
+                        color: (appState.userRole == 'RM' || appState.userRole == 'RSM' ? Colors.purple : Colors.orange).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                          color: (appState.userRole == 'RM' ? Colors.purple : Colors.orange).withValues(alpha: 0.3),
+                          color: (appState.userRole == 'RM' || appState.userRole == 'RSM' ? Colors.purple : Colors.orange).withValues(alpha: 0.3),
                         ),
                       ),
                       child: Text(
-                        RoleHelper.formatRole(appState.userRole ?? "AM"),
+                        RoleHelper.formatRole(appState.userRole ?? "ASM"),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: appState.userRole == 'RM' ? Colors.purple.shade700 : Colors.orange.shade800,
+                          color: appState.userRole == 'RM' || appState.userRole == 'RSM' ? Colors.purple.shade700 : Colors.orange.shade800,
                         ),
                       ),
                     ),

@@ -55,7 +55,7 @@ class TeamAttendanceProvider extends ChangeNotifier {
 
       final status = response != null ? response['status'] : null;
       if (response != null && (status == true || status == "success" || status == "true" || status == 1)) {
-        print("TEAM ATTENDANCE RESPONSE: $response");
+        AppLogger.info("TEAM ATTENDANCE RESPONSE: $response");
         final List data = response['data'] ?? [];
         _rawResponseList = data; // Save all logs
         _allAttendance = data.map((item) => TeamAttendance.fromJson(item)).toList();
@@ -107,11 +107,17 @@ class TeamAttendanceProvider extends ChangeNotifier {
 
     // Filter by the selected date (year, month, day)
     roleFiltered = roleFiltered.where((item) {
-      final parsed = DateTime.tryParse(item.attendanceDate);
-      if (parsed == null) return false;
-      return parsed.year == _selectedDate.year &&
-             parsed.month == _selectedDate.month &&
-             parsed.day == _selectedDate.day;
+      DateTime? parsed = DateTime.tryParse(item.attendanceDate.trim());
+      if (parsed == null && item.firstCheckin != null) {
+        parsed = DateTime.tryParse(item.firstCheckin!.trim());
+      }
+      if (parsed != null) {
+        return parsed.year == _selectedDate.year &&
+               parsed.month == _selectedDate.month &&
+               parsed.day == _selectedDate.day;
+      }
+      final ymd = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
+      return item.attendanceDate.contains(ymd);
     }).toList();
 
     // Now, group by User ID to show unique users with their nested logs
@@ -144,11 +150,16 @@ class TeamAttendanceProvider extends ChangeNotifier {
 
   String _normalizeRole(String role) {
     final norm = role.trim().toUpperCase();
-    if (norm == 'ASM' || norm == 'AM') {
+    if (norm == 'ASM' || norm == 'AM' || norm.contains('AREA')) {
       return 'AM';
-    } else if (norm == 'RM') {
+    } else if (norm == 'RM' || norm == 'RSM' || norm.contains('REGION')) {
       return 'RM';
-    } else if (norm == 'SO' || norm.contains('SALE OFF') || norm.contains('SALES OFF') || norm.contains('SALE OFFICER') || norm.contains('SALES OFFICER')) {
+    } else if (norm == 'SO' ||
+        norm == 'FSE' ||
+        norm.contains('SALE') ||
+        norm.contains('SALES') ||
+        norm.contains('FIELD') ||
+        norm.contains('EXECUTIVE')) {
       return 'SO';
     }
     return norm;

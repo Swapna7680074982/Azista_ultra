@@ -36,6 +36,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
 
   bool get _isManager =>
       _userRole.toUpperCase() == 'RM' ||
+      _userRole.toUpperCase() == 'RSM' ||
       _userRole.toUpperCase() == 'AM' ||
       _userRole.toUpperCase() == 'ASM' ||
       _userRole.toUpperCase() == 'ADMIN';

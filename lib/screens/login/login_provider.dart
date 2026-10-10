@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 
 import '../../permissions/SessionManager.dart';
 import '../../services/api_services.dart';
+import '../../utilities/role_helper.dart';
 
 class LoginProvider extends ChangeNotifier {
   bool isLoading = false;
@@ -86,8 +87,11 @@ class LoginProvider extends ChangeNotifier {
           }
 
           final name = userInfo["name"]?.toString() ?? basicDetails?["EMPNAME"]?.toString() ?? "Unknown";
-          final rolecode = userInfo["rolecode"]?.toString().trim();
-          final role = (rolecode == null || rolecode.isEmpty) ? "Sale Off" : rolecode;
+          final rawRole = userInfo["rolecode"]?.toString().trim() ??
+              data["role"]?.toString().trim() ??
+              response["role"]?.toString().trim();
+          final role = RoleHelper.formatRole(rawRole);
+          userInfo["rolecode"] = role;
           await SessionManager.saveUserDetails(name, role, userInfo: userInfo);
 
           final attStatusObj = (data["attendance_status"] ?? response["attendance_status"]);

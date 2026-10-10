@@ -377,7 +377,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
   }
 
   Widget _buildFilterSection(AppStateProvider appState, TeamAttendanceProvider provider) {
-    if (appState.userRole == 'AM') {
+    if (appState.userRole == 'AM' || appState.userRole == 'ASM') {
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         color: Colors.transparent,

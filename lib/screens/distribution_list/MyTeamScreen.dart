@@ -52,9 +52,9 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
 
   String _normalizeRole(String role) {
     final norm = role.trim().toUpperCase();
-    if (norm == 'ASM' || norm == 'AM') return 'AM';
-    if (norm == 'RM') return 'RM';
-    if (norm == 'SO' || norm.contains('SALE') || norm.contains('SALES')) return 'SO';
+    if (norm == 'ASM' || norm == 'AM' || norm.contains('AREA')) return 'AM';
+    if (norm == 'RM' || norm == 'RSM' || norm.contains('REGION')) return 'RM';
+    if (norm == 'SO' || norm == 'FSE' || norm.contains('SALE') || norm.contains('SALES') || norm.contains('FIELD') || norm.contains('EXECUTIVE')) return 'SO';
     return norm;
   }
 
@@ -674,53 +674,6 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
                   ],
                 ),
               ),
-
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    icon: const Icon(Icons.people_alt_outlined, size: 14, color: AppColors.primary),
-                    label: const Text(
-                      "ATTENDANCE",
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const TeamAttendanceScreen()),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppColors.button.withValues(alpha: 0.5)),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    icon: const Icon(Icons.history, size: 14, color: AppColors.button),
-                    label: const Text(
-                      "POB HISTORY",
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.button),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const TeamPosHistoryScreen()),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),

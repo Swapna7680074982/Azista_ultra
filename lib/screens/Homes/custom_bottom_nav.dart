@@ -30,7 +30,7 @@ class CustomBottomNav extends StatelessWidget {
           children: [
             Expanded(child: navItemIcon(context, Icons.access_time, "Home", 0)),
             Expanded(child: navItemIcon(context, Icons.receipt_long, "User Trans.", 1)),
-            Expanded(child: navItemIcon(context, Icons.pin_drop_outlined, "Outlet Visits", 2)),
+            Expanded(child: navItemIcon(context, Icons.pin_drop_outlined, "Visits", 2)),
             Expanded(child: navItemIcon(context, Icons.account_tree_outlined, "Dist. Net.", 3)),
             Expanded(child: navItemIcon(context, Icons.check_circle, "Attendance", 4)),
           ],

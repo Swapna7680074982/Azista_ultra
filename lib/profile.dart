@@ -77,7 +77,7 @@ class ProfileDrawer extends StatelessWidget {
 
           Consumer<AppStateProvider>(
             builder: (context, appState, _) {
-              if (appState.userRole == 'AM' || appState.userRole == 'RM' || appState.userRole == 'ASM') {
+              if (appState.userRole == 'AM' || appState.userRole == 'RM' || appState.userRole == 'ASM' || appState.userRole == 'RSM') {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

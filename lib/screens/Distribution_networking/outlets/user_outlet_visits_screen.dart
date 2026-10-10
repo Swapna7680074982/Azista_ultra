@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../constants/app_colors.dart';
 import '../../../permissions/SessionManager.dart';
@@ -20,6 +21,7 @@ class UserVisitRecord {
   final String? checkoutTime;
   final int? durationMinutes;
   final bool isActive;
+  final String? personName;
 
   UserVisitRecord({
     required this.outletId,
@@ -32,6 +34,7 @@ class UserVisitRecord {
     this.checkoutTime,
     this.durationMinutes,
     this.isActive = false,
+    this.personName,
   });
 
   String get workingHoursFormatted {
@@ -70,6 +73,8 @@ class UserOutletVisitsScreen extends StatefulWidget {
 class _UserOutletVisitsScreenState extends State<UserOutletVisitsScreen> {
   String _searchQuery = "";
   final TextEditingController _searchController = TextEditingController();
+
+  DateTime _selectedDate = DateTime.now();
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -170,14 +175,13 @@ class _UserOutletVisitsScreenState extends State<UserOutletVisitsScreen> {
         debugPrint("Error fetching routes/outlets: $e");
       }
 
-      // 3. Fetch candidate outlet IDs from calls_info API
-      try {
-        final now = DateTime.now();
-        final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-        final monthStr = "${now.month.toString().padLeft(2, '0')}-${now.year}";
+      // 3. Fetch candidate outlet IDs from calls_info API for selected date
+      final dateStr = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
+      final monthStr = "${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.year}";
 
-        final callsRes = await ApiServices.getCallsInfo(month: monthStr) ??
-            await ApiServices.getCallsInfo(date: dateStr);
+      try {
+        final callsRes = await ApiServices.getCallsInfo(date: dateStr) ??
+            await ApiServices.getCallsInfo(month: monthStr);
 
         if (callsRes != null && callsRes["data"] is List) {
           for (var item in callsRes["data"]) {
@@ -191,11 +195,16 @@ class _UserOutletVisitsScreenState extends State<UserOutletVisitsScreen> {
         debugPrint("Error fetching calls info: $e");
       }
 
-      // Also include active check-in outlet ID if present
+      // Also include active check-in outlet ID if present and selected date is today
+      final now = DateTime.now();
+      final isToday = _selectedDate.year == now.year &&
+          _selectedDate.month == now.month &&
+          _selectedDate.day == now.day;
+
       final activeOutletId = await SessionManager.getOutletCheckInOutletId();
       final activeCheckInTime = await SessionManager.getOutletCheckInTime();
       final activeVisitId = await SessionManager.getOutletCheckInVisitId();
-      if (activeOutletId != null) {
+      if (isToday && activeOutletId != null) {
         candidateOutletIds.add(activeOutletId);
       }
 
@@ -204,7 +213,13 @@ class _UserOutletVisitsScreenState extends State<UserOutletVisitsScreen> {
         Map<String, dynamic>? hist;
         for (int attempt = 0; attempt < 2; attempt++) {
           try {
-            hist = await ApiServices.getOutletHistory(outletId: oId);
+            hist = await ApiServices.getOutletHistory(
+              outletId: oId,
+              fromDate: dateStr,
+              toDate: dateStr,
+              month: _selectedDate.month,
+              year: _selectedDate.year,
+            );
             if (hist != null &&
                 (hist['status'] == true ||
                     hist['status'] == 1 ||
@@ -245,6 +260,13 @@ class _UserOutletVisitsScreenState extends State<UserOutletVisitsScreen> {
               final cOut = vMap['checkout_time']?.toString();
               final bool isAct = (cOut == null || cOut.isEmpty || cOut == 'N/A' || cOut == 'null');
 
+              final pName = (vMap['employee_name'] ??
+                      vMap['user_name'] ??
+                      vMap['fullname'] ??
+                      vMap['created_by_name'] ??
+                      vMap['submitted_by'])
+                  ?.toString();
+
               loadedRecords.add(UserVisitRecord(
                 outletId: oId.toString(),
                 outletName: outletName,
@@ -256,14 +278,15 @@ class _UserOutletVisitsScreenState extends State<UserOutletVisitsScreen> {
                 checkoutTime: cOut,
                 durationMinutes: int.tryParse((vMap['duration_minutes'] ?? vMap['duration'] ?? '').toString()),
                 isActive: isAct,
+                personName: pName,
               ));
             }
           }
         }
       }
 
-      // 5. Prepend currently active check-in session if present and not in list
-      if (activeOutletId != null && activeCheckInTime != null) {
+      // 5. Prepend currently active check-in session if present, not in list, and selected date is today
+      if (isToday && activeOutletId != null && activeCheckInTime != null) {
         final formattedActiveTime = activeCheckInTime.toIso8601String();
         final matchedOutlet = outletMap[activeOutletId.toString()];
         final bool alreadyActive = loadedRecords.any((r) => r.outletId == activeOutletId.toString() && r.isActive);
@@ -288,14 +311,27 @@ class _UserOutletVisitsScreenState extends State<UserOutletVisitsScreen> {
         }
       }
 
-      // 6. Deduplicate and sort by most recent checkin
+      // 6. Deduplicate and filter by selected date
       final List<UserVisitRecord> uniqueRecords = [];
       final Set<String> seenKeys = {};
       for (var r in loadedRecords) {
         final key = "${r.outletId}_${r.visitId}_${r.checkinTime}";
         if (!seenKeys.contains(key)) {
           seenKeys.add(key);
-          uniqueRecords.add(r);
+          final rDate = _getRecordDate(r);
+          if (rDate != null) {
+            if (rDate.year == _selectedDate.year &&
+                rDate.month == _selectedDate.month &&
+                rDate.day == _selectedDate.day) {
+              uniqueRecords.add(r);
+            }
+          } else {
+            final ymd = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
+            final dmy = "${_selectedDate.day.toString().padLeft(2, '0')}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.year}";
+            if (r.checkinTime.contains(ymd) || r.checkinTime.contains(dmy) || r.visitDate.contains(ymd) || r.visitDate.contains(dmy)) {
+              uniqueRecords.add(r);
+            }
+          }
         }
       }
 
@@ -324,6 +360,49 @@ class _UserOutletVisitsScreenState extends State<UserOutletVisitsScreen> {
     }
   }
 
+  DateTime? _getRecordDate(UserVisitRecord record) {
+    if (record.checkinTime.trim().isNotEmpty) {
+      final dt = _parseDateTime(record.checkinTime);
+      if (dt != null) return dt;
+    }
+    if (record.visitDate.trim().isNotEmpty) {
+      final dt = _parseDateTime(record.visitDate);
+      if (dt != null) return dt;
+    }
+    return null;
+  }
+
+  DateTime? _parseDateTime(String str) {
+    final cleaned = str.trim();
+    if (cleaned.isEmpty || cleaned == 'null' || cleaned == 'N/A') return null;
+
+    final dt = DateTime.tryParse(cleaned);
+    if (dt != null) return dt.toLocal();
+
+    final patterns = [
+      "yyyy-MM-dd HH:mm:ss",
+      "yyyy-MM-dd HH:mm",
+      "yyyy-MM-dd",
+      "dd-MM-yyyy HH:mm:ss",
+      "dd-MM-yyyy HH:mm",
+      "dd-MM-yyyy",
+      "dd/MM/yyyy HH:mm:ss",
+      "dd/MM/yyyy HH:mm",
+      "dd/MM/yyyy",
+      "yyyy/MM/dd HH:mm:ss",
+      "yyyy/MM/dd",
+      "d MMM yyyy, hh:mm a",
+      "d MMM yyyy",
+    ];
+
+    for (final p in patterns) {
+      try {
+        return DateFormat(p).parse(cleaned).toLocal();
+      } catch (_) {}
+    }
+    return null;
+  }
+
   List<UserVisitRecord> get _filteredVisits {
     if (_searchQuery.trim().isEmpty) {
       return _allVisits;
@@ -336,13 +415,121 @@ class _UserOutletVisitsScreenState extends State<UserOutletVisitsScreen> {
     }).toList();
   }
 
+  Widget _buildDateSelector() {
+    final now = DateTime.now();
+    final isToday = _selectedDate.year == now.year &&
+        _selectedDate.month == now.month &&
+        _selectedDate.day == now.day;
+    final dateText = isToday
+        ? "TODAY, ${DateFormat('dd MMM yyyy').format(_selectedDate).toUpperCase()}"
+        : DateFormat('EEEE, dd MMM yyyy').format(_selectedDate).toUpperCase();
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => _selectDate(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.calendar_month,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "VISIT DATE",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade500,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      dateText,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_drop_down,
+                color: Colors.grey.shade700,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              onSurface: Colors.black87,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null &&
+        (picked.year != _selectedDate.year ||
+            picked.month != _selectedDate.month ||
+            picked.day != _selectedDate.day)) {
+      setState(() {
+        _selectedDate = picked;
+      });
+      _loadVisitsData();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredVisits;
 
     return Scaffold(
       appBar: WavyAppBar(
-        title: "OUTLET VISITS",
+        title: "VISITS",
         actions: [
           IconButton(
             tooltip: "Refresh Visits",
@@ -363,9 +550,12 @@ class _UserOutletVisitsScreenState extends State<UserOutletVisitsScreen> {
       ),
       body: Column(
         children: [
-          // Search & Counter Header
+          // 1. Calendar / Selected Date Selector
+          _buildDateSelector(),
+
+          // 2. Search & Counter Header
           Container(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
             color: Colors.white,
             child: Row(
               children: [
@@ -476,12 +666,12 @@ class _UserOutletVisitsScreenState extends State<UserOutletVisitsScreen> {
                               physics:
                                   const AlwaysScrollableScrollPhysics(),
                               children: [
-                                const SizedBox(height: 100),
+                                const SizedBox(height: 80),
                                 Icon(Icons.history_toggle_off,
                                     size: 60, color: Colors.grey.shade400),
                                 const SizedBox(height: 16),
                                 const Text(
-                                  "No Outlet Visits Found",
+                                  "No Visits Found",
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                       fontSize: 16,
@@ -489,15 +679,40 @@ class _UserOutletVisitsScreenState extends State<UserOutletVisitsScreen> {
                                       color: Colors.black87),
                                 ),
                                 const SizedBox(height: 6),
-                                Text(
-                                  _searchQuery.isNotEmpty
-                                      ? "No visits matching '$_searchQuery'"
-                                      : "No outlet visits recorded yet.",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey.shade600),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                                  child: Text(
+                                    _searchQuery.isNotEmpty
+                                        ? "No visits matching '$_searchQuery'"
+                                        : "No visits recorded for ${DateFormat('dd MMMM yyyy').format(_selectedDate)}.",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey.shade600),
+                                  ),
                                 ),
+                                if (_searchQuery.isNotEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  Center(
+                                    child: OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppColors.primary,
+                                        side: const BorderSide(color: AppColors.primary),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() {
+                                          _searchQuery = "";
+                                        });
+                                      },
+                                      icon: const Icon(Icons.clear, size: 16),
+                                      label: const Text("Clear Search"),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           )
@@ -608,9 +823,29 @@ class _UserOutletVisitsScreenState extends State<UserOutletVisitsScreen> {
                           ],
                         ],
                       ),
-                    ],
+                        if (record.personName != null && record.personName!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(Icons.person, size: 13, color: AppColors.primary),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  record.personName!,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                ),
                 const SizedBox(width: 8),
                 if (record.isActive)
                   Container(

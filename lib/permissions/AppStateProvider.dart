@@ -14,12 +14,16 @@ class AppStateProvider extends ChangeNotifier {
   void setUserRole(String? role) {
     if (role != null) {
       final norm = role.trim().toUpperCase();
-      if (norm == 'ASM' || norm == 'AM') {
-        userRole = 'AM';
-      } else if (norm == 'RM') {
-        userRole = 'RM';
-      } else if (norm == 'SO' || norm.contains('SALE OFF') || norm.contains('SALES OFF') || norm.contains('SALE OFFICER') || norm.contains('SALES OFFICER')) {
-        userRole = 'SO';
+      if (norm == 'ASM' || norm == 'AM' || norm.contains('AREA')) {
+        userRole = 'ASM';
+      } else if (norm == 'RSM' || norm == 'RM' || norm.contains('REGION')) {
+        userRole = 'RSM';
+      } else if (norm == 'SO' ||
+          norm == 'FSE' ||
+          norm.contains('SALE') ||
+          norm.contains('FIELD') ||
+          norm.contains('EXECUTIVE')) {
+        userRole = 'FSE';
       } else {
         userRole = norm;
       }
@@ -28,6 +32,10 @@ class AppStateProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  bool get isManager => userRole == 'RSM' || userRole == 'RM' || userRole == 'ASM' || userRole == 'AM' || userRole == 'ADMIN';
+  bool get isRM => userRole == 'RSM' || userRole == 'RM';
+  bool get isAM => userRole == 'ASM' || userRole == 'AM';
 
   void setDistributor(String? distributor, {int? id}) {
     selectedDistributor = distributor;

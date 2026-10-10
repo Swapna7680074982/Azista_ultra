@@ -1,4 +1,26 @@
 class RoleHelper {
+  /// Normalizes any backend role into standard internal tiers:
+  /// AM (ASM / Area Manager)
+  /// RM (RSM / Regional Manager)
+  /// SO (SO / FSE / Field Sales Executive / Sales Officer)
+  static String normalizeRole(String? role) {
+    if (role == null || role.trim().isEmpty) return '';
+    final norm = role.trim().toUpperCase();
+    if (norm == 'ASM' || norm == 'AM' || norm.contains('AREA')) {
+      return 'AM';
+    } else if (norm == 'RSM' || norm == 'RM' || norm.contains('REGION')) {
+      return 'RM';
+    } else if (norm == 'SO' ||
+        norm == 'FSE' ||
+        norm.contains('SALE') ||
+        norm.contains('SALES') ||
+        norm.contains('FIELD') ||
+        norm.contains('EXECUTIVE')) {
+      return 'SO';
+    }
+    return norm;
+  }
+
   /// Maps any backend rolecode or role name to the standard UI display name:
   /// SO -> FSE
   /// AM -> ASM

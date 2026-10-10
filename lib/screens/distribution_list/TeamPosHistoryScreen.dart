@@ -4,7 +4,6 @@ import '../../constants/app_colors.dart';
 import '../../services/api_services.dart';
 import '../../utilities/common_widgets.dart';
 import '../../utilities/date_formatter.dart';
-import '../../utilities/role_helper.dart';
 import '../../permissions/SessionManager.dart';
 import 'TeamMemberDetailScreen.dart';
 
@@ -56,9 +55,9 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
 
   String _normalizeRole(String role) {
     final norm = role.trim().toUpperCase();
-    if (norm == 'ASM' || norm == 'AM') return 'AM';
-    if (norm == 'RM') return 'RM';
-    if (norm == 'SO' || norm.contains('SALE') || norm.contains('SALES')) return 'SO';
+    if (norm == 'ASM' || norm == 'AM' || norm.contains('AREA')) return 'AM';
+    if (norm == 'RM' || norm == 'RSM' || norm.contains('REGION')) return 'RM';
+    if (norm == 'SO' || norm == 'FSE' || norm.contains('SALE') || norm.contains('SALES') || norm.contains('FIELD') || norm.contains('EXECUTIVE')) return 'SO';
     return norm;
   }
 
@@ -619,7 +618,6 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
         _outletNameLookup[outletIdStr] ??
         (outletIdStr.isNotEmpty ? "Outlet #$outletIdStr" : "Unknown Outlet");
     final empName = pob["employee_name"]?.toString() ?? pob["fullname"]?.toString() ?? "Unknown";
-    final empId = pob["employee_id"]?.toString() ?? pob["user_id"]?.toString() ?? "-";
     final role = _normalizeRole(pob["rolecode"]?.toString() ?? "SO");
     final status = (pob["status"]?.toString() ?? "supplied").toUpperCase();
     final createdAt = pob["created_at"]?.toString() ?? "";
@@ -728,12 +726,23 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
                             color: Colors.black87,
                           ),
                         ),
-                        Text(
-                          "Submitted by: $empName (${RoleHelper.formatRole(role)}) - ID: $empId",
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade600,
-                          ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            const Icon(Icons.person, size: 13, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                empName,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -952,7 +961,6 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
     if (items.isEmpty) return const SizedBox.shrink();
     final first = items.first;
     final empName = first["employee_name"]?.toString() ?? "Unknown SO";
-    final empId = first["employee_id"]?.toString() ?? first["user_id"]?.toString() ?? "-";
     final role = first["rolecode"]?.toString() ?? "SO";
     final createdOn = first["created_on"]?.toString() ?? first["created_at"]?.toString() ?? "";
     final totalSkus = items.length;
@@ -1009,20 +1017,23 @@ class _TeamPosHistoryScreenState extends State<TeamPosHistoryScreen>
                           ),
                         ),
                         const SizedBox(height: 3),
-                        Text(
-                          "Submitted by: $empName (${RoleHelper.formatRole(role)})",
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade700,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Text(
-                          "Employee ID: $empId",
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey.shade500,
-                          ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            const Icon(Icons.person, size: 13, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                empName,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

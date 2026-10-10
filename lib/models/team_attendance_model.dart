@@ -38,11 +38,16 @@ class TeamAttendance {
 
 String _normalizeRole(String role) {
   final norm = role.trim().toUpperCase();
-  if (norm == 'ASM' || norm == 'AM') {
+  if (norm == 'ASM' || norm == 'AM' || norm.contains('AREA')) {
     return 'AM';
-  } else if (norm == 'RM') {
+  } else if (norm == 'RM' || norm == 'RSM' || norm.contains('REGION')) {
     return 'RM';
-  } else if (norm == 'SO' || norm.contains('SALE OFF') || norm.contains('SALES OFF') || norm.contains('SALE OFFICER') || norm.contains('SALES OFFICER')) {
+  } else if (norm == 'SO' ||
+      norm == 'FSE' ||
+      norm.contains('SALE') ||
+      norm.contains('SALES') ||
+      norm.contains('FIELD') ||
+      norm.contains('EXECUTIVE')) {
     return 'SO';
   }
   return norm;
