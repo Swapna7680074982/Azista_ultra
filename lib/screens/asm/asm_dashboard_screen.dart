@@ -8,9 +8,8 @@ import '../Distribution_networking/distribution_network_screen.dart';
 import '../../utilities/date_formatter.dart';
 import '../Homes/HomeProvider.dart';
 import '../attendance/TeamAttendanceScreen.dart';
-import '../distribution_list/TeamPosHistoryScreen.dart';
-import '../distribution_list/MyTeamScreen.dart';
 import '../geo_requests/outlet_geo_requests_screen.dart';
+import '../team_progress/my_team_progress_screen.dart';
 
 class AmDashboardScreen extends StatefulWidget {
   const AmDashboardScreen({super.key});
@@ -219,13 +218,13 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 40),
               children: [
                 _buildMenuItem(
-                  iconPath: Icons.groups_outlined,
-                  label: "My Team",
+                  iconPath: Icons.trending_up,
+                  label: "My Team Progress",
                   enabled: appState.isOnline,
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const MyTeamScreen()),
+                      MaterialPageRoute(builder: (_) => const MyTeamProgressScreen()),
                     );
                   },
                 ),
@@ -237,17 +236,6 @@ class _AmDashboardScreenState extends State<AmDashboardScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const TeamAttendanceScreen()),
-                    );
-                  },
-                ),
-                _buildMenuItem(
-                  iconPath: Icons.history,
-                  label: "Team POB History",
-                  enabled: appState.isOnline,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const TeamPosHistoryScreen()),
                     );
                   },
                 ),

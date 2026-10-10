@@ -1849,6 +1849,8 @@ class ApiServices {
     int? distributorId,
     int? outletId,
     int? productId,
+    int? userId,
+    String? employeeId,
   }) async {
     try {
       final token = await SessionManager.getToken();
@@ -1895,6 +1897,7 @@ class ApiServices {
   static Future<List<dynamic>> getTeamPobHistory({
     int? outletId,
     int? distributorId,
+    int? userId,
     String? status,
     String? fromDate,
     String? toDate,
@@ -1913,6 +1916,7 @@ class ApiServices {
       final Map<String, dynamic> body = {};
       if (outletId != null) body["outlet_id"] = outletId;
       if (distributorId != null) body["distributor_id"] = distributorId;
+      if (userId != null) body["user_id"] = userId;
       if (status != null && status.isNotEmpty) body["status"] = status;
       if (fromDate != null && fromDate.isNotEmpty) body["from_date"] = fromDate;
       if (toDate != null && toDate.isNotEmpty) body["to_date"] = toDate;
@@ -2963,3 +2967,5 @@ class ApiServices {
     }
   }
 }
+
+

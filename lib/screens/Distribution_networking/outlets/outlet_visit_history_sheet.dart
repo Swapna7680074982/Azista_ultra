@@ -3,7 +3,6 @@ import '../../../constants/app_colors.dart';
 import '../../../services/api_services.dart';
 import '../../../utilities/common_widgets.dart';
 import '../../../utilities/date_formatter.dart';
-import '../../distribution_list/TeamOutletHistoryScreen.dart';
 import 'outlet_provider.dart';
 
 class OutletVisitHistorySheet extends StatefulWidget {
@@ -291,48 +290,6 @@ class _OutletVisitHistorySheetState extends State<OutletVisitHistorySheet> {
                               return _buildVisitCard(item, index);
                             },
                           ),
-          ),
-
-          // Bottom Action
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              border: Border(top: BorderSide(color: Colors.grey.shade200)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      final now = DateTime.now();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => TeamOutletHistoryScreen(
-                            outletId: widget.outletId,
-                            outletName: widget.outletName,
-                            month: now.month,
-                            year: now.year,
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
-                    label: const Text(
-                      "VIEW FULL MONTHLY REPORT",
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.primary),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),

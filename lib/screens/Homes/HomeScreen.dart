@@ -17,10 +17,10 @@ import 'widgets/DonutChart.dart';
 import '../../permissions/SessionManager.dart';
 import '../../utilities/date_formatter.dart';
 import '../attendance/TeamAttendanceScreen.dart';
-import '../distribution_list/MyTeamScreen.dart';
-import '../distribution_list/TeamPosHistoryScreen.dart';
 import '../geo_requests/outlet_geo_requests_screen.dart';
+import '../team_progress/my_team_progress_screen.dart';
 import '../../utilities/role_helper.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -1073,8 +1073,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Expanded(
                       child: ActionBox(
-                        Icons.groups_outlined,
-                        "MY\nTEAM",
+                        Icons.trending_up,
+                        "MY TEAM\nPROGRESS",
                         enabled: appState.isOnline,
                         onTap: () {
                           if (!appState.isOnline) {
@@ -1085,7 +1085,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           }
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const MyTeamScreen()),
+                            MaterialPageRoute(builder: (_) => const MyTeamProgressScreen()),
                           );
                         },
                       ),
@@ -1115,48 +1115,22 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ActionBox(
-                        Icons.history,
-                        "TEAM POB\nHISTORY",
-                        enabled: appState.isOnline,
-                        onTap: () {
-                          if (!appState.isOnline) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Please turn on attendance first.")),
-                            );
-                            return;
-                          }
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const TeamPosHistoryScreen()),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ActionBox(
-                        Icons.edit_location_alt_outlined,
-                        "OUTLET GEO\nREQUESTS",
-                        enabled: appState.isOnline,
-                        onTap: () {
-                          if (!appState.isOnline) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Please turn on attendance first.")),
-                            );
-                            return;
-                          }
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const OutletGeoRequestsScreen()),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                child: ActionBox(
+                  Icons.edit_location_alt_outlined,
+                  "OUTLET GEO REQUESTS",
+                  enabled: appState.isOnline,
+                  onTap: () {
+                    if (!appState.isOnline) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Please turn on attendance first.")),
+                      );
+                      return;
+                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const OutletGeoRequestsScreen()),
+                    );
+                  },
                 ),
               ),
             ],

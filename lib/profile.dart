@@ -8,9 +8,8 @@ import 'package:azista_ultra/screens/Homes/support.dart';
 import 'package:azista_ultra/screens/login/login_screen.dart';
 import 'package:azista_ultra/screens/geo_requests/my_geo_requests_screen.dart';
 import 'package:azista_ultra/screens/geo_requests/outlet_geo_requests_screen.dart';
-import 'package:azista_ultra/screens/distribution_list/MyTeamScreen.dart';
 import 'package:azista_ultra/screens/attendance/TeamAttendanceScreen.dart';
-import 'package:azista_ultra/screens/distribution_list/TeamPosHistoryScreen.dart';
+import 'package:azista_ultra/screens/team_progress/my_team_progress_screen.dart';
 import 'package:azista_ultra/screens/profile_screen.dart';
 import 'package:azista_ultra/services/api_services.dart';
 import 'package:azista_ultra/utilities/delete_account_dialog.dart';
@@ -83,9 +82,8 @@ class ProfileDrawer extends StatelessWidget {
                   children: [
                     const Divider(),
                     sectionTitle("TEAM MANAGEMENT"),
-                    menuItem(context, "My Team"),
+                    menuItem(context, "My Team Progress"),
                     menuItem(context, "Team Attendance"),
-                    menuItem(context, "Team POB History"),
                     menuItem(context, "Outlet Geo Requests"),
                   ],
                 );
@@ -219,9 +217,7 @@ class ProfileDrawer extends StatelessWidget {
                 context,
                 MaterialPageRoute(builder: (_) => const MyGeoRequestsScreen()),
               );
-              break;
-
-            case "My Team":
+            case "My Team Progress":
               if (!appState.isOnline) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Please turn on attendance first.")),
@@ -230,7 +226,7 @@ class ProfileDrawer extends StatelessWidget {
               }
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const MyTeamScreen()),
+                MaterialPageRoute(builder: (_) => const MyTeamProgressScreen()),
               );
               break;
 
@@ -244,19 +240,6 @@ class ProfileDrawer extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const TeamAttendanceScreen()),
-              );
-              break;
-
-            case "Team POB History":
-              if (!appState.isOnline) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Please turn on attendance first.")),
-                );
-                return;
-              }
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const TeamPosHistoryScreen()),
               );
               break;
 
