@@ -140,9 +140,13 @@ class _UserTransactionScreenState extends State<UserTransactionScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => TransactionDetailsScreen(outletId: int.tryParse(outlet['outlet_id']) ?? 0),
+                                builder: (_) => TransactionDetailsScreen(
+                                  outletId: int.tryParse(outlet['outlet_id'].toString()) ?? 0,
+                                  outletName: outlet['outlet_name']?.toString(),
+                                  initialDate: selectedDate,
+                                ),
                               ),
-                            );
+                            ).then((_) => _reload());
                           },
                           child: Container(
                             width: double.infinity,

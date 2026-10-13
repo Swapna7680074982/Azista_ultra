@@ -1,6 +1,21 @@
 import 'package:flutter/foundation.dart';
 
 class AppLogger {
+  static void printFull(String message, {String tag = "INFO"}) {
+    if (kDebugMode) {
+      const int chunkSize = 800;
+      if (message.length <= chunkSize) {
+        debugPrint("ℹ️ [$tag]: $message");
+        return;
+      }
+      for (int i = 0; i < message.length; i += chunkSize) {
+        final end = (i + chunkSize < message.length) ? i + chunkSize : message.length;
+        // ignore: avoid_print
+        print("ℹ️ [$tag PART ${(i ~/ chunkSize) + 1}]: ${message.substring(i, end)}");
+      }
+    }
+  }
+
   static void info(String message) {
     if (kDebugMode) {
       debugPrint("ℹ️ INFO: $message");

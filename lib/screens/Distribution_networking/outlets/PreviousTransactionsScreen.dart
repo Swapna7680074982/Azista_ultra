@@ -304,6 +304,12 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
             return false;
           }
         }).toList();
+
+        filteredData.sort((a, b) {
+          final da = (a['created_at'] ?? a['created_on'] ?? '').toString();
+          final db = (b['created_at'] ?? b['created_on'] ?? '').toString();
+          return db.compareTo(da);
+        });
         
         if (filteredData.isEmpty) {
           return const Center(child: Text("No POB History"));
@@ -461,6 +467,12 @@ class _StockSalePosScreenState extends State<StockSalePosScreen> {
             return false;
           }
         }).toList();
+
+        filteredData.sort((a, b) {
+          final da = (a['created_on'] ?? a['created_at'] ?? '').toString();
+          final db = (b['created_on'] ?? b['created_at'] ?? '').toString();
+          return db.compareTo(da);
+        });
         
         if (filteredData.isEmpty) {
           return Center(child: Text("No ${posType.toUpperCase()} History"));

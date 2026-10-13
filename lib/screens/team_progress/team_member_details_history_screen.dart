@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
 import '../../models/team_progress_model.dart';
@@ -8,6 +10,7 @@ import '../../utilities/date_formatter.dart';
 import '../../utilities/mylogger.dart';
 import '../../utilities/role_helper.dart';
 import '../../utilities/wavy_app_bar.dart';
+import 'team_progress_provider.dart';
 import 'team_pob_details_screen.dart';
 
 class TeamMemberDetailsHistoryScreen extends StatefulWidget {
@@ -53,7 +56,6 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
 
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
-  String _pobStatusFilter = "ALL";
 
   final currencyFormatter = NumberFormat.currency(
     locale: 'en_IN',
@@ -79,17 +81,15 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
   }
 
   Future<void> _initAllData() async {
-    // Load outlets and category data in parallel
-    await Future.wait([
-      _loadMemberOutlets(),
-      _loadCategoryData(_activeCategory),
-    ]);
+    // 1. MUST load outlets first so candidate outlets exist
+    await _loadMemberOutlets();
+    // 2. Then load active category data
+    await _loadCategoryData(_activeCategory);
   }
 
   Future<void> _loadMemberOutlets({bool force = false}) async {
     if (_outletsLoaded && !force && _memberOutlets.isNotEmpty) return;
     try {
-      _outletsLoaded = true;
 
       void parseAndStoreOutlets(dynamic rawList) {
         if (rawList is! List) return;
@@ -104,60 +104,77 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
               continue;
             }
             _outletNameMap[id] = cleanName;
-            if (!_memberOutlets.any((existing) => existing['outlet_id']?.toString() == id)) {
-              _memberOutlets.add({
-                'outlet_id': id,
-                'outlet_name': cleanName,
-                'owner_name': o['owner_name'] ?? o['owner'] ?? '',
-                'mobile': o['mobile'] ?? o['phone'] ?? '',
-                'address': o['address'] ?? '',
-                'total_visits': o['total_visits'] ?? 0,
-                'total_activities': o['total_activities'] ?? 0,
-                'total_pobs': o['total_pobs'] ?? 0,
-                'sale_value': o['sale_value'] ?? 0,
-              });
+            final existingIdx = _memberOutlets.indexWhere((existing) => existing['outlet_id']?.toString() == id);
+            final assignedName = (o['assigned_user_name'] ?? o['assigned_name'] ?? o['assigned_to'])?.toString().trim() ?? '';
+            final createdByName = (o['created_by_name'] ?? o['created_by_user_name'] ?? o['creator_name'] ?? o['employee_name'])?.toString().trim() ?? '';
+            final personName = createdByName.isNotEmpty
+                ? createdByName
+                : (assignedName.isNotEmpty ? assignedName : widget.member.fullName);
+
+            final outletData = {
+              'outlet_id': id,
+              'outlet_name': cleanName,
+              'owner_name': o['owner_name'] ?? o['owner'] ?? '',
+              'mobile': o['mobile'] ?? o['phone'] ?? '',
+              'address': o['address'] ?? '',
+              'route_id': o['route_id'],
+              'route_code': o['route_code'],
+              'assigned_user_id': o['assigned_user_id'] ?? o['created_by'],
+              'assigned_user_name': assignedName,
+              'created_by_name': createdByName.isNotEmpty ? createdByName : personName,
+              'person_name': personName,
+              'total_visits': o['total_visits'] ?? 0,
+              'total_activities': o['total_activities'] ?? 0,
+              'total_pobs': o['total_pobs'] ?? 0,
+              'sale_value': o['sale_value'] ?? 0,
+            };
+            if (existingIdx >= 0) {
+              _memberOutlets[existingIdx] = outletData;
+            } else {
+              _memberOutlets.add(outletData);
             }
           }
         }
       }
 
-      // 1. Load authentic outlets without user_id from getUserOutlets()
-      try {
-        final userOutletsRes = await ApiServices.getUserOutlets();
-        if (userOutletsRes != null && userOutletsRes['data'] is List) {
-          parseAndStoreOutlets(userOutletsRes['data']);
-        }
-      } catch (e) {
-        AppLogger.error("getUserOutlets error", e);
+      if (force) {
+        _memberOutlets.clear();
+        _outletNameMap.clear();
       }
 
-      // 2. Query team_member_outlets ONLY for this specific member's own user_id
+      // 1. Query team_member_outlets for team members
+      final List<int> userIdsToLoad = [];
       final memberUid = int.tryParse(widget.member.userId);
       if (memberUid != null && memberUid > 0) {
+        userIdsToLoad.add(memberUid);
+      }
+
+      try {
+        final teamProvider = Provider.of<TeamProgressProvider>(context, listen: false);
+        for (var m in teamProvider.members) {
+          final uid = int.tryParse(m.userId);
+          if (uid != null && uid > 0 && !userIdsToLoad.contains(uid)) {
+            userIdsToLoad.add(uid);
+          }
+        }
+      } catch (_) {}
+
+      for (var uId in userIdsToLoad) {
         try {
-          var memberOutletsRes = await ApiServices.getTeamMemberOutlets(
-            userId: memberUid,
+          final memberOutletsRes = await ApiServices.getTeamMemberOutlets(
+            userId: uId,
             month: _selectedMonth,
             year: _selectedYear,
           );
-          if ((memberOutletsRes == null ||
-                  memberOutletsRes['data'] == null ||
-                  (memberOutletsRes['data'] is List && (memberOutletsRes['data'] as List).isEmpty)) &&
-              _selectedMonth != 9) {
-            memberOutletsRes = await ApiServices.getTeamMemberOutlets(
-              userId: memberUid,
-              month: 9,
-              year: _selectedYear,
-            );
-          }
           if (memberOutletsRes != null && memberOutletsRes['data'] is List) {
             parseAndStoreOutlets(memberOutletsRes['data']);
           }
         } catch (e) {
-          AppLogger.error("getTeamMemberOutlets error", e);
+          AppLogger.error("getTeamMemberOutlets error for $uId", e);
         }
       }
 
+      _outletsLoaded = true;
       if (mounted) setState(() {});
     } catch (e) {
       AppLogger.error("_loadMemberOutlets error", e);
@@ -166,7 +183,8 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
 
   Future<void> _loadCategoryData(String category, {bool forceRefresh = false}) async {
     if (forceRefresh) {
-      _dataCache.remove(category);
+      _dataCache.clear();
+      await _loadMemberOutlets(force: true);
     } else if (_dataCache.containsKey(category)) {
       return;
     }
@@ -176,7 +194,7 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
     });
 
     try {
-      if (!_outletsLoaded) {
+      if (!_outletsLoaded || _memberOutlets.isEmpty) {
         await _loadMemberOutlets();
       }
 
@@ -185,135 +203,129 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
       switch (category) {
         case "POB History":
           final List<dynamic> pobsList = [];
-          final uIdStr = widget.member.userId.trim();
-          final empIdStr = widget.member.employeeId.trim();
-          final fullName = widget.member.fullName.trim().toLowerCase();
 
-          // 1. Query team_pob_history without user_id restriction
-          final teamPobs = await ApiServices.getTeamPobHistory(
-            outletId: _selectedOutletId,
-          );
-          _extractOutletIds(teamPobs);
-          final filteredTeamPobs = _filterByMember(teamPobs);
-          for (var p in filteredTeamPobs) {
-            if (p is Map) {
-              final pCopy = Map<String, dynamic>.from(p);
-              final pOId = pCopy['outlet_id']?.toString();
-              if (pOId != null && _outletNameMap.containsKey(pOId)) {
-                pCopy['outlet_name'] = _outletNameMap[pOId];
+          // 1. Primary: Query team POB history by month/year (and outlet if selected)
+          try {
+            final allTeamPobs = await ApiServices.getTeamPobHistory(
+              outletId: _selectedOutletId,
+              month: _selectedMonth,
+              year: _selectedYear,
+            );
+            if (allTeamPobs.isNotEmpty) {
+              for (var p in allTeamPobs) {
+                if (p is Map) {
+                  final pCopy = Map<String, dynamic>.from(p);
+                  final oId = p['outlet_id']?.toString() ?? '';
+                  final rawName = p['outlet_name']?.toString() ?? _outletNameMap[oId];
+                  pCopy['outlet_name'] = (rawName != null && rawName.isNotEmpty && !rawName.toLowerCase().startsWith('outlet #'))
+                      ? rawName
+                      : 'Outlet';
+                  pCopy['employee_name'] = p['employee_name'] ?? p['created_by_name'] ?? p['fullname'] ?? 'Team Member';
+                  pCopy['employee_id'] = p['employee_id'] ?? p['created_by_employee_id'] ?? '';
+                  pCopy['rolecode'] = p['rolecode'] ?? p['designation'] ?? p['created_by_role'] ?? p['created_by_designation'] ?? '';
+                  pCopy['user_id'] = p['created_by'] ?? p['user_id'];
+                  pCopy['pts_total_amount'] = p['pts_total_amount'] ?? p['sale_value'];
+                  pCopy['sale_value'] = p['sale_value'] ?? p['pts_total_amount'];
+                  pCopy['supplied_by_name'] = p['supplied_by_name'];
+                  pCopy['supplied_at'] = p['supplied_at'];
+                  pCopy['order_copy'] = (p['order_copy_url'] != null && p['order_copy_url'].toString().isNotEmpty && p['order_copy_url'] != 'null')
+                      ? p['order_copy_url'].toString()
+                      : (p['order_copy']?.toString() ?? '');
+                  pobsList.add(pCopy);
+                }
               }
-              pobsList.add(pCopy);
             }
+          } catch (e) {
+            AppLogger.error("getTeamPobHistory general query error", e);
           }
 
-          // 2. Query outlet_pob_history for this member's mapped outlets
+          // 2. Query candidate outlets sequentially to prevent MySQL connection limits from failing
           final candidateOutlets = _selectedOutletId != null
               ? (_memberOutlets.any((o) => o['outlet_id']?.toString() == _selectedOutletId.toString())
                   ? _memberOutlets.where((o) => o['outlet_id']?.toString() == _selectedOutletId.toString()).toList()
                   : [{'outlet_id': _selectedOutletId, 'outlet_name': _outletNameMap[_selectedOutletId.toString()]}])
               : _memberOutlets;
 
-          for (var o in candidateOutlets) {
-            final oId = int.tryParse(o['outlet_id']?.toString() ?? '');
-            if (oId != null) {
-              var pobRes = await ApiServices.getOutletPobHistory(
-                outletId: oId,
-                month: _selectedMonth,
-                year: _selectedYear,
-              );
-              // Fallback to month 9 if empty
-              if ((pobRes == null || pobRes['data'] == null || (pobRes['data'] is List && (pobRes['data'] as List).isEmpty)) && _selectedMonth != 9) {
-                pobRes = await ApiServices.getOutletPobHistory(
-                  outletId: oId,
-                  month: 9,
-                  year: _selectedYear,
-                );
-              }
-              // Fallback to month 6 if still empty
-              if ((pobRes == null || pobRes['data'] == null || (pobRes['data'] is List && (pobRes['data'] as List).isEmpty)) && _selectedMonth != 6) {
-                pobRes = await ApiServices.getOutletPobHistory(
-                  outletId: oId,
-                  month: 6,
-                  year: _selectedYear,
-                );
-              }
+          if (pobsList.isEmpty || _selectedOutletId != null) {
+            for (var o in candidateOutlets) {
+              final oId = int.tryParse(o['outlet_id']?.toString() ?? '');
+              if (oId == null) continue;
 
-              if (pobRes != null && pobRes['data'] is List) {
-                for (var p in pobRes['data']) {
+              try {
+                final teamPobs = await ApiServices.getTeamPobHistory(
+                  outletId: oId,
+                );
+                for (var p in teamPobs) {
                   if (p is Map) {
-                    final itemUid = (p['user_id'] ?? p['created_by'])?.toString().trim();
-                    final itemEmpId = p['employee_id']?.toString().trim();
-                    final itemName = (p['employee_name'] ?? p['fullname'] ?? p['user_name'])?.toString().trim().toLowerCase();
-
-                    // STRICT FILTER BY USER ID
-                    bool matchesUser = false;
-                    if (itemUid != null && itemUid.isNotEmpty) {
-                      matchesUser = (itemUid == uIdStr);
-                    } else if (itemEmpId != null && itemEmpId.isNotEmpty) {
-                      matchesUser = (itemEmpId == empIdStr);
-                    } else if (itemName != null && itemName.isNotEmpty) {
-                      matchesUser = (itemName == fullName);
-                    } else {
-                      // Inherit outlet ownership since outlet was returned by team_member_outlets for this user_id
-                      matchesUser = true;
-                    }
-
-                    if (!matchesUser) continue;
-
-                    final pId = (p['id'] ?? p['pob_id'] ?? p['pob_number'])?.toString();
-                    if (pId != null && pobsList.any((existing) => (existing['id'] ?? existing['pob_id'] ?? existing['pob_number'])?.toString() == pId)) {
+                    final pId = (p['pob_id'] ?? p['id'] ?? p['pob_number'])?.toString();
+                    if (pId != null && pobsList.any((existing) => (existing['pob_id'] ?? existing['id'] ?? existing['pob_number'])?.toString() == pId)) {
                       continue;
                     }
-
                     final pCopy = Map<String, dynamic>.from(p);
-                    final rawName = o['outlet_name']?.toString() ?? _outletNameMap[oId.toString()];
-                    final oName = (rawName != null && rawName.isNotEmpty && !rawName.toLowerCase().startsWith('outlet #'))
+                    final rawName = o['outlet_name']?.toString() ?? p['outlet_name']?.toString() ?? _outletNameMap[oId.toString()];
+                    pCopy['outlet_name'] = (rawName != null && rawName.isNotEmpty && !rawName.toLowerCase().startsWith('outlet #'))
                         ? rawName
-                        : (_memberOutlets.isNotEmpty ? _memberOutlets.first['outlet_name'] : 'Outlet');
-                    pCopy['outlet_name'] = oName;
+                        : 'Outlet';
                     pCopy['outlet_id'] = oId;
-                    pCopy['employee_name'] = pCopy['employee_name'] ?? widget.member.fullName;
-                    pCopy['employee_id'] = pCopy['employee_id'] ?? widget.member.employeeId;
-                    pCopy['rolecode'] = pCopy['rolecode'] ?? widget.member.roleCode;
-                    pCopy['user_id'] = pCopy['user_id'] ?? widget.member.userId;
+                    pCopy['employee_name'] = p['employee_name'] ?? p['created_by_name'] ?? p['fullname'] ?? 'Team Member';
+                    pCopy['employee_id'] = p['employee_id'] ?? p['created_by_employee_id'] ?? '';
+                    pCopy['rolecode'] = p['rolecode'] ?? p['designation'] ?? p['created_by_role'] ?? p['created_by_designation'] ?? '';
+                    pCopy['user_id'] = p['created_by'] ?? p['user_id'];
+                    pCopy['pts_total_amount'] = p['pts_total_amount'] ?? p['sale_value'];
+                    pCopy['sale_value'] = p['sale_value'] ?? p['pts_total_amount'];
+                    pCopy['supplied_by_name'] = p['supplied_by_name'];
+                    pCopy['supplied_at'] = p['supplied_at'];
+                    pCopy['order_copy'] = (p['order_copy_url'] != null && p['order_copy_url'].toString().isNotEmpty && p['order_copy_url'] != 'null')
+                        ? p['order_copy_url'].toString()
+                        : (p['order_copy']?.toString() ?? '');
                     pobsList.add(pCopy);
                   }
                 }
+              } catch (e) {
+                AppLogger.error("getTeamPobHistory sequential outlet query error for $oId", e);
               }
             }
           }
 
+          _extractOutletIds(pobsList);
+          AppLogger.printFull(
+            "Whole Team POB History loaded (${pobsList.length} items): ${jsonEncode(pobsList)}",
+            tag: "TEAM_POB_LOADED",
+          );
           items = pobsList;
           break;
 
         case "Sale":
           final allSales = await ApiServices.getTeamPosHistory(
             posType: "sale",
+            month: _selectedMonth,
+            year: _selectedYear,
             outletId: _selectedOutletId,
           );
           _extractOutletIds(allSales);
-          final filteredSales = _filterByMember(allSales);
-          items = _groupPosItems(filteredSales);
+          items = _groupPosItems(allSales);
           break;
 
         case "Stock":
           final allStock = await ApiServices.getTeamPosHistory(
             posType: "stock",
+            month: _selectedMonth,
+            year: _selectedYear,
             outletId: _selectedOutletId,
           );
           _extractOutletIds(allStock);
-          final filteredStock = _filterByMember(allStock);
-          items = _groupPosItems(filteredStock);
+          items = _groupPosItems(allStock);
           break;
 
         case "Sample":
           final allSamples = await ApiServices.getTeamPosHistory(
             posType: "sampling",
+            month: _selectedMonth,
+            year: _selectedYear,
             outletId: _selectedOutletId,
           );
           _extractOutletIds(allSamples);
-          final filteredSamples = _filterByMember(allSamples);
-          items = _groupPosItems(filteredSamples);
+          items = _groupPosItems(allSamples);
           break;
 
         case "Visits":
@@ -327,37 +339,27 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
           for (var o in candidateOutlets) {
             final oId = int.tryParse(o['outlet_id']?.toString() ?? '');
             if (oId != null) {
-              var actHist = await ApiServices.getOutletVisitActivityHistory(
+              final actHist = await ApiServices.getOutletVisitActivityHistory(
                 outletId: oId,
                 month: _selectedMonth,
                 year: _selectedYear,
               );
-              // Fallback to month 9 if empty and _selectedMonth != 9 (backend test dataset)
-              if ((actHist == null || actHist['visit_history'] == null || (actHist['visit_history'] as List).isEmpty) && _selectedMonth != 9) {
-                actHist = await ApiServices.getOutletVisitActivityHistory(
-                  outletId: oId,
-                  month: 9,
-                  year: _selectedYear,
-                );
-              }
 
-              if (actHist != null && actHist['visit_history'] is List) {
-                for (var v in actHist['visit_history']) {
-                  if (v is Map) {
-                    final vUserId = v['user_id']?.toString().trim();
-                    // STRICT: Only include visits by this member
-                    if (vUserId != null && vUserId.isNotEmpty && vUserId != widget.member.userId.trim()) {
-                      continue;
-                    }
-                    final vCopy = Map<String, dynamic>.from(v);
-                    final oName = o['outlet_name'] ?? _outletNameMap[oId.toString()] ?? 'OUTLET';
-                    vCopy['outlet_name'] = oName;
-                    vCopy['outlet_id'] = oId;
-                    vCopy['employee_name'] = widget.member.fullName;
-                    vCopy['employee_id'] = widget.member.employeeId;
-                    vCopy['rolecode'] = widget.member.roleCode;
-                    visitsList.add(vCopy);
-                  }
+              final rawVisits = (actHist != null && actHist['visit_history'] is List)
+                  ? actHist['visit_history'] as List
+                  : ((actHist != null && actHist['data'] is List) ? actHist['data'] as List : []);
+
+              for (var v in rawVisits) {
+                if (v is Map) {
+                  final vCopy = Map<String, dynamic>.from(v);
+                  final oName = o['outlet_name'] ?? _outletNameMap[oId.toString()] ?? 'OUTLET';
+                  vCopy['outlet_name'] = oName;
+                  vCopy['outlet_id'] = oId;
+                  vCopy['employee_name'] = v['visited_by_name'] ?? v['employee_name'] ?? widget.member.fullName;
+                  vCopy['employee_id'] = v['visited_by_employee_id'] ?? v['employee_id'] ?? widget.member.employeeId;
+                  vCopy['rolecode'] = v['visited_by_role'] ?? v['visited_by_designation'] ?? v['rolecode'] ?? widget.member.roleCode;
+                  vCopy['mobile'] = v['visited_by_mobile'] ?? v['mobile'] ?? '';
+                  visitsList.add(vCopy);
                 }
               }
             }
@@ -376,43 +378,43 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
           for (var o in candidateOutlets) {
             final oId = int.tryParse(o['outlet_id']?.toString() ?? '');
             if (oId != null) {
-              var actHist = await ApiServices.getOutletVisitActivityHistory(
+              final actHist = await ApiServices.getOutletVisitActivityHistory(
                 outletId: oId,
                 month: _selectedMonth,
                 year: _selectedYear,
               );
-              if ((actHist == null || actHist['visit_history'] == null || (actHist['visit_history'] as List).isEmpty) && _selectedMonth != 9) {
-                actHist = await ApiServices.getOutletVisitActivityHistory(
-                  outletId: oId,
-                  month: 9,
-                  year: _selectedYear,
-                );
-              }
 
-              if (actHist != null && actHist['visit_history'] is List) {
-                for (var v in actHist['visit_history']) {
-                  if (v is Map) {
-                    final vUserId = v['user_id']?.toString().trim();
-                    // STRICT: Only include visits by this member
-                    if (vUserId != null && vUserId.isNotEmpty && vUserId != widget.member.userId.trim()) {
-                      continue;
-                    }
-                    if (v['activities'] is List) {
-                      for (var a in v['activities']) {
-                        if (a is Map) {
-                          final actCopy = Map<String, dynamic>.from(a);
-                          final oName = o['outlet_name'] ?? _outletNameMap[oId.toString()] ?? 'OUTLET';
-                          actCopy['outlet_name'] = oName;
-                          actCopy['outlet_id'] = oId;
-                          actCopy['employee_name'] = widget.member.fullName;
-                          actCopy['employee_id'] = widget.member.employeeId;
-                          actCopy['rolecode'] = widget.member.roleCode;
-                          actCopy['activity_name'] = actCopy['activity_name'] ?? actCopy['activity_type'] ?? 'Activity';
-                          actCopy['activity_date'] = actCopy['activity_date'] ?? v['visit_date'] ?? v['checkin_time'] ?? v['created_at'];
-                          actCopy['remarks'] = actCopy['remarks'] ?? 'activity';
-                          actCopy['files'] = actCopy['files'] ?? [];
-                          acts.add(actCopy);
-                        }
+              final rawVisits = (actHist != null && actHist['visit_history'] is List)
+                  ? actHist['visit_history'] as List
+                  : ((actHist != null && actHist['data'] is List) ? actHist['data'] as List : []);
+
+              for (var v in rawVisits) {
+                if (v is Map) {
+                  final activities = v['activities'] ?? v['activity_history'];
+                  if (activities is List) {
+                    for (var a in activities) {
+                      if (a is Map) {
+                        final actCopy = Map<String, dynamic>.from(a);
+                        final oName = o['outlet_name'] ?? _outletNameMap[oId.toString()] ?? 'OUTLET';
+                        actCopy['outlet_name'] = oName;
+                        actCopy['outlet_id'] = oId;
+                        actCopy['employee_name'] = a['activity_by_name'] ?? v['visited_by_name'] ?? widget.member.fullName;
+                        actCopy['employee_id'] = v['visited_by_employee_id'] ?? widget.member.employeeId;
+                        actCopy['rolecode'] = v['visited_by_role'] ?? v['visited_by_designation'] ?? widget.member.roleCode;
+                        actCopy['activity_name'] = a['activity_name'] ?? a['activity_type'] ?? 'Activity';
+                        actCopy['activity_date'] = a['activity_date'] ?? v['visit_date'] ?? v['checkin_time'] ?? v['created_at'];
+                        actCopy['remarks'] = (a['remarks'] != null && a['remarks'].toString().trim().isNotEmpty)
+                            ? a['remarks']
+                            : ((v['remarks'] != null && v['remarks'].toString().trim().isNotEmpty) ? v['remarks'] : '');
+                        actCopy['files'] = a['files'] ?? [];
+                        actCopy['product_id'] = a['product_id'] ?? a['productId'];
+                        actCopy['sku_id'] = a['sku_id'] ?? a['skuId'];
+                        actCopy['product_name'] = a['product_name'] ?? a['product'] ?? a['item_name'];
+                        actCopy['sku_displayname'] = a['sku_displayname'] ?? a['sku_name'] ?? a['sku'];
+                        actCopy['sku_name'] = a['sku_name'] ?? a['sku_displayname'] ?? a['sku'];
+                        actCopy['quantity'] = a['quantity'] ?? a['qty'];
+                        actCopy['products'] = a['products'] ?? a['items'] ?? a['skus'] ?? a['product_details'];
+                        acts.add(actCopy);
                       }
                     }
                   }
@@ -461,39 +463,26 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
               oName.trim() != 'null' &&
               !oName.toLowerCase().startsWith('outlet #') &&
               oName.toLowerCase().trim() != 'outlet') {
-            _outletNameMap[oId] = oName.trim();
+            final cleanName = oName.trim();
+            _outletNameMap[oId] = cleanName;
+            if (!_memberOutlets.any((m) => m['outlet_id']?.toString() == oId)) {
+              final createdByName = (it['employee_name'] ?? it['created_by_name'] ?? it['fullname'])?.toString().trim() ?? '';
+              _memberOutlets.add({
+                'outlet_id': oId,
+                'outlet_name': cleanName,
+                'owner_name': it['owner_name'] ?? '',
+                'mobile': it['outlet_mobile'] ?? it['mobile'] ?? '',
+                'address': it['outlet_address'] ?? it['address'] ?? '',
+                'created_by_name': createdByName,
+                'person_name': createdByName,
+              });
+            }
           }
         }
       }
     }
   }
 
-  List<dynamic> _filterByMember(List<dynamic> raw) {
-    final uIdStr = widget.member.userId.trim();
-    final empIdStr = widget.member.employeeId.trim();
-    final memberName = widget.member.fullName.trim().toLowerCase();
-
-    return raw.where((item) {
-      if (item is! Map) return false;
-      final itemUid = item['user_id']?.toString().trim() ?? item['created_by']?.toString().trim() ?? '';
-      final itemEmpId = item['employee_id']?.toString().trim() ?? '';
-      final itemName = (item['employee_name'] ?? item['fullname'] ?? item['user_name'])?.toString().trim().toLowerCase() ?? '';
-
-      // Match employee ID
-      if (empIdStr.isNotEmpty && itemEmpId.isNotEmpty && itemEmpId == empIdStr) {
-        return true;
-      }
-      // Match user ID
-      if (uIdStr.isNotEmpty && itemUid.isNotEmpty && itemUid == uIdStr) {
-        return true;
-      }
-      // Match full name
-      if (memberName.isNotEmpty && itemName.isNotEmpty && itemName == memberName) {
-        return true;
-      }
-      return false;
-    }).toList();
-  }
 
   List<dynamic> _groupPosItems(List<dynamic> raw) {
     final Map<String, Map<String, dynamic>> groups = {};
@@ -581,11 +570,14 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
 
   String _getPersonName(dynamic item) {
     if (item is Map) {
-      final name = item['employee_name']?.toString() ??
-          item['fullname']?.toString() ??
-          item['user_name']?.toString();
-      if (name != null && name.isNotEmpty && name != 'null') {
-        return name;
+      final name = item['created_by_name'] ??
+          item['visited_by_name'] ??
+          item['activity_by_name'] ??
+          item['employee_name'] ??
+          item['fullname'] ??
+          item['user_name'];
+      if (name != null && name.toString().isNotEmpty && name.toString() != 'null') {
+        return name.toString();
       }
     }
     return widget.member.fullName;
@@ -593,16 +585,27 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
 
   String _getPersonRole(dynamic item) {
     if (item is Map) {
-      final r = item['rolecode']?.toString() ?? item['role']?.toString();
-      if (r != null && r.isNotEmpty) return RoleHelper.formatRole(r);
+      final r = item['created_by_role'] ??
+          item['created_by_designation'] ??
+          item['visited_by_role'] ??
+          item['visited_by_designation'] ??
+          item['rolecode'] ??
+          item['role'];
+      if (r != null && r.toString().isNotEmpty && r.toString() != 'null') {
+        return RoleHelper.formatRole(r.toString());
+      }
     }
     return RoleHelper.formatRole(widget.member.roleCode);
   }
 
   String _getEmployeeId(dynamic item) {
     if (item is Map) {
-      final id = item['employee_id']?.toString();
-      if (id != null && id.isNotEmpty) return id;
+      final id = item['created_by_employee_id'] ??
+          item['visited_by_employee_id'] ??
+          item['employee_id'];
+      if (id != null && id.toString().isNotEmpty && id.toString() != 'null') {
+        return id.toString();
+      }
     }
     return widget.member.employeeId;
   }
@@ -618,40 +621,14 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
         }
       }
 
-      // 2. Search Query Filter
+      // 2. Search Query Filter - ONLY person name and outlet name
       final q = _searchQuery.toLowerCase().trim();
-      final outlet = _getOutletName(item).toLowerCase();
-      final person = _getPersonName(item).toLowerCase();
-      final pobNum = item['pob_number']?.toString().toLowerCase() ?? '';
-      final prodName = item['product_name']?.toString().toLowerCase() ?? '';
-      final skuName = item['sku_displayname']?.toString().toLowerCase() ?? '';
-
-      bool matchesProducts = false;
-      if (item['products'] is List) {
-        for (var p in item['products']) {
-          final pName = p['product_name']?.toString().toLowerCase() ?? '';
-          final sName = (p['sku_displayname'] ?? p['sku_name'])?.toString().toLowerCase() ?? '';
-          if (pName.contains(q) || sName.contains(q)) {
-            matchesProducts = true;
-            break;
-          }
+      if (q.isNotEmpty) {
+        final outlet = _getOutletName(item).toLowerCase();
+        final person = _getPersonName(item).toLowerCase();
+        if (!outlet.contains(q) && !person.contains(q)) {
+          return false;
         }
-      }
-
-      final matchesQuery = q.isEmpty ||
-          outlet.contains(q) ||
-          person.contains(q) ||
-          pobNum.contains(q) ||
-          prodName.contains(q) ||
-          skuName.contains(q) ||
-          matchesProducts;
-
-      if (!matchesQuery) return false;
-
-      // 3. Status filter for POB History
-      if (_activeCategory == "POB History" && _pobStatusFilter != "ALL") {
-        final status = item['status']?.toString().toLowerCase() ?? '';
-        return status == _pobStatusFilter.toLowerCase();
       }
 
       return true;
@@ -954,6 +931,46 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        if (_selectedOutletId != null) ...[
+                          () {
+                            final sel = _memberOutlets.firstWhere(
+                              (m) => m['outlet_id']?.toString() == _selectedOutletId.toString(),
+                              orElse: () => {},
+                            );
+                            String pName = '';
+                            for (final key in [
+                              'created_by_name',
+                              'created_by_user_name',
+                              'creator_name',
+                              'assigned_user_name',
+                              'assigned_name',
+                              'assigned_to',
+                              'person_name',
+                            ]) {
+                              final val = sel[key]?.toString().trim() ?? '';
+                              if (val.isNotEmpty && val != 'null') {
+                                pName = val;
+                                break;
+                              }
+                            }
+                            if (pName.isEmpty) {
+                              pName = widget.member.fullName;
+                            }
+
+                            if (pName.isNotEmpty && pName != 'null') {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 1),
+                                child: Text(
+                                  "Created by: $pName",
+                                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          }(),
+                        ],
                       ],
                     ),
                   ),
@@ -997,7 +1014,7 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
               style: const TextStyle(fontSize: 13),
               decoration: InputDecoration(
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                hintText: "Search by outlet, product, SKU...",
+                hintText: "Search by person or outlet name...",
                 hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                 prefixIcon: Icon(Icons.search, size: 18, color: Colors.grey.shade500),
                 suffixIcon: _searchController.text.isNotEmpty
@@ -1015,22 +1032,6 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
               ),
             ),
           ),
-
-          // Status Filter Chips for POB History
-          if (_activeCategory == "POB History") ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                _buildStatusChip("ALL"),
-                const SizedBox(width: 6),
-                _buildStatusChip("SUPPLIED"),
-                const SizedBox(width: 6),
-                _buildStatusChip("PENDING"),
-                const SizedBox(width: 6),
-                _buildStatusChip("PARTIAL"),
-              ],
-            ),
-          ],
         ],
       ),
     );
@@ -1116,6 +1117,29 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
                         final name = (o['outlet_name'] ?? _outletNameMap[idStr])?.toString().trim() ?? '';
                         final isSel = _selectedOutletId == id;
 
+                        String personName = '';
+                        for (final key in [
+                          'created_by_name',
+                          'created_by_user_name',
+                          'creator_name',
+                          'assigned_user_name',
+                          'assigned_name',
+                          'assigned_to',
+                          'person_name',
+                          'employee_name',
+                        ]) {
+                          final val = o[key]?.toString().trim() ?? '';
+                          if (val.isNotEmpty && val != 'null') {
+                            personName = val;
+                            break;
+                          }
+                        }
+                        if (personName.isEmpty) {
+                          personName = widget.member.fullName;
+                        }
+                        final ownerName = (o['owner_name'] ?? '')?.toString().trim() ?? '';
+                        final mobile = (o['mobile'] ?? '')?.toString().trim() ?? '';
+
                         return ListTile(
                           leading: Icon(Icons.storefront, color: isSel ? AppColors.primary : Colors.grey),
                           title: Text(
@@ -1126,18 +1150,41 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
                               color: isSel ? AppColors.primary : Colors.black87,
                             ),
                           ),
-                          subtitle: (o['owner_name'] != null && o['owner_name'].toString().isNotEmpty && o['owner_name'].toString() != 'null') ||
-                                  (o['mobile'] != null && o['mobile'].toString().isNotEmpty && o['mobile'].toString() != 'null')
-                              ? Text(
-                                  [
-                                    if (o['owner_name'] != null && o['owner_name'].toString().isNotEmpty && o['owner_name'].toString() != 'null')
-                                      o['owner_name'].toString(),
-                                    if (o['mobile'] != null && o['mobile'].toString().isNotEmpty && o['mobile'].toString() != 'null')
-                                      o['mobile'].toString(),
-                                  ].join(' • '),
-                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                                )
-                              : null,
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if ((ownerName.isNotEmpty && ownerName != 'null') || (mobile.isNotEmpty && mobile != 'null'))
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    [
+                                      if (ownerName.isNotEmpty && ownerName != 'null') ownerName,
+                                      if (mobile.isNotEmpty && mobile != 'null') mobile,
+                                    ].join(' • '),
+                                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                  ),
+                                ),
+                              if (personName.isNotEmpty && personName != 'null')
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.person_outline, size: 12, color: AppColors.primary),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          "Created by: $personName",
+                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey.shade800),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
                           trailing: isSel ? const Icon(Icons.check, color: AppColors.primary) : null,
                           onTap: () {
                             Navigator.pop(ctx);
@@ -1156,36 +1203,6 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
           ),
         );
       },
-    );
-  }
-
-  Widget _buildStatusChip(String status) {
-    final isSelected = _pobStatusFilter == status;
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _pobStatusFilter = status;
-        });
-      },
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.button : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? AppColors.button : Colors.grey.shade300,
-          ),
-        ),
-        child: Text(
-          status,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? Colors.white : Colors.grey.shade700,
-          ),
-        ),
-      ),
     );
   }
 
@@ -1274,8 +1291,8 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
 
     final pobNumber = item['pob_number']?.toString() ?? 'POB-${item['pob_id'] ?? ''}';
     final status = (item['status']?.toString() ?? 'pending').toLowerCase();
-    final totalAmount = double.tryParse(item['ptr_total_amount']?.toString() ?? '') ?? 0.0;
-    final totalWithGst = double.tryParse(item['ptr_incl_gst_total_amount']?.toString() ?? '') ?? totalAmount;
+    final totalAmount = double.tryParse(item['pts_total_amount']?.toString() ?? item['ptr_total_amount']?.toString() ?? item['sale_value']?.toString() ?? '') ?? 0.0;
+    final totalWithGst = double.tryParse(item['ptr_incl_gst_total_amount']?.toString() ?? item['sale_value']?.toString() ?? item['pts_total_amount']?.toString() ?? '') ?? totalAmount;
     final createdAt = item['created_at']?.toString() ?? '';
     final List itemsList = item['items'] is List ? item['items'] : [];
 
@@ -2265,6 +2282,42 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
     final actDate = item['activity_date']?.toString() ?? item['created_at']?.toString() ?? '';
     final files = item['files'] is List ? item['files'] as List : [];
 
+    // Extract products & SKUs
+    final List<Map<String, dynamic>> activityProducts = [];
+    final rawProductsList = item['products'] ?? item['items'] ?? item['skus'] ?? item['product_details'];
+
+    if (rawProductsList is List && rawProductsList.isNotEmpty) {
+      for (var p in rawProductsList) {
+        if (p is Map) {
+          final pName = (p['product_name'] ?? p['name'] ?? p['product'])?.toString() ?? 'Product';
+          final sName = (p['sku_displayname'] ?? p['sku_name'] ?? p['sku'])?.toString() ?? '';
+          final q = (p['quantity'] ?? p['qty'])?.toString();
+          activityProducts.add({
+            'product_name': pName,
+            'sku_name': sName,
+            'quantity': q,
+          });
+        }
+      }
+    } else {
+      final pName = (item['product_name'] ?? item['product'] ?? item['item_name'])?.toString();
+      final sName = (item['sku_displayname'] ?? item['sku_name'] ?? item['sku'])?.toString();
+      final q = (item['quantity'] ?? item['qty'])?.toString();
+
+      if ((pName != null && pName.trim().isNotEmpty && pName.trim() != 'null') ||
+          (sName != null && sName.trim().isNotEmpty && sName.trim() != 'null')) {
+        activityProducts.add({
+          'product_name': (pName != null && pName.trim().isNotEmpty && pName.trim() != 'null') ? pName.trim() : 'Product',
+          'sku_name': (sName != null && sName.trim().isNotEmpty && sName.trim() != 'null') ? sName.trim() : '',
+          'quantity': (q != null && q.trim().isNotEmpty && q.trim() != 'null' && q.trim() != '0') ? q.trim() : null,
+        });
+      }
+    }
+
+    final bool isDefaultVisitRemark = remarks.trim().isEmpty ||
+        remarks.trim() == 'No remarks' ||
+        remarks.toLowerCase().contains('individual visit');
+
     return Card(
       color: Colors.white,
       margin: const EdgeInsets.only(bottom: 12),
@@ -2365,26 +2418,127 @@ class _TeamMemberDetailsHistoryScreenState extends State<TeamMemberDetailsHistor
               ],
             ),
 
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.notes, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      remarks,
-                      style: const TextStyle(fontSize: 12, color: Colors.black87),
+            // PRODUCT & SKU SECTION
+            if (activityProducts.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200.withValues(alpha: 0.6)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.inventory_2_outlined, size: 14, color: Colors.blue.shade800),
+                        const SizedBox(width: 6),
+                        Text(
+                          "PRODUCTS & SKU (${activityProducts.length})",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    ...activityProducts.map((p) {
+                      final pName = p['product_name'] ?? 'Product';
+                      final sName = p['sku_name'] ?? '';
+                      final q = p['quantity'];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.only(top: 4),
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade700,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    pName.toString().toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  if (sName.toString().isNotEmpty && sName.toString().toLowerCase() != pName.toString().toLowerCase())
+                                    Text(
+                                      sName.toString(),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade700,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            if (q != null && q.toString().isNotEmpty && q.toString() != '0')
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: Colors.blue.shade200),
+                                ),
+                                child: Text(
+                                  "$q Qty",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue.shade800,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
               ),
-            ),
+            ],
+
+            // Remarks Container (hidden if default "Individual Visit" remarks)
+            if (!isDefaultVisitRemark) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.notes, size: 16, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        remarks,
+                        style: const TextStyle(fontSize: 12, color: Colors.black87),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
             if (files.isNotEmpty) ...[
               const SizedBox(height: 10),

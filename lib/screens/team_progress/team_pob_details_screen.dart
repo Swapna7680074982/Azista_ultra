@@ -26,8 +26,8 @@ class TeamPobDetailsScreen extends StatelessWidget {
     final currencyFormatter = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 2);
     final pobNumber = pob['pob_number']?.toString() ?? 'POB-${pob['id'] ?? ''}';
     final status = (pob['status']?.toString() ?? 'pending').toLowerCase();
-    final totalAmount = double.tryParse(pob['ptr_total_amount']?.toString() ?? '') ?? 0.0;
-    final totalWithGst = double.tryParse(pob['ptr_incl_gst_total_amount']?.toString() ?? pob['sale_value']?.toString() ?? '') ?? totalAmount;
+    final totalAmount = double.tryParse(pob['pts_total_amount']?.toString() ?? pob['ptr_total_amount']?.toString() ?? pob['sale_value']?.toString() ?? '') ?? 0.0;
+    final totalWithGst = double.tryParse(pob['ptr_incl_gst_total_amount']?.toString() ?? pob['sale_value']?.toString() ?? pob['pts_total_amount']?.toString() ?? '') ?? totalAmount;
     final createdAt = pob['created_at']?.toString() ?? '';
     final orderCopy = pob['order_copy']?.toString() ?? '';
     final List items = pob['items'] is List ? pob['items'] as List : [];
@@ -176,6 +176,25 @@ class TeamPobDetailsScreen extends StatelessWidget {
                       ],
                     ),
                   ],
+                  if ((pob['supplied_by_name']?.toString() ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.local_shipping_outlined, size: 16, color: Colors.green.shade700),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            "Supplied by: ${pob['supplied_by_name']}${pob['supplied_at'] != null ? ' on ${DateFormatter.formatDateTime(pob['supplied_at'].toString())}' : ''}",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -271,17 +290,88 @@ class TeamPobDetailsScreen extends StatelessWidget {
                     ),
                   ),
                   if (orderCopy.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Divider(height: 1),
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        const Icon(Icons.description_outlined, size: 14, color: Colors.grey),
+                        const Icon(Icons.description_outlined, size: 14, color: AppColors.primary),
                         const SizedBox(width: 6),
-                        Text(
-                          "Order Copy: $orderCopy",
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        const Text(
+                          "ORDER COPY",
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+                    if (orderCopy.startsWith('http'))
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: InkWell(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => Dialog(
+                                insetPadding: const EdgeInsets.all(16),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    AppBar(
+                                      title: const Text("Order Copy", style: TextStyle(fontSize: 14)),
+                                      backgroundColor: AppColors.primary,
+                                      elevation: 0,
+                                      leading: IconButton(
+                                        icon: const Icon(Icons.close),
+                                        onPressed: () => Navigator.pop(ctx),
+                                      ),
+                                    ),
+                                    Container(
+                                      constraints: const BoxConstraints(maxHeight: 500),
+                                      child: Image.network(
+                                        orderCopy,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (context, error, stackTrace) => const Padding(
+                                          padding: EdgeInsets.all(24),
+                                          child: Text("Could not load image"),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            height: 100,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Image.network(
+                              orderCopy,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    orderCopy,
+                                    style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
+                        orderCopy,
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      ),
                   ],
                 ],
               ),
@@ -349,10 +439,10 @@ class TeamPobDetailsScreen extends StatelessWidget {
                   final qty = item['quantity']?.toString() ?? '0';
                   final supplied = item['supplied_qty']?.toString() ?? '0';
                   final remaining = item['remaining_qty']?.toString() ?? '';
-                  final price = double.tryParse(item['ptr_price']?.toString() ?? '') ?? 0.0;
-                  final priceGst = double.tryParse(item['ptr_incl_gst_price']?.toString() ?? '') ?? 0.0;
-                  final subtotal = double.tryParse(item['ptr_subtotal']?.toString() ?? '') ?? (price * (int.tryParse(qty) ?? 0));
-                  final totalGst = double.tryParse(item['ptr_incl_gst_subtotal']?.toString() ?? '') ?? (priceGst * (int.tryParse(qty) ?? 0));
+                  final price = double.tryParse(item['pts']?.toString() ?? item['ptr_price']?.toString() ?? '') ?? 0.0;
+                  final priceGst = double.tryParse(item['ptr_incl_gst_price']?.toString() ?? '') ?? price;
+                  final subtotal = double.tryParse(item['pts_subtotal']?.toString() ?? item['ptr_subtotal']?.toString() ?? '') ?? (price * (int.tryParse(qty) ?? 0));
+                  final totalGst = double.tryParse(item['ptr_incl_gst_subtotal']?.toString() ?? item['pts_subtotal']?.toString() ?? '') ?? subtotal;
 
                   return Container(
                     padding: const EdgeInsets.all(14),

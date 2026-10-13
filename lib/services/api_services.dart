@@ -1851,6 +1851,10 @@ class ApiServices {
     int? productId,
     int? userId,
     String? employeeId,
+    int? month,
+    int? year,
+    int? limit,
+    int? offset,
   }) async {
     try {
       final token = await SessionManager.getToken();
@@ -1867,6 +1871,14 @@ class ApiServices {
       if (outletId != null) body["outlet_id"] = outletId;
       if (productId != null) body["product_id"] = productId;
       if (distributorId != null) body["distributor_id"] = distributorId;
+      if (userId != null) body["user_id"] = userId;
+      if (employeeId != null && employeeId.isNotEmpty) body["employee_id"] = employeeId;
+      if (month != null) body["month"] = month;
+      if (year != null) body["year"] = year;
+      if (limit != null) body["limit"] = limit;
+      if (offset != null) body["offset"] = offset;
+
+      AppLogger.info("Payload: ${jsonEncode(body)}");
 
       final response = await _dio.post(
         AppUrls.teamPosHistory,
@@ -1901,6 +1913,8 @@ class ApiServices {
     String? status,
     String? fromDate,
     String? toDate,
+    int? month,
+    int? year,
     int? limit,
     int? offset,
   }) async {
@@ -1920,8 +1934,12 @@ class ApiServices {
       if (status != null && status.isNotEmpty) body["status"] = status;
       if (fromDate != null && fromDate.isNotEmpty) body["from_date"] = fromDate;
       if (toDate != null && toDate.isNotEmpty) body["to_date"] = toDate;
+      if (month != null) body["month"] = month;
+      if (year != null) body["year"] = year;
       if (limit != null) body["limit"] = limit;
       if (offset != null) body["offset"] = offset;
+
+      AppLogger.info("Payload: ${jsonEncode(body)}");
 
       final response = await _dio.post(
         AppUrls.teamPobHistory,
@@ -1937,7 +1955,10 @@ class ApiServices {
       );
 
       final parsed = _safeParseJson(response.data);
-      AppLogger.info("Get Team POB History response: ${response.statusCode} - $parsed");
+      AppLogger.printFull(
+        "Get Team POB History full response: ${response.statusCode} - ${response.data}",
+        tag: "TEAM_POB",
+      );
 
       if (parsed is Map && parsed["data"] is List) {
         return List<dynamic>.from(parsed["data"]);

@@ -370,10 +370,58 @@ class OutletProvider extends ChangeNotifier {
     }
   }
 
-  void clearCheckIn() {
+  void clearCheckIn({String? outletId}) {
+    final targetId = outletId ?? _checkedInOutletId?.toString();
     _checkedInOutletId = null;
     _checkedInTime = null;
     _checkedInVisitId = null;
+
+    if (targetId != null) {
+      _outlets = _outlets.map((o) {
+        if (o.id == targetId) {
+          final updatedVisits = o.visitHistory.map((v) {
+            final cTime = v.checkoutTime;
+            if (cTime == null || cTime.isEmpty || cTime == 'N/A' || cTime == 'null' || cTime == '-') {
+              return VisitHistoryItem(
+                visitId: v.visitId,
+                visitDate: v.visitDate,
+                visitType: v.visitType,
+                checkinTime: v.checkinTime,
+                checkoutTime: DateTime.now().toIso8601String(),
+                remarks: v.remarks,
+                activityHistory: v.activityHistory,
+              );
+            }
+            return v;
+          }).toList();
+          return o.copyWith(visitHistory: updatedVisits);
+        }
+        return o;
+      }).toList();
+
+      _nearbyOutlets = _nearbyOutlets.map((o) {
+        if (o.id == targetId) {
+          final updatedVisits = o.visitHistory.map((v) {
+            final cTime = v.checkoutTime;
+            if (cTime == null || cTime.isEmpty || cTime == 'N/A' || cTime == 'null' || cTime == '-') {
+              return VisitHistoryItem(
+                visitId: v.visitId,
+                visitDate: v.visitDate,
+                visitType: v.visitType,
+                checkinTime: v.checkinTime,
+                checkoutTime: DateTime.now().toIso8601String(),
+                remarks: v.remarks,
+                activityHistory: v.activityHistory,
+              );
+            }
+            return v;
+          }).toList();
+          return o.copyWith(visitHistory: updatedVisits);
+        }
+        return o;
+      }).toList();
+    }
+
     notifyListeners();
     SessionManager.clearOutletCheckIn();
   }
@@ -475,6 +523,141 @@ class OutletProvider extends ChangeNotifier {
     }).toList();
   }
 
+  Future<List<Outlet>> _syncOutletsWithHistoryAndCheckIn(List<Outlet> initialOutlets) async {
+    if (initialOutlets.isEmpty) return initialOutlets;
+
+    try {
+      int? activeOutletId;
+      int? activeVisitId;
+      DateTime? activeCheckInTime;
+
+      // Check current session check-in
+      final sessionOutletId = _checkedInOutletId ?? await SessionManager.getOutletCheckInOutletId();
+
+      // Collect unique outlet IDs
+      final List<int> outletIdsToFetch = initialOutlets
+          .map((o) => int.tryParse(o.id))
+          .whereType<int>()
+          .where((id) => id > 0)
+          .toSet()
+          .toList();
+
+      // Ensure sessionOutletId is queried first if available
+      if (sessionOutletId != null && sessionOutletId > 0) {
+        outletIdsToFetch.remove(sessionOutletId);
+        outletIdsToFetch.insert(0, sessionOutletId);
+      }
+
+      // Fetch histories concurrently
+      final historyFutures = outletIdsToFetch.map((oId) async {
+        try {
+          final hist = await ApiServices.getOutletHistory(outletId: oId);
+          return MapEntry<int, Map<String, dynamic>?>(oId, hist);
+        } catch (e) {
+          debugPrint("Error fetching outlet history for $oId: $e");
+          return MapEntry<int, Map<String, dynamic>?>(oId, null);
+        }
+      });
+
+      final historyResults = await Future.wait(historyFutures);
+
+      final Map<int, Map<String, dynamic>> historiesByOutlet = {};
+      for (var entry in historyResults) {
+        if (entry.value != null &&
+            (entry.value!['status'] == true ||
+                entry.value!['status'] == 1 ||
+                entry.value!['status'] == '1' ||
+                entry.value!['status'] == 'success' ||
+                entry.value!['status_code'] == 200)) {
+          historiesByOutlet[entry.key] = entry.value!;
+        }
+      }
+
+      // Check for active visit among histories
+      for (var entry in historiesByOutlet.entries) {
+        final oId = entry.key;
+        final history = entry.value;
+
+        final rawVisits = (history['visit_history'] ??
+            history['visits'] ??
+            history['data']?['visit_history'] ??
+            history['data']?['visits'] ??
+            (history['data'] is List ? history['data'] : null) ??
+            []) as List;
+
+        final activeVisit = rawVisits.where((v) {
+          if (v is! Map) return false;
+          final cTime = v['checkout_time'];
+          return cTime == null ||
+              cTime.toString().isEmpty ||
+              cTime == 'N/A' ||
+              cTime == 'null' ||
+              cTime == '-';
+        }).firstOrNull;
+
+        if (activeVisit != null && activeVisit is Map) {
+          activeOutletId = oId;
+          activeVisitId = int.tryParse(activeVisit['visit_id']?.toString() ?? activeVisit['id']?.toString() ?? '') ?? 0;
+          final cInStr = activeVisit['checkin_time']?.toString() ??
+              activeVisit['check_in_time']?.toString() ??
+              activeVisit['visit_date']?.toString() ??
+              activeVisit['created_at']?.toString() ??
+              '';
+          activeCheckInTime = DateTime.tryParse(cInStr) ?? DateTime.now();
+          break;
+        }
+      }
+
+      // If active visit was found, update provider and session
+      if (activeOutletId != null) {
+        setCheckedInOutlet(
+          activeOutletId,
+          visitId: activeVisitId,
+          checkInTime: activeCheckInTime,
+        );
+      } else if (sessionOutletId != null && historiesByOutlet.containsKey(sessionOutletId)) {
+        // If the session outlet's history was fetched and has no active visit, clear check-in
+        clearCheckIn();
+      }
+
+      // Merge visit history into outlet items
+      return initialOutlets.map((outlet) {
+        final oId = int.tryParse(outlet.id);
+        if (oId != null && historiesByOutlet.containsKey(oId)) {
+          final history = historiesByOutlet[oId]!;
+          final rawVisits = (history['visit_history'] ??
+              history['visits'] ??
+              history['data']?['visit_history'] ??
+              history['data']?['visits'] ??
+              (history['data'] is List ? history['data'] : null) ??
+              []) as List;
+          final List<VisitHistoryItem> parsed = [];
+          for (var v in rawVisits) {
+            if (v is Map) {
+              parsed.add(VisitHistoryItem.fromJson(Map<String, dynamic>.from(v)));
+            }
+          }
+
+          final fetchedTotal = int.tryParse((history['total_visits'] ??
+                  history['visit_count'] ??
+                  history['visits_count'] ??
+                  history['total'] ??
+                  '')
+              .toString()) ?? (parsed.isNotEmpty ? parsed.length : outlet.totalVisits);
+
+          return outlet.copyWith(
+            visitHistory: parsed.isNotEmpty ? parsed : outlet.visitHistory,
+            totalVisits: fetchedTotal > 0 ? fetchedTotal : outlet.totalVisits,
+          );
+        }
+        return outlet;
+      }).toList();
+    } catch (e) {
+      debugPrint("Error syncing outlets with history: $e");
+      return initialOutlets;
+    }
+  }
+
   Future<void> fetchOutlets(int routeId) async {
     isLoading = true;
     _outletsErrorMessage = null;
@@ -484,8 +667,11 @@ class OutletProvider extends ChangeNotifier {
       final response = await ApiServices.getUserOutlets(routeId: routeId);
       if (response != null && response['data'] != null && response['data'] is List) {
         final List<dynamic> data = response['data'];
-        _outlets = data.map((json) => Outlet.fromJson(json)).toList();
+        final loadedOutlets = data.map((json) => Outlet.fromJson(json)).toList();
         _outletsErrorMessage = null;
+
+        // Sync outlet history and active check-in status before releasing loading
+        _outlets = await _syncOutletsWithHistoryAndCheckIn(loadedOutlets);
       } else {
         _outlets = [];
         if (response != null && response['message'] != null && response['message'].toString().trim().isNotEmpty) {
@@ -531,7 +717,8 @@ class OutletProvider extends ChangeNotifier {
       
       if (response != null && response['data'] != null && response['data'] is List) {
         final List<dynamic> data = response['data'];
-        _nearbyOutlets = data.map((json) => Outlet.fromJson(json)).toList();
+        final loaded = data.map((json) => Outlet.fromJson(json)).toList();
+        _nearbyOutlets = await _syncOutletsWithHistoryAndCheckIn(loaded);
         _nearbyErrorMessage = null;
       } else {
         _nearbyOutlets = [];

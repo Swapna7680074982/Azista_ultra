@@ -38,6 +38,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
   double? _userLat;
   double? _userLng;
   String _userRole = 'SO';
+  bool _isLoading = true;
 
   bool get _isManager =>
       _userRole.toUpperCase() == 'RM' ||
@@ -61,7 +62,12 @@ class _OutletsScreenState extends State<OutletsScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    _loadCheckInStatus();
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+    await _loadCheckInStatus();
     final role = await SessionManager.getUserRole();
     if (mounted) {
       setState(() {
@@ -75,7 +81,10 @@ class _OutletsScreenState extends State<OutletsScreen> {
       provider.fetchOutlets(widget.routeId),
     ]);
     if (mounted) {
-      setState(() {});
+      await _loadCheckInStatus();
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -469,15 +478,32 @@ class _OutletsScreenState extends State<OutletsScreen> {
     }
   }
 
-  Widget outletCard(Outlet outlet, BuildContext context) {
+  Widget outletCard(Outlet outlet) {
     final provider = Provider.of<OutletProvider>(context);
     final activeId = provider.checkedInOutletId ?? _checkedInOutletId;
-    final isCheckedIn = activeId != null && activeId == int.tryParse(outlet.id);
-    final activeTime = provider.checkedInTime != null
+    final oIdInt = int.tryParse(outlet.id);
+    final isCheckedIn = activeId != null && activeId == oIdInt;
+
+    String? activeTime = provider.checkedInTime != null
         ? provider.checkedInTime!.toIso8601String()
         : _checkInTimeAndDate;
+
+    if ((activeTime == null || activeTime.isEmpty) && isCheckedIn) {
+      final vActive = outlet.visitHistory.where((v) {
+        final cTime = v.checkoutTime;
+        return cTime == null ||
+            cTime.isEmpty ||
+            cTime == 'N/A' ||
+            cTime == 'null' ||
+            cTime == '-';
+      }).firstOrNull;
+      if (vActive != null && vActive.checkinTime.isNotEmpty) {
+        activeTime = vActive.checkinTime;
+      }
+    }
+
     final distance = _getDistanceToOutlet(outlet);
-    final isBlocked = distance != null && distance > 250;
+    final isBlocked = !isCheckedIn && distance != null && distance > 250;
 
     final cardContent = Container(
       padding: const EdgeInsets.all(12),
@@ -534,7 +560,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
           ),
 
           Text("OUTLET ID: ${outlet.id}", style: const TextStyle(fontSize: 15)),
-          if (isCheckedIn && activeTime != null) ...[
+          if (isCheckedIn && activeTime != null && activeTime.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               "CHECKED-IN: ${DateFormatter.formatDateTime(activeTime)}",
@@ -723,7 +749,11 @@ class _OutletsScreenState extends State<OutletsScreen> {
             builder: (_) => PosBaseScreen(outlet: outlet),
           ),
         );
-        _loadCheckInStatus();
+        await _loadCheckInStatus();
+        if (mounted) {
+          setState(() {});
+          context.read<OutletProvider>().fetchOutlets(widget.routeId);
+        }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -864,10 +894,18 @@ class _OutletsScreenState extends State<OutletsScreen> {
                       ),
                     ),
                     onPressed: () async {
+                      if (mounted) {
+                        setState(() {
+                          _isLoading = true;
+                        });
+                      }
                       await _loadUserLocation();
                       await provider.fetchOutlets(widget.routeId);
                       if (mounted) {
                         await _loadCheckInStatus();
+                        setState(() {
+                          _isLoading = false;
+                        });
                       }
                     },
                   ),
@@ -919,14 +957,22 @@ class _OutletsScreenState extends State<OutletsScreen> {
               ScaffoldMessenger.of(context).hideCurrentSnackBar();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text("Refreshing outlets..."),
+                  content: Text("Refreshing outlets & check-in status..."),
                   duration: Duration(milliseconds: 900),
                 ),
               );
+              if (mounted) {
+                setState(() {
+                  _isLoading = true;
+                });
+              }
               await _loadUserLocation();
               await provider.fetchOutlets(widget.routeId);
               if (mounted) {
                 await _loadCheckInStatus();
+                setState(() {
+                  _isLoading = false;
+                });
               }
             },
           ),
@@ -1032,7 +1078,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
           const SizedBox(height: 10),
 
           Expanded(
-            child: provider.isLoading && provider.outlets.isEmpty
+            child: (_isLoading || (provider.isLoading && provider.outlets.isEmpty))
                 ? const Center(child: LogoProgressIndicator())
                 : RefreshIndicator(
                     color: AppColors.primary,
@@ -1049,7 +1095,7 @@ class _OutletsScreenState extends State<OutletsScreen> {
                             physics: const AlwaysScrollableScrollPhysics(),
                             itemCount: provider.outlets.length,
                             itemBuilder: (context, index) {
-                              return outletCard(provider.outlets[index], context);
+                              return outletCard(provider.outlets[index]);
                             },
                           ),
                   ),

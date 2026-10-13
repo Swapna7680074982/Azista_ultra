@@ -11,7 +11,15 @@ import '../utilities/date_formatter.dart';
 
 class TransactionDetailsScreen extends StatefulWidget {
   final int outletId;
-  const TransactionDetailsScreen({super.key, required this.outletId});
+  final String? outletName;
+  final DateTime? initialDate;
+
+  const TransactionDetailsScreen({
+    super.key,
+    required this.outletId,
+    this.outletName,
+    this.initialDate,
+  });
 
   @override
   State<TransactionDetailsScreen> createState() =>
@@ -22,9 +30,15 @@ class _TransactionDetailsScreenState
     extends State<TransactionDetailsScreen> {
 
   int selectedTab = 0;
-  DateTime selectedDate = DateTime.now();
+  late DateTime selectedDate;
 
   final List<String> tabs = ["SALE", "STOCK", "POB"];
+
+  @override
+  void initState() {
+    super.initState();
+    selectedDate = widget.initialDate ?? DateTime.now();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +46,9 @@ class _TransactionDetailsScreenState
 
     return Scaffold(
       appBar: WavyAppBar(
-        title: "Transaction Details",
+        title: widget.outletName != null && widget.outletName!.isNotEmpty
+            ? widget.outletName!.toUpperCase()
+            : "TRANSACTION DETAILS",
         actions: [
           IconButton(
             icon: const Icon(Icons.sync, color: Colors.white),
@@ -283,6 +299,12 @@ class _TransactionDetailsScreenState
             return false;
           }
         }).toList();
+
+        filteredData.sort((a, b) {
+          final da = (a['created_at'] ?? a['created_on'] ?? '').toString();
+          final db = (b['created_at'] ?? b['created_on'] ?? '').toString();
+          return db.compareTo(da);
+        });
         
         if (filteredData.isEmpty) {
           return const Center(child: Text("No POB History"));
@@ -440,6 +462,12 @@ class _TransactionDetailsScreenState
             return false;
           }
         }).toList();
+
+        filteredData.sort((a, b) {
+          final da = (a['created_on'] ?? a['created_at'] ?? '').toString();
+          final db = (b['created_on'] ?? b['created_at'] ?? '').toString();
+          return db.compareTo(da);
+        });
         
         if (filteredData.isEmpty) {
           return Center(child: Text("No ${posType.toUpperCase()} History"));

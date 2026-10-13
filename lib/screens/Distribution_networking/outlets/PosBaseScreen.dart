@@ -564,7 +564,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
     // If no active visit exists on server, simply clear local check-in
     if (resolvedVisitId == null || resolvedVisitId <= 0) {
       if (mounted) {
-        context.read<OutletProvider>().clearCheckIn();
+        context.read<OutletProvider>().clearCheckIn(outletId: widget.outlet.id);
         setState(() {
           _isCheckedIn = false;
           _visitId = null;
@@ -574,7 +574,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
           context,
           message: "Check-in cleared successfully",
           onDismiss: () {
-            Navigator.pop(context);
+            Navigator.pop(context, true);
           },
         );
       }
@@ -599,7 +599,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
 
       if (response != null && response['status'] == true) {
         if (mounted) {
-          context.read<OutletProvider>().clearCheckIn();
+          context.read<OutletProvider>().clearCheckIn(outletId: widget.outlet.id);
           setState(() {
             _isCheckedIn = false;
             _visitId = null;
@@ -610,7 +610,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
             context,
             message: response['message'] ?? "Outlet checked-out successfully",
             onDismiss: () {
-              Navigator.pop(context); // Go back to outlet list upon checkout
+              Navigator.pop(context, true); // Go back to outlet list upon checkout
             },
           );
         }

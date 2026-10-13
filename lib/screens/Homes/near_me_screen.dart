@@ -488,15 +488,32 @@ class _NearMeScreenState extends State<NearMeScreen> {
     }
   }
 
-  Widget outletCard(Outlet outlet, BuildContext context) {
+  Widget outletCard(Outlet outlet) {
     final provider = Provider.of<OutletProvider>(context);
     final activeId = provider.checkedInOutletId ?? _checkedInOutletId;
-    final isCheckedIn = activeId != null && activeId == int.tryParse(outlet.id);
-    final activeTime = provider.checkedInTime != null
+    final oIdInt = int.tryParse(outlet.id);
+    final isCheckedIn = activeId != null && activeId == oIdInt;
+
+    String? activeTime = provider.checkedInTime != null
         ? provider.checkedInTime!.toIso8601String()
         : _checkInTimeAndDate;
+
+    if ((activeTime == null || activeTime.isEmpty) && isCheckedIn) {
+      final vActive = outlet.visitHistory.where((v) {
+        final cTime = v.checkoutTime;
+        return cTime == null ||
+            cTime.isEmpty ||
+            cTime == 'N/A' ||
+            cTime == 'null' ||
+            cTime == '-';
+      }).firstOrNull;
+      if (vActive != null && vActive.checkinTime.isNotEmpty) {
+        activeTime = vActive.checkinTime;
+      }
+    }
+
     final distance = _getDistanceToOutlet(outlet);
-    final isBlocked = distance != null && distance > 250;
+    final isBlocked = !isCheckedIn && distance != null && distance > 250;
 
     final cardContent = Container(
       padding: const EdgeInsets.all(12),
@@ -743,7 +760,11 @@ class _NearMeScreenState extends State<NearMeScreen> {
             builder: (_) => PosBaseScreen(outlet: outlet),
           ),
         );
-        _loadCheckInStatus();
+        await _loadCheckInStatus();
+        if (mounted) {
+          setState(() {});
+          _loadData();
+        }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -996,7 +1017,7 @@ class _NearMeScreenState extends State<NearMeScreen> {
                             physics: const AlwaysScrollableScrollPhysics(),
                             itemCount: provider.nearbyOutlets.length,
                             itemBuilder: (context, index) {
-                              return outletCard(provider.nearbyOutlets[index], context);
+                              return outletCard(provider.nearbyOutlets[index]);
                             },
                           ),
                   ),

@@ -11,6 +11,7 @@ import 'package:azista_ultra/screens/geo_requests/outlet_geo_requests_screen.dar
 import 'package:azista_ultra/screens/attendance/TeamAttendanceScreen.dart';
 import 'package:azista_ultra/screens/team_progress/my_team_progress_screen.dart';
 import 'package:azista_ultra/screens/profile_screen.dart';
+import 'package:azista_ultra/screens/Homes/near_me_screen.dart';
 import 'package:azista_ultra/services/api_services.dart';
 import 'package:azista_ultra/utilities/delete_account_dialog.dart';
 import 'package:flutter/material.dart';
@@ -205,11 +206,14 @@ class ProfileDrawer extends StatelessWidget {
               break;
 
             case "Near Me":
-              navProvider.setTab(2);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NearMeScreen()),
+              );
               break;
 
             case "Distribution Network":
-              navProvider.setTab(3);
+              navProvider.setTab(2);
               break;
 
             case "My Geo Requests":

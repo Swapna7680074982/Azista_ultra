@@ -96,7 +96,7 @@ class _UserOutletVisitsScreenState extends State<UserOutletVisitsScreen> {
     super.didChangeDependencies();
     try {
       final tabProvider = Provider.of<MainTabProvider>(context);
-      if (tabProvider.currentIndex == 2 && tabProvider.visitsRefreshTick != _lastRefreshTick) {
+      if ((tabProvider.currentIndex == 1 || tabProvider.currentIndex == 2) && tabProvider.visitsRefreshTick != _lastRefreshTick) {
         _lastRefreshTick = tabProvider.visitsRefreshTick;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
