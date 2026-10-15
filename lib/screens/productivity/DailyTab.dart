@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../constants/app_colors.dart';
 import 'productivity_provider.dart';
 import '../../utilities/common_widgets.dart';
 
@@ -18,7 +19,7 @@ class _DailyTabState extends State<DailyTab> {
       final now = DateTime.now();
       final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
       if (mounted) {
-        Provider.of<ProductivityProvider>(context, listen: false).fetchCallsInfo(
+        Provider.of<ProductivityProvider>(context, listen: false).fetchDailyCalls(
           date: dateStr,
         );
       }
@@ -29,7 +30,7 @@ class _DailyTabState extends State<DailyTab> {
   Widget build(BuildContext context) {
     return Consumer<ProductivityProvider>(
       builder: (context, provider, child) {
-        return provider.isLoading
+        return provider.isDailyLoading
             ? const LogoProgressIndicator()
             : Padding(
           padding: const EdgeInsets.all(16.0),
@@ -67,11 +68,21 @@ class _DailyTabState extends State<DailyTab> {
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: provider.dailyData.isEmpty
-                    ? const Center(child: Text("No call data available"))
-                    : ListView.builder(
-                  itemCount: provider.dailyData.length,
-                  itemBuilder: (context, index) {
+                child: RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: () async => provider.fetchDailyCalls(),
+                  child: provider.dailyData.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: const [
+                            SizedBox(height: 100),
+                            Center(child: Text("No call data available")),
+                          ],
+                        )
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemCount: provider.dailyData.length,
+                          itemBuilder: (context, index) {
                     final data = provider.dailyData[index];
 
                     // Filter based on dropdown
@@ -149,6 +160,7 @@ class _DailyTabState extends State<DailyTab> {
                       ),
                     );
                   },
+                ),
                 ),
               ),
             ],

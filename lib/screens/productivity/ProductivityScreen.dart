@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import 'DailyTab.dart';
 import 'MonthlyTab.dart';
+import 'productivity_provider.dart';
 
 class ProductivityScreen extends StatefulWidget {
   const ProductivityScreen({super.key});
@@ -54,7 +56,9 @@ class _ProductivityScreenState extends State<ProductivityScreen> {
                     duration: Duration(milliseconds: 900),
                   ),
                 );
-                setState(() {});
+                final prod = context.read<ProductivityProvider>();
+                prod.fetchDailyCalls();
+                prod.fetchMonthlyCalls();
               },
             ),
             const SizedBox(width: 4),
