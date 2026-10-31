@@ -27,7 +27,6 @@ class _NearMeScreenState extends State<NearMeScreen> {
           ? int.tryParse(distProvider.selectedRouteId!) 
           : null;
       final provider = context.read<OutletProvider>();
-      provider.syncCheckInStatus();
       await provider.refreshNearbyOutlets(routeId: routeId);
     });
   }
@@ -102,7 +101,30 @@ class _NearMeScreenState extends State<NearMeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("OUTLET ID: ${outlet.id}", style: TextStyle(color: Colors.grey.shade700, fontSize: 15)),
+                  Row(
+                    children: [
+                      Text("OUTLET ID: ${outlet.id}", style: TextStyle(color: Colors.grey.shade700, fontSize: 15)),
+                      if (provider.getOutletVisitsCount(int.tryParse(outlet.id) ?? 0) > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE3F2FD),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFF90CAF9)),
+                          ),
+                          child: Text(
+                            "${provider.getOutletVisitsCount(int.tryParse(outlet.id) ?? 0)} VISITS",
+                            style: const TextStyle(
+                              color: Color(0xFF1976D2),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                   if (outlet.distanceKm != null)
                     Text("${outlet.distanceKm!.toStringAsFixed(2)} km away", style: TextStyle(color: Colors.red.shade700, fontSize: 15, fontWeight: FontWeight.bold)),
                 ],

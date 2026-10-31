@@ -52,7 +52,7 @@ class DistributionProvider extends ChangeNotifier {
         for (var item in routes.values) {
           final region = item["REGION"]?.toString() ?? item["STATE"]?.toString() ?? "Region 1";
           final area = item["CLUSTER"]?.toString() ?? item["AREA"]?.toString() ?? item["CITY"]?.toString() ?? "Area 1";
-          final hq = item["TERRITORY"]?.toString() ?? item["HQ"]?.toString() ?? (item["CITY"] != null ? "${item["CITY"]} HQ" : "HQ 1");
+          final hq = item["TERRITORY"]?.toString() ?? item["HEADQUARTER"]?.toString() ?? item["HQ"]?.toString() ?? (item["CITY"] != null ? "${item["CITY"]} Headquarter" : "Headquarter 1");
           final beat = item["BEAT"]?.toString() ?? item["ROUTE"]?.toString() ?? "Beat 1";
           final routeId = item["BEAT_ID"]?.toString() ?? item["ROUTE_ID"]?.toString();
 

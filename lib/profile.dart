@@ -9,6 +9,7 @@ import 'package:azista_ultra/screens/Homes/main_tab_provider.dart';
 import 'package:azista_ultra/screens/Homes/near_me_screen.dart';
 import 'package:azista_ultra/screens/Homes/support.dart';
 import 'package:azista_ultra/screens/login/login_screen.dart';
+import 'package:azista_ultra/screens/distribution_list/VisitsScreen.dart';
 import 'package:azista_ultra/services/api_services.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -58,6 +59,7 @@ class ProfileDrawer extends StatelessWidget {
           sectionTitle("GENERAL"),
 
           menuItem(context, "Dashboard"),
+          menuItem(context, "Visits History"),
           menuItem(context, "Near Me"),
           menuItem(context, "Distribution Network"),
 
@@ -157,6 +159,13 @@ class ProfileDrawer extends StatelessWidget {
           switch (title) {
             case "Dashboard":
               navProvider.setTab(0);
+              break;
+
+            case "Visits History":
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const VisitsScreen()),
+              );
               break;
 
             case "Near Me":

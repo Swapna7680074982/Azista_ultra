@@ -552,6 +552,7 @@ class ApiServices {
     required int outletId,
     required double latitude,
     required double longitude,
+    String visitType = "INDIVIDUAL",
     String? address,
     String? remarks,
   }) async {
@@ -566,6 +567,7 @@ class ApiServices {
         "outlet_id": outletId,
         "latitude": latitude,
         "longitude": longitude,
+        "visit_type": visitType,
         "address": address ?? "",
         "remarks": remarks ?? "",
       };
@@ -644,6 +646,50 @@ class ApiServices {
           return e.response!.data as Map<String, dynamic>;
         }
       }
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getOutletVisitsHistory({
+    required String visitDate,
+  }) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getOutletVisitsHistory");
+        return null;
+      }
+
+      final payload = {
+        "visit_date": visitDate,
+      };
+
+      AppLogger.info("Outlet Visits History API called: ${AppUrls.outletVisitsHistory}");
+      AppLogger.info("Payload: ${jsonEncode(payload)}");
+
+      final response = await _dio.post(
+        AppUrls.outletVisitsHistory,
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status! < 500,
+        ),
+      );
+
+      AppLogger.info("Outlet Visits History response: ${response.statusCode} - ${response.data}");
+      if (response.statusCode == 200 && response.data != null) {
+        if (response.data is Map<String, dynamic>) {
+          return response.data as Map<String, dynamic>;
+        } else if (response.data is Map) {
+          return Map<String, dynamic>.from(response.data as Map);
+        }
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Outlet Visits History error", e);
       return null;
     }
   }
@@ -988,15 +1034,25 @@ class ApiServices {
       AppLogger.info("Generate POB response status: ${response.statusCode}");
       AppLogger.info("Generate POB response data: ${response.data}");
 
-      if (response.statusCode == 200 && isSuccess(response.data)) {
-        return response.data;
+      if (response.statusCode == 200) {
+        if (response.data is Map<String, dynamic>) {
+          return response.data;
+        } else if (response.data is String) {
+          try {
+            return jsonDecode(response.data) as Map<String, dynamic>;
+          } catch (_) {}
+        }
+        return {"status": true, "data": response.data};
       }
-      return null;
+      return response.data is Map<String, dynamic> ? response.data : null;
     } catch (e) {
       AppLogger.error("Generate POB error", e);
       if (e is DioException) {
         AppLogger.error("Generate POB status code: ${e.response?.statusCode}");
         AppLogger.error("Generate POB response data: ${e.response?.data}");
+        if (e.response?.data != null && e.response!.data is Map<String, dynamic>) {
+          return e.response!.data as Map<String, dynamic>;
+        }
       }
       return null;
     }

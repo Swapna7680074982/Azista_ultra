@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../../../services/api_services.dart';
+import '../../../services/offline_sync_service.dart';
 
 class OutletActivityProvider extends ChangeNotifier {
   bool _isLoadingProducts = false;
@@ -165,9 +166,31 @@ class OutletActivityProvider extends ChangeNotifier {
         notifyListeners();
         return {"status": true, "message": response['message'] ?? "$posType transaction success"};
       }
-      return {"status": false, "message": response?['message'] ?? "Transaction failed"};
+      
+      // Save offline if submission fails
+      await OfflineSyncService.savePendingPos({
+        "pos_type": posType,
+        "payload": payload,
+      });
+      targetMap.clear();
+      notifyListeners();
+      return {
+        "status": true,
+        "offline": true,
+        "message": "Saved offline! Tap Sync to upload when online."
+      };
     } catch (e) {
-      return {"status": false, "message": "Transaction error: $e"};
+      await OfflineSyncService.savePendingPos({
+        "pos_type": posType,
+        "payload": payload,
+      });
+      targetMap.clear();
+      notifyListeners();
+      return {
+        "status": true,
+        "offline": true,
+        "message": "Saved offline! Tap Sync to upload when online."
+      };
     }
   }
 
@@ -201,14 +224,38 @@ class OutletActivityProvider extends ChangeNotifier {
         orderCopy: imageFile,
       );
       
-      if (response != null && (response['status'] == "success" || response['status'] == true)) {
+      if (response != null && ApiServices.isSuccess(response)) {
         _stockQuantities.clear();
         notifyListeners();
         return true;
       }
-      return false;
+
+      if (response != null && response['status'] == false) {
+        return false;
+      }
+      
+      // If server unreachable or offline, save offline
+      await OfflineSyncService.savePendingPob({
+        "outlet_id": outletId.toString(),
+        if (distributorId != null) "distributor_id": distributorId.toString(),
+        "items_json": jsonEncode(items),
+        "remarks": remarks,
+        if (imageFile != null) "image_path": imageFile.path,
+      });
+      _stockQuantities.clear();
+      notifyListeners();
+      return true;
     } catch (e) {
-      return false;
+      await OfflineSyncService.savePendingPob({
+        "outlet_id": outletId.toString(),
+        if (distributorId != null) "distributor_id": distributorId.toString(),
+        "items_json": jsonEncode(items),
+        "remarks": remarks,
+        if (imageFile != null) "image_path": imageFile.path,
+      });
+      _stockQuantities.clear();
+      notifyListeners();
+      return true;
     }
   }
 

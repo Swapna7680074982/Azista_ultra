@@ -27,10 +27,8 @@ class _OutletsScreenState extends State<OutletsScreen> {
   @override
   void initState() {
     super.initState();
-    final provider = Provider.of<OutletProvider>(context, listen: false);
-    Future.microtask(() async {
-      provider.syncCheckInStatus();
-      await provider.fetchOutlets(widget.routeId);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<OutletProvider>(context, listen: false).fetchOutlets(widget.routeId);
     });
   }
 
@@ -98,7 +96,30 @@ class _OutletsScreenState extends State<OutletsScreen> {
             ],
           ),
 
-          Text("OUTLET ID: ${outlet.id}",style: const TextStyle(fontSize: 15)),
+          Row(
+            children: [
+              Text("OUTLET ID: ${outlet.id}", style: const TextStyle(fontSize: 15)),
+              if (provider.getOutletVisitsCount(int.tryParse(outlet.id) ?? 0) > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE3F2FD),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFF90CAF9)),
+                  ),
+                  child: Text(
+                    "${provider.getOutletVisitsCount(int.tryParse(outlet.id) ?? 0)} VISITS",
+                    style: const TextStyle(
+                      color: Color(0xFF1976D2),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
           if (isCheckedIn && checkInTimeAndDate != null) ...[
             const SizedBox(height: 4),
             Text(

@@ -51,4 +51,5 @@ class AppUrls {
   static const String teamMemberOutlets = "$baseUrl/distribution/team_member_outlets";
   static const String outletPobHistory = "$baseUrl/distribution/outlet_pob_history";
   static const String outletVisitActivityHistory = "$baseUrl/distribution/outlet_visit_activity_history";
+  static const String outletVisitsHistory = "$baseUrl/distribution/outlet_visits_history";
 }

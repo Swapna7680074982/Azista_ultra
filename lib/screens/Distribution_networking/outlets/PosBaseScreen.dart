@@ -17,8 +17,10 @@ import 'SaleScreen.dart';
 import 'outlet_provider.dart';
 import '../../../services/api_services.dart';
 import '../../../utilities/common_widgets.dart';
+import 'package:intl/intl.dart';
 import '../../../permissions/SessionManager.dart';
 import '../../../utilities/date_formatter.dart';
+import '../../distribution_list/VisitsScreen.dart';
 
 class PosBaseScreen extends StatefulWidget {
   final Outlet outlet;
@@ -37,6 +39,10 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   bool? isLocationValid;
   String locationError = "";
   List<Widget> _tabViews = [];
+
+  int _totalVisits = 0;
+  String? _lastVisitText;
+  bool _isCardExpanded = true;
 
   void _buildTabViews() {
     _tabViews = dynamicTabs.map((tab) => _getModuleBody(tab['module_code'], selectedTab)).toList();
@@ -61,6 +67,24 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       final history = await ApiServices.getOutletHistory(outletId: currentOutletId);
       if (history != null && (history['status'] == true || history['status'] == 'success' || history['visit_history'] != null)) {
         final List visits = history['visit_history'] ?? [];
+        if (mounted) {
+          setState(() {
+            _totalVisits = visits.length;
+            if (visits.isNotEmpty) {
+              final last = visits.first;
+              final dateStr = last['visit_date'] ?? last['checkin_time'];
+              final type = (last['visit_type'] ?? 'INDIVIDUAL').toString().toUpperCase();
+              if (dateStr != null) {
+                try {
+                  final dt = DateTime.parse(dateStr.toString()).toLocal();
+                  _lastVisitText = "LAST VISIT: ${DateFormat('dd MMM yyyy').format(dt)} ($type)";
+                } catch (_) {
+                  _lastVisitText = "LAST VISIT: $dateStr ($type)";
+                }
+              }
+            }
+          });
+        }
         final activeVisit = visits.firstWhere(
           (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
           orElse: () => null,
@@ -70,11 +94,13 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
           final visitId = int.tryParse(activeVisit['visit_id']?.toString() ?? "") ?? 0;
           final checkInTimeStr = activeVisit['checkin_time']?.toString() ?? "";
           final checkInTime = DateTime.tryParse(checkInTimeStr);
+          final activeType = (activeVisit['visit_type'] ?? 'INDIVIDUAL').toString().toUpperCase();
 
           await SessionManager.saveOutletCheckIn(
             outletId: currentOutletId,
             visitId: visitId,
             checkInTime: checkInTime ?? DateTime.now(),
+            visitType: activeType,
           );
 
           if (mounted) {
@@ -82,6 +108,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
               _isCheckedIn = true;
               _visitId = visitId;
               _checkInTime = checkInTime;
+              _visitType = activeType;
               isLoadingCheckIn = false;
               _buildTabViews();
             });
@@ -155,6 +182,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   bool _isCheckedIn = false;
   DateTime? _checkInTime;
   int? _visitId;
+  String _visitType = "INDIVIDUAL";
 
   void _showErrorSnackBar(String message) {
     if (mounted) {
@@ -167,8 +195,180 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
     }
   }
 
+  Future<String?> _showVisitTypeDialog() async {
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 8,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.location_on,
+                    color: AppColors.primary,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  "Select Visit Type",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.black,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "Please choose visit type to proceed with check-in at ${widget.outlet.name}",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // INDIVIDUAL Option
+                InkWell(
+                  onTap: () => Navigator.pop(ctx, "INDIVIDUAL"),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue.shade300, width: 1.5),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.person, color: Colors.blue, size: 24),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Individual Visit",
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                "Solo visit to outlet",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.blue),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // COMBINE Option
+                InkWell(
+                  onTap: () => Navigator.pop(ctx, "COMBINE"),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.deepOrange.shade50.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.deepOrange.shade300, width: 1.5),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.deepOrange.shade100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.groups, color: Colors.deepOrange, size: 24),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Combine Visit",
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                "Joint visit with Area Manager / Team",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.deepOrange),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, null),
+                  child: Text(
+                    "Cancel",
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _handleCheckIn() async {
-    LoadingDialog.show(context, message: "Checking in...");
+    final visitType = await _showVisitTypeDialog();
+    if (visitType == null) {
+      // User cancelled
+      return;
+    }
+
+    if (!mounted) return;
+    LoadingDialog.show(context, message: "Checking in ($visitType)...");
     try {
       final coords = await LocationService.getCoordinates();
       final currentLat = double.parse(coords[0]);
@@ -180,6 +380,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         outletId: outletId,
         latitude: currentLat,
         longitude: currentLng,
+        visitType: visitType,
         remarks: "Visited outlet",
       );
 
@@ -195,6 +396,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
           outletId: outletId,
           visitId: visitId,
           checkInTime: checkInTime,
+          visitType: visitType,
         );
 
         if (mounted) {
@@ -202,18 +404,20 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
             outletId: outletId,
             visitId: visitId,
             checkInTime: checkInTime.toIso8601String(),
+            visitType: visitType,
           );
 
           setState(() {
             _isCheckedIn = true;
             _visitId = visitId;
             _checkInTime = checkInTime;
+            _visitType = visitType;
             _buildTabViews();
           });
 
           SuccessDialog.show(
             context,
-            message: response['message'] ?? "Outlet checked-in successfully",
+            message: response['message'] ?? "Outlet checked-in successfully ($visitType)",
           );
         }
       } else {
@@ -404,8 +608,8 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                       const SizedBox(width: 8),
                       Text(
                         _checkInTime != null
-                            ? "Checked-in at: ${DateFormatter.formatDateTime(_checkInTime!.toIso8601String())}"
-                            : "Checked-in",
+                            ? "Checked-in ($_visitType) at: ${DateFormatter.formatDateTime(_checkInTime!.toIso8601String())}"
+                            : "Checked-in ($_visitType)",
                         style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                     ],
@@ -521,221 +725,335 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
     );
   }
   Widget outletCard(Outlet outlet) {
+    final outletProvider = context.watch<OutletProvider>();
+    final outletIdNum = int.tryParse(outlet.id) ?? 0;
+    final int visitsCount = _totalVisits > 0 
+        ? _totalVisits 
+        : outletProvider.getOutletVisitsCount(outletIdNum);
+    
+    String? lastVisitDisplay = _lastVisitText;
+    if (lastVisitDisplay == null) {
+      final lastV = outletProvider.getOutletLastVisit(outletIdNum);
+      if (lastV != null) {
+        final dStr = lastV['visit_date'] ?? lastV['checkin_time'];
+        final tStr = (lastV['visit_type'] ?? 'INDIVIDUAL').toString().toUpperCase();
+        if (dStr != null) {
+          try {
+            final dt = DateTime.parse(dStr.toString()).toLocal();
+            lastVisitDisplay = "LAST VISIT: ${DateFormat('dd MMM yyyy').format(dt)} ($tStr)";
+          } catch (_) {
+            lastVisitDisplay = "LAST VISIT: $dStr ($tStr)";
+          }
+        }
+      }
+    }
+
     return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: const [
-              BoxShadow(color: Colors.black12, blurRadius: 4)
-            ],
-          ),
-          child: Column(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(outlet.name.toUpperCase(),
-                  style: const TextStyle(fontWeight: FontWeight.bold,fontSize: 16)),
-
-              Text("OUTLET ID: ${outlet.id}",style: const TextStyle(fontSize: 15)),
-
-              const Divider(),
-
-              Row(
-                children: [
-                  const Icon(Icons.person, size: 20),
-                  const SizedBox(width: 8),
-                  Text(outlet.owner.toUpperCase(),style: const TextStyle(fontSize: 18)),
-                ],
-              ),
-
-              const SizedBox(height: 6),
-
-              Row(
-                children: [
-                  const Icon(Icons.phone, size: 20),
-                  const SizedBox(width: 8),
-                  Text(outlet.phone,style: const TextStyle(fontSize: 18)),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              Align(
-                alignment: Alignment.centerRight,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (outlet.type.isNotEmpty)
-                      Text(
-                        outlet.type.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.teal.shade700,
-                          fontWeight: FontWeight.w500,
+                    Text(
+                      outlet.name.toUpperCase(),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          "OUTLET ID: ${outlet.id}",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade700,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                    if (outlet.type.isNotEmpty) const SizedBox(width: 5),
-
-                    ShaderMask(
-                      shaderCallback: (bounds) => const LinearGradient(
-                        colors: [
-                          Colors.orange,
-                          Colors.teal,
+                        if (visitsCount > 0) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE3F2FD),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: const Color(0xFF90CAF9)),
+                            ),
+                            child: Text(
+                              "$visitsCount VISITS",
+                              style: const TextStyle(
+                                color: Color(0xFF1976D2),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         ],
-                      ).createShader(bounds),
-                      child: const Icon(
-                        Icons.storefront,
-                        size: 18,
-                        color: Colors.white,
-                      ),
+                      ],
                     ),
                   ],
                 ),
               ),
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: Icon(
+                  _isCardExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  color: AppColors.primary,
+                  size: 24,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _isCardExpanded = !_isCardExpanded;
+                  });
+                },
+              ),
+            ],
+          ),
 
-              const SizedBox(height: 10),
+          if (_isCardExpanded) ...[
+            const Divider(height: 20),
 
+            Row(
+              children: [
+                Icon(Icons.person, size: 20, color: Colors.grey.shade600),
+                const SizedBox(width: 8),
+                Text(outlet.owner.toUpperCase(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
+
+            const SizedBox(height: 6),
+
+            Row(
+              children: [
+                Icon(Icons.phone, size: 20, color: Colors.grey.shade600),
+                const SizedBox(width: 8),
+                Text(outlet.phone, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
+
+            if (lastVisitDisplay != null) ...[
+              const SizedBox(height: 6),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Container(
-                    height: 30,
+                  const Icon(Icons.history, size: 18, color: Color(0xFF1976D2)),
+                  const SizedBox(width: 8),
+                  Text(
+                    lastVisitDisplay,
+                    style: const TextStyle(
+                      color: Color(0xFF1976D2),
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            const SizedBox(height: 8),
+
+            Align(
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (outlet.type.isNotEmpty)
+                    Text(
+                      outlet.type.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.teal.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  if (outlet.type.isNotEmpty) const SizedBox(width: 5),
+                  ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [
+                        Colors.orange,
+                        Colors.teal,
+                      ],
+                    ).createShader(bounds),
+                    child: const Icon(
+                      Icons.storefront,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Buttons Row 1: VISIT HISTORY & TRANSACTIONS
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 38,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFF90CAF9)),
+                      borderRadius: BorderRadius.circular(6),
+                      color: const Color(0xFFE3F2FD),
+                    ),
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      icon: const Icon(Icons.history, size: 16, color: Color(0xFF1976D2)),
+                      label: const Text(
+                        "VISIT HISTORY",
+                        style: TextStyle(
+                          color: Color(0xFF1976D2),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => VisitsScreen(
+                              initialOutletId: int.tryParse(widget.outlet.id),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    height: 38,
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(6),
                       color: Colors.white,
                     ),
                     child: TextButton(
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Feature will be implemented in future"),
-                            duration: Duration(seconds: 2),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => StockSalePosScreen(
+                              outletId: int.tryParse(widget.outlet.id) ?? 0,
+                            ),
                           ),
                         );
                       },
                       child: const Text(
-                        "JOINT CALL",
+                        "TRANSACTIONS",
                         style: TextStyle(
                           color: Colors.black87,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                           fontSize: 12,
                         ),
                       ),
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Container(
-                        height: 30,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(4),
-                          color: Colors.white,
-                        ),
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => StockSalePosScreen(
-                                  outletId: int.tryParse(widget.outlet.id) ?? 0,
-                                ),
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            "PREVIOUS TRANSACTIONS",
-                            style: TextStyle(
-                              color: Colors.black87,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 35,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.green),
-                        borderRadius: BorderRadius.circular(6),
-                        color: AppColors.green.withValues(alpha:0.05),
+            // Buttons Row 2: CALL & DIRECTIONS
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 38,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.green),
+                      borderRadius: BorderRadius.circular(6),
+                      color: AppColors.green.withValues(alpha: 0.05),
+                    ),
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: TextButton(
-                        onPressed: () {
-                          CallService.makeCall(outlet.phone);
-                        },
-                        child: const Text(
-                          "CALL",
-                          style: TextStyle(
-                            color: AppColors.green,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      onPressed: () {
+                        CallService.makeCall(outlet.phone);
+                      },
+                      child: const Text(
+                        "CALL",
+                        style: TextStyle(
+                          color: AppColors.green,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
                         ),
                       ),
                     ),
                   ),
-
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Container(
-                      height: 35,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.green),
-                        borderRadius: BorderRadius.circular(6),
-                        color: AppColors.green.withValues(alpha:0.05),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    height: 38,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.green),
+                      borderRadius: BorderRadius.circular(6),
+                      color: AppColors.green.withValues(alpha: 0.05),
+                    ),
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => DirectionsMapScreen(
-                                outletLat: widget.outlet.latitude,
-                                outletLng: widget.outlet.longitude,
-                                outletName: widget.outlet.name,
-                              ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DirectionsMapScreen(
+                              outletLat: widget.outlet.latitude,
+                              outletLng: widget.outlet.longitude,
+                              outletName: widget.outlet.name,
                             ),
-                          );
-                        },
-                        child: const Text(
-                          "DIRECTIONS",
-                          style: TextStyle(
-                            color: AppColors.green,
-                            fontWeight: FontWeight.w600,
                           ),
+                        );
+                      },
+                      child: const Text(
+                        "DIRECTIONS",
+                        style: TextStyle(
+                          color: AppColors.green,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
                         ),
                       ),
                     ),
                   ),
-                ],
-              )
-            ],
-          ),
-
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
   Widget _tabs() {

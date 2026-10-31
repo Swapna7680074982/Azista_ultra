@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../services/api_services.dart';
 import '../../../services/location_service.dart';
@@ -86,9 +87,15 @@ class OutletProvider extends ChangeNotifier {
   String? _checkInTimeAndDate;
   int? _checkedInVisitId;
 
+  final Map<int, int> _outletVisitsCount = {};
+  final Map<int, Map<String, dynamic>> _outletLastVisit = {};
+
   int? get checkedInOutletId => _checkedInOutletId;
   String? get checkInTimeAndDate => _checkInTimeAndDate;
   int? get checkedInVisitId => _checkedInVisitId;
+
+  int getOutletVisitsCount(int outletId) => _outletVisitsCount[outletId] ?? 0;
+  Map<String, dynamic>? getOutletLastVisit(int outletId) => _outletLastVisit[outletId];
 
   List<OutletCategory> _categories = [];
   bool isCategoriesLoading = false;
@@ -100,7 +107,7 @@ class OutletProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateLocalCheckIn({required int outletId, required int visitId, required String checkInTime}) {
+  void updateLocalCheckIn({required int outletId, required int visitId, required String checkInTime, String? visitType}) {
     _checkedInOutletId = outletId;
     _checkedInVisitId = visitId;
     _checkInTimeAndDate = checkInTime;
@@ -115,6 +122,72 @@ class OutletProvider extends ChangeNotifier {
   }
 
   Future<void> syncCheckInStatus({List<Outlet>? checkOutlets}) async {
+    try {
+      final todayStr = DateFormat("yyyy-MM-dd").format(DateTime.now());
+      final response = await ApiServices.getOutletVisitsHistory(visitDate: todayStr);
+
+      if (response != null && (response['status'] == true || response['status'] == 'success')) {
+        final List visits = response['visits'] as List? ?? [];
+
+        _outletVisitsCount.clear();
+        _outletLastVisit.clear();
+
+        Map<String, dynamic>? activeVisit;
+
+        for (var v in visits) {
+          if (v is Map) {
+            final vMap = Map<String, dynamic>.from(v);
+            final outletId = int.tryParse(vMap['outlet_id']?.toString() ?? '');
+            if (outletId != null) {
+              _outletVisitsCount[outletId] = (_outletVisitsCount[outletId] ?? 0) + 1;
+              if (!_outletLastVisit.containsKey(outletId)) {
+                _outletLastVisit[outletId] = vMap;
+              }
+            }
+
+            final checkOutTime = vMap['checkout_time']?.toString().trim();
+            if (checkOutTime == null ||
+                checkOutTime.isEmpty ||
+                checkOutTime == 'null' ||
+                checkOutTime == 'N/A' ||
+                checkOutTime == '-') {
+              activeVisit = vMap;
+            }
+          }
+        }
+
+        if (activeVisit != null) {
+          final outletId = int.tryParse(activeVisit['outlet_id']?.toString() ?? '') ?? 0;
+          final visitId = int.tryParse(activeVisit['visit_id']?.toString() ?? '') ?? 0;
+          final checkinTime = activeVisit['checkin_time']?.toString() ?? '';
+          final visitType = activeVisit['visit_type']?.toString();
+          final parsedTime = DateTime.tryParse(checkinTime);
+
+          await SessionManager.saveOutletCheckIn(
+            outletId: outletId,
+            visitId: visitId,
+            checkInTime: parsedTime ?? DateTime.now(),
+            visitType: visitType,
+          );
+
+          _checkedInOutletId = outletId;
+          _checkedInVisitId = visitId;
+          _checkInTimeAndDate = checkinTime;
+          notifyListeners();
+          return;
+        } else {
+          await SessionManager.clearOutletCheckIn();
+          _checkedInOutletId = null;
+          _checkedInVisitId = null;
+          _checkInTimeAndDate = null;
+          notifyListeners();
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint("Error syncing check-in status from visits history: $e");
+    }
+
     final id = await SessionManager.getOutletCheckInOutletId();
     final savedTime = await SessionManager.getOutletCheckInTime();
     final visitId = await SessionManager.getOutletCheckInVisitId();
@@ -124,99 +197,6 @@ class OutletProvider extends ChangeNotifier {
       _checkedInVisitId = visitId;
       _checkInTimeAndDate = savedTime?.toIso8601String();
       notifyListeners();
-
-      try {
-        final history = await ApiServices.getOutletHistory(outletId: id);
-        if (history != null && (history['status'] == true || history['status'] == 'success' || history['visit_history'] != null)) {
-          final List visits = history['visit_history'] ?? [];
-          final activeVisit = visits.firstWhere(
-            (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
-            orElse: () => null,
-          );
-
-          if (activeVisit != null) {
-            final checkinTime = activeVisit['checkin_time']?.toString();
-            final vId = int.tryParse(activeVisit['visit_id']?.toString() ?? "") ?? 0;
-            final parsedTime = DateTime.tryParse(checkinTime ?? "");
-
-            await SessionManager.saveOutletCheckIn(
-              outletId: id,
-              visitId: vId,
-              checkInTime: parsedTime ?? DateTime.now(),
-            );
-
-            _checkedInOutletId = id;
-            _checkedInVisitId = vId;
-            _checkInTimeAndDate = checkinTime;
-            notifyListeners();
-            return;
-          }
-        }
-      } catch (e) {
-        debugPrint("Error verifying check-in with server: $e");
-      }
-
-      // If active visit was not found for this outlet, clear local check-in
-      await SessionManager.clearOutletCheckIn();
-      _checkedInOutletId = null;
-      _checkedInVisitId = null;
-      _checkInTimeAndDate = null;
-      notifyListeners();
-    }
-
-    final targetList = checkOutlets ?? (_nearbyOutlets.isNotEmpty ? _nearbyOutlets : _outlets);
-    if (targetList.isNotEmpty) {
-      try {
-        final futures = targetList.map((outlet) async {
-          final currentId = int.tryParse(outlet.id);
-          if (currentId == null) return null;
-          final history = await ApiServices.getOutletHistory(outletId: currentId);
-          if (history != null && (history['status'] == true || history['status'] == 'success' || history['visit_history'] != null)) {
-            final List visits = history['visit_history'] ?? [];
-            final activeVisit = visits.firstWhere(
-              (v) => v['checkout_time'] == null || v['checkout_time'].toString().isEmpty || v['checkout_time'] == 'N/A',
-              orElse: () => null,
-            );
-            if (activeVisit != null) {
-              return {
-                'outlet_id': currentId,
-                'visit_id': int.tryParse(activeVisit['visit_id']?.toString() ?? "") ?? 0,
-                'checkin_time': activeVisit['checkin_time']?.toString(),
-              };
-            }
-          }
-          return null;
-        }).toList();
-
-        final results = await Future.wait(futures);
-        final activeCheckIn = results.firstWhere((r) => r != null, orElse: () => null);
-
-        if (activeCheckIn != null) {
-          final outletId = activeCheckIn['outlet_id'] as int;
-          final vId = activeCheckIn['visit_id'] as int;
-          final checkinTimeStr = activeCheckIn['checkin_time'] as String?;
-          final checkInTime = DateTime.tryParse(checkinTimeStr ?? "");
-
-          await SessionManager.saveOutletCheckIn(
-            outletId: outletId,
-            visitId: vId,
-            checkInTime: checkInTime ?? DateTime.now(),
-          );
-
-          _checkedInOutletId = outletId;
-          _checkedInVisitId = vId;
-          _checkInTimeAndDate = checkinTimeStr;
-          notifyListeners();
-        } else {
-          await SessionManager.clearOutletCheckIn();
-          _checkedInOutletId = null;
-          _checkedInVisitId = null;
-          _checkInTimeAndDate = null;
-          notifyListeners();
-        }
-      } catch (e) {
-        debugPrint("Error checking server check-in status: $e");
-      }
     }
   }
 
