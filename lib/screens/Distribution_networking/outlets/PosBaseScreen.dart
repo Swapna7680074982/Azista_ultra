@@ -63,6 +63,33 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       return;
     }
 
+    // Immediately use preloaded history from OutletProvider (loaded on Outlets list screen)
+    final outletProvider = Provider.of<OutletProvider>(context, listen: false);
+    final cachedVisitsCount = outletProvider.getOutletVisitsCount(currentOutletId);
+    final cachedLastVisit = outletProvider.getOutletLastVisit(currentOutletId);
+    if (cachedVisitsCount > 0) {
+      _totalVisits = cachedVisitsCount;
+    }
+    if (cachedLastVisit != null) {
+      final dateStr = cachedLastVisit['visit_date'] ?? cachedLastVisit['checkin_time'];
+      final type = (cachedLastVisit['visit_type'] ?? 'INDIVIDUAL').toString().toUpperCase();
+      if (dateStr != null) {
+        try {
+          final dt = DateTime.parse(dateStr.toString()).toLocal();
+          _lastVisitText = "LAST VISIT: ${DateFormat('dd MMM yyyy').format(dt)} ($type)";
+        } catch (_) {
+          _lastVisitText = "LAST VISIT: $dateStr ($type)";
+        }
+      }
+    }
+    if (outletProvider.checkedInOutletId == currentOutletId) {
+      _isCheckedIn = true;
+      _visitId = outletProvider.checkedInVisitId;
+      _checkInTime = outletProvider.checkInTimeAndDate != null ? DateTime.tryParse(outletProvider.checkInTimeAndDate!) : null;
+      isLoadingCheckIn = false;
+      _buildTabViews();
+    }
+
     try {
       final history = await ApiServices.getOutletHistory(outletId: currentOutletId);
       if (history != null && (history['status'] == true || history['status'] == 'success' || history['visit_history'] != null)) {
@@ -602,18 +629,44 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        _checkInTime != null
-                            ? "Checked-in ($_visitType) at: ${DateFormatter.formatDateTime(_checkInTime!.toIso8601String())}"
-                            : "Checked-in ($_visitType)",
-                        style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13),
-                      ),
-                    ],
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "Checked-in ($_visitType)",
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              if (_checkInTime != null)
+                                Text(
+                                  DateFormatter.formatDateTime(_checkInTime!.toIso8601String()),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.green.shade800,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () {
                       showDialog(

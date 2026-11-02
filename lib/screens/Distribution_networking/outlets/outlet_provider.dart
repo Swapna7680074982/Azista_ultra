@@ -122,17 +122,14 @@ class OutletProvider extends ChangeNotifier {
   }
 
   Future<void> syncCheckInStatus({List<Outlet>? checkOutlets}) async {
+    Map<String, dynamic>? activeVisit;
+
     try {
       final todayStr = DateFormat("yyyy-MM-dd").format(DateTime.now());
       final response = await ApiServices.getOutletVisitsHistory(visitDate: todayStr);
 
       if (response != null && (response['status'] == true || response['status'] == 'success')) {
         final List visits = response['visits'] as List? ?? [];
-
-        _outletVisitsCount.clear();
-        _outletLastVisit.clear();
-
-        Map<String, dynamic>? activeVisit;
 
         for (var v in visits) {
           if (v is Map) {
@@ -155,48 +152,101 @@ class OutletProvider extends ChangeNotifier {
             }
           }
         }
-
-        if (activeVisit != null) {
-          final outletId = int.tryParse(activeVisit['outlet_id']?.toString() ?? '') ?? 0;
-          final visitId = int.tryParse(activeVisit['visit_id']?.toString() ?? '') ?? 0;
-          final checkinTime = activeVisit['checkin_time']?.toString() ?? '';
-          final visitType = activeVisit['visit_type']?.toString();
-          final parsedTime = DateTime.tryParse(checkinTime);
-
-          await SessionManager.saveOutletCheckIn(
-            outletId: outletId,
-            visitId: visitId,
-            checkInTime: parsedTime ?? DateTime.now(),
-            visitType: visitType,
-          );
-
-          _checkedInOutletId = outletId;
-          _checkedInVisitId = visitId;
-          _checkInTimeAndDate = checkinTime;
-          notifyListeners();
-          return;
-        } else {
-          await SessionManager.clearOutletCheckIn();
-          _checkedInOutletId = null;
-          _checkedInVisitId = null;
-          _checkInTimeAndDate = null;
-          notifyListeners();
-          return;
-        }
       }
     } catch (e) {
       debugPrint("Error syncing check-in status from visits history: $e");
     }
 
-    final id = await SessionManager.getOutletCheckInOutletId();
-    final savedTime = await SessionManager.getOutletCheckInTime();
-    final visitId = await SessionManager.getOutletCheckInVisitId();
+    // Call getOutletHistory for all outlets in the list at any cost
+    final List<Outlet> outletsToProcess;
+    if (checkOutlets != null && checkOutlets.isNotEmpty) {
+      outletsToProcess = checkOutlets;
+    } else {
+      final seenIds = <String>{};
+      outletsToProcess = [];
+      for (var o in [..._outlets, ..._nearbyOutlets]) {
+        if (seenIds.add(o.id)) {
+          outletsToProcess.add(o);
+        }
+      }
+    }
 
-    if (id != null) {
-      _checkedInOutletId = id;
+    if (outletsToProcess.isNotEmpty) {
+      try {
+        await Future.wait(
+          outletsToProcess.map((outlet) async {
+            final outletId = int.tryParse(outlet.id);
+            if (outletId == null) return;
+            try {
+              final hist = await ApiServices.getOutletHistory(outletId: outletId);
+              if (hist != null && (hist['status'] == true || hist['status'] == 'success' || hist['visit_history'] != null)) {
+                final List histVisits = hist['visit_history'] as List? ?? [];
+                _outletVisitsCount[outletId] = histVisits.length;
+                if (histVisits.isNotEmpty) {
+                  _outletLastVisit[outletId] = Map<String, dynamic>.from(histVisits.first);
+                }
+
+                final active = histVisits.firstWhere(
+                  (v) {
+                    final co = v['checkout_time']?.toString().trim();
+                    return co == null || co.isEmpty || co == 'null' || co == 'N/A' || co == '-';
+                  },
+                  orElse: () => null,
+                );
+
+                if (active != null) {
+                  final activeMap = Map<String, dynamic>.from(active);
+                  activeMap['outlet_id'] = outletId;
+                  activeVisit = activeMap;
+                }
+              }
+            } catch (e) {
+              debugPrint("Error fetching outlet history for $outletId: $e");
+            }
+          }),
+        );
+      } catch (e) {
+        debugPrint("Error in concurrent outlet history fetch: $e");
+      }
+    }
+
+    if (activeVisit != null) {
+      final outletId = int.tryParse(activeVisit!['outlet_id']?.toString() ?? '') ?? 0;
+      final visitId = int.tryParse(activeVisit!['visit_id']?.toString() ?? '') ?? 0;
+      final checkinTime = activeVisit!['checkin_time']?.toString() ?? '';
+      final visitType = activeVisit!['visit_type']?.toString();
+      final parsedTime = DateTime.tryParse(checkinTime);
+
+      await SessionManager.saveOutletCheckIn(
+        outletId: outletId,
+        visitId: visitId,
+        checkInTime: parsedTime ?? DateTime.now(),
+        visitType: visitType,
+      );
+
+      _checkedInOutletId = outletId;
       _checkedInVisitId = visitId;
-      _checkInTimeAndDate = savedTime?.toIso8601String();
+      _checkInTimeAndDate = checkinTime;
       notifyListeners();
+      return;
+    } else {
+      final localOutletId = await SessionManager.getOutletCheckInOutletId();
+      final localVisitId = await SessionManager.getOutletCheckInVisitId();
+      final localTime = await SessionManager.getOutletCheckInTime();
+      if (localOutletId != null && localVisitId != null) {
+        _checkedInOutletId = localOutletId;
+        _checkedInVisitId = localVisitId;
+        _checkInTimeAndDate = localTime?.toIso8601String();
+        notifyListeners();
+        return;
+      }
+
+      await SessionManager.clearOutletCheckIn();
+      _checkedInOutletId = null;
+      _checkedInVisitId = null;
+      _checkInTimeAndDate = null;
+      notifyListeners();
+      return;
     }
   }
 

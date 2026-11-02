@@ -9,6 +9,7 @@ import '../Distribution_networking/outlets/PosBaseScreen.dart';
 import '../../services/directions_map_screen.dart';
 import '../../utilities/wavy_app_bar.dart';
 import '../../utilities/date_formatter.dart';
+import 'package:intl/intl.dart';
 
 class NearMeScreen extends StatefulWidget {
   const NearMeScreen({super.key});
@@ -33,8 +34,24 @@ class _NearMeScreenState extends State<NearMeScreen> {
 
   Widget outletCard(Outlet outlet, BuildContext context) {
     final provider = context.watch<OutletProvider>();
-    final isCheckedIn = provider.checkedInOutletId != null && provider.checkedInOutletId == int.tryParse(outlet.id);
+    final outletIdNum = int.tryParse(outlet.id) ?? 0;
+    final isCheckedIn = provider.checkedInOutletId != null && provider.checkedInOutletId == outletIdNum;
     final checkInTimeAndDate = provider.checkInTimeAndDate;
+
+    final lastV = provider.getOutletLastVisit(outletIdNum);
+    String? lastVisitDisplay;
+    if (lastV != null) {
+      final dStr = lastV['visit_date'] ?? lastV['checkin_time'];
+      final tStr = (lastV['visit_type'] ?? 'INDIVIDUAL').toString().toUpperCase();
+      if (dStr != null) {
+        try {
+          final dt = DateTime.parse(dStr.toString()).toLocal();
+          lastVisitDisplay = "LAST VISIT: ${DateFormat('dd MMM yyyy').format(dt)} ($tStr)";
+        } catch (_) {
+          lastVisitDisplay = "LAST VISIT: $dStr ($tStr)";
+        }
+      }
+    }
 
     return InkWell(
         onTap: () async {
@@ -138,6 +155,22 @@ class _NearMeScreenState extends State<NearMeScreen> {
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
+                ),
+              ] else if (lastVisitDisplay != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.history, size: 16, color: Color(0xFF1976D2)),
+                    const SizedBox(width: 4),
+                    Text(
+                      lastVisitDisplay,
+                      style: const TextStyle(
+                        color: Color(0xFF1976D2),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ],
 

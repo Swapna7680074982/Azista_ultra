@@ -198,8 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _buildSyncCard(),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
@@ -857,6 +856,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            _buildSyncCard(),
+            const SizedBox(height: 24),
           ],
         ),
       ),
