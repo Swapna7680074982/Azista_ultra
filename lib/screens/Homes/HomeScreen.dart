@@ -1042,18 +1042,18 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: (hasPending ? Colors.orange : AppColors.primary).withValues(alpha: 0.12),
+                  color: (hasPending ? Colors.orange : AppColors.button).withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: _isSyncing
                     ? const SizedBox(
                         width: 22,
                         height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primary),
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.button),
                       )
                     : Icon(
                         hasPending ? Icons.sync_problem : Icons.cloud_sync,
-                        color: hasPending ? Colors.deepOrange : AppColors.primary,
+                        color: hasPending ? Colors.deepOrange : AppColors.button,
                         size: 24,
                       ),
               ),
@@ -1119,7 +1119,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 38,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: AppColors.button,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       elevation: 0,
                     ),
