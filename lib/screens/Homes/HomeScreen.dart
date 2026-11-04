@@ -868,8 +868,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ),
             const SizedBox(height: 16),
-            _buildSyncCard(),
-            const SizedBox(height: 24),
           ],
         ),
       ),
