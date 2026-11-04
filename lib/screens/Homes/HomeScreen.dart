@@ -26,11 +26,12 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   MainTabProvider? _tabProvider;
   String _selectedSummaryType = "Monthly";
   int _pendingOfflineCount = 0;
   bool _isSyncing = false;
+  late AnimationController _syncAnimController;
 
   void _onTabChanged() {
     if (_tabProvider?.currentIndex == 0) {
@@ -71,6 +72,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _syncAnimController = AnimationController(
+      duration: const Duration(milliseconds: 900),
+      vsync: this,
+    );
 
     Future.microtask(() async {
       if (!mounted) return;
@@ -108,6 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _tabProvider?.removeListener(_onTabChanged);
+    _syncAnimController.dispose();
     super.dispose();
   }
 
@@ -439,6 +445,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+
+            const SizedBox(height: 20),
+
+            // Server Data Sync Section
+            _buildSyncCard(),
 
             const SizedBox(height: 20),
 
@@ -1015,189 +1026,358 @@ class _HomeScreenState extends State<HomeScreen> {
     final hasPending = _pendingOfflineCount > 0;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: hasPending ? Colors.orange.shade300 : Colors.grey.shade200,
-          width: 1.2,
+          color: hasPending ? Colors.amber.shade400 : Colors.grey.shade200,
+          width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: hasPending 
-                ? Colors.orange.withValues(alpha: 0.1) 
-                : AppColors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            color: hasPending
+                ? Colors.amber.withValues(alpha: 0.12)
+                : AppColors.black.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: (hasPending ? Colors.orange : AppColors.button).withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: _isSyncing
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.button),
-                      )
-                    : Icon(
-                        hasPending ? Icons.sync_problem : Icons.cloud_sync,
-                        color: hasPending ? Colors.deepOrange : AppColors.button,
-                        size: 24,
-                      ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          "Server Data Sync",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.black,
-                          ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          children: [
+            // Header Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              color: Colors.grey.shade50,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: hasPending ? Colors.deepOrange : AppColors.primary,
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: hasPending ? Colors.orange.shade50 : Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: hasPending ? Colors.orange.shade300 : Colors.green.shade300,
-                              width: 0.8,
-                            ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        "ONLINE SYNC",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.black,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _isSyncing
+                          ? AppColors.primary.withValues(alpha: 0.1)
+                          : hasPending
+                              ? Colors.amber.shade50
+                              : Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _isSyncing
+                            ? AppColors.primary.withValues(alpha: 0.3)
+                            : hasPending
+                                ? Colors.amber.shade400
+                                : Colors.green.shade300,
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_isSyncing) ...[
+                          const SizedBox(
+                            width: 10,
+                            height: 10,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                           ),
-                          child: Text(
-                            hasPending
-                                ? "$_pendingOfflineCount PENDING"
-                                : "IN SYNC",
+                          const SizedBox(width: 6),
+                          const Text(
+                            "SAVING...",
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: hasPending ? Colors.deepOrange : Colors.green.shade700,
+                              color: AppColors.primary,
                             ),
+                          ),
+                        ] else if (hasPending) ...[
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: const BoxDecoration(
+                              color: Colors.deepOrange,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            "$_pendingOfflineCount NOT SAVED",
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.deepOrange,
+                            ),
+                          ),
+                        ] else ...[
+                          const Icon(Icons.check_circle_rounded, size: 12, color: Colors.green),
+                          const SizedBox(width: 4),
+                          Text(
+                            "ALL SAVED",
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green.shade700,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+
+            // Card Body
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // Status Info Container
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: hasPending
+                            ? [
+                                const Color(0xFFFFF8E1),
+                                const Color(0xFFFFF3E0),
+                              ]
+                            : [
+                                const Color(0xFFE8F5E9),
+                                const Color(0xFFF1F8E9),
+                              ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: hasPending ? Colors.amber.shade300 : Colors.green.shade200,
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: _isSyncing
+                                  ? [AppColors.primary, AppColors.button]
+                                  : hasPending
+                                      ? [Colors.orange.shade700, Colors.deepOrange.shade600]
+                                      : [Colors.green.shade600, Colors.teal.shade700],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: (hasPending ? Colors.deepOrange : Colors.green).withValues(alpha: 0.25),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: _isSyncing
+                                ? RotationTransition(
+                                    turns: _syncAnimController,
+                                    child: const Icon(Icons.sync, color: Colors.white, size: 22),
+                                  )
+                                : Icon(
+                                    hasPending ? Icons.cloud_upload_outlined : Icons.cloud_done_rounded,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _isSyncing
+                                    ? "Saving your entries online..."
+                                    : hasPending
+                                        ? "$_pendingOfflineCount entries not yet saved online"
+                                        : "All your data is saved",
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                _isSyncing
+                                    ? "Please keep the app open while saving..."
+                                    : hasPending
+                                        ? "You have orders or visits on this phone. Tap Sync Now to save."
+                                        : "Your orders and visits are safely saved online.",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade700,
+                                  height: 1.25,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      hasPending
-                          ? "Please click sync option to get sync with server ($_pendingOfflineCount offline records pending)"
-                          : "Please click sync option to get sync with server",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 38,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.button,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      elevation: 0,
-                    ),
-                    onPressed: _isSyncing
-                        ? null
-                        : () async {
-                            setState(() => _isSyncing = true);
-                            try {
-                              await OfflineSyncService.syncAll(context: context);
-                              await _refreshData();
-                              await _checkPendingOffline();
-                            } finally {
-                              if (mounted) setState(() => _isSyncing = false);
-                            }
-                          },
-                    icon: _isSyncing
-                        ? const SizedBox.shrink()
-                        : const Icon(Icons.sync, color: Colors.white, size: 18),
-                    label: Text(
-                      _isSyncing ? "Syncing with server..." : "SYNC WITH SERVER",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
                   ),
-                ),
-              ),
-              if (hasPending) ...[
-                const SizedBox(width: 8),
-                SizedBox(
-                  height: 38,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.grey.shade400),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text("Clear Pending Records?"),
-                          content: Text(
-                            "Are you sure you want to discard $_pendingOfflineCount offline records that cannot be uploaded to the server?",
+
+                  const SizedBox(height: 14),
+
+                  // Actions
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 42,
+                          decoration: BoxDecoration(
+                            gradient: _isSyncing
+                                ? LinearGradient(colors: [Colors.grey.shade400, Colors.grey.shade400])
+                                : const LinearGradient(
+                                    colors: [AppColors.primary, AppColors.button],
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                  ),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: _isSyncing
+                                ? []
+                                : [
+                                    BoxShadow(
+                                      color: AppColors.primary.withValues(alpha: 0.3),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                           ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text("CANCEL"),
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
                             ),
-                            TextButton(
-                              onPressed: () async {
-                                Navigator.pop(ctx);
-                                await OfflineSyncService.clearAllPending();
-                                await _checkPendingOffline();
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text("Pending offline records cleared.")),
-                                  );
-                                }
-                              },
-                              child: const Text("CLEAR", style: TextStyle(color: Colors.red)),
+                            onPressed: _isSyncing
+                                ? null
+                                : () async {
+                                    setState(() => _isSyncing = true);
+                                    _syncAnimController.repeat();
+                                    try {
+                                      await OfflineSyncService.syncAll(context: context);
+                                      await _refreshData();
+                                      await _checkPendingOffline();
+                                    } finally {
+                                      if (mounted) {
+                                        _syncAnimController.stop();
+                                        _syncAnimController.reset();
+                                        setState(() => _isSyncing = false);
+                                      }
+                                    }
+                                  },
+                            icon: _isSyncing
+                                ? RotationTransition(
+                                    turns: _syncAnimController,
+                                    child: const Icon(Icons.sync, color: Colors.white, size: 18),
+                                  )
+                                : const Icon(Icons.cloud_sync_outlined, color: Colors.white, size: 18),
+                            label: Text(
+                              _isSyncing ? "SAVING..." : "SYNC NOW",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                letterSpacing: 0.5,
+                              ),
                             ),
-                          ],
+                          ),
                         ),
-                      );
-                    },
-                    child: const Text(
-                      "CLEAR",
-                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
-                    ),
+                      ),
+                      if (hasPending) ...[
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          height: 42,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: Colors.red.shade50.withValues(alpha: 0.5),
+                              side: BorderSide(color: Colors.red.shade200),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                            ),
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text("Remove Unsaved Records?"),
+                                  content: Text(
+                                    "Are you sure you want to remove the $_pendingOfflineCount records that could not be saved online?",
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx),
+                                      child: const Text("CANCEL"),
+                                    ),
+                                    TextButton(
+                                      onPressed: () async {
+                                        Navigator.pop(ctx);
+                                        await OfflineSyncService.clearAllPending();
+                                        await _checkPendingOffline();
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text("Unsaved records removed.")),
+                                          );
+                                        }
+                                      },
+                                      child: const Text("REMOVE", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 16),
+                            label: const Text(
+                              "REMOVE",
+                              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ),
-              ],
-            ],
-          ),
-        ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

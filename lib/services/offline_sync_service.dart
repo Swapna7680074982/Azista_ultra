@@ -210,15 +210,15 @@ class OfflineSyncService {
       final totalSynced = syncedPobs + syncedPos;
       String message;
       if (totalSynced > 0 && failedCount == 0) {
-        message = "Sync successful! $totalSynced offline records uploaded.";
+        message = "Saved successfully! $totalSynced records uploaded.";
       } else if (totalSynced > 0 && failedCount > 0) {
-        message = "Synced $totalSynced records. $failedCount records pending: ${lastErrorMsg ?? 'check network'}.";
+        message = "Saved $totalSynced records. $failedCount records could not be saved, please check internet.";
       } else if (failedCount > 0) {
         message = lastErrorMsg != null 
-            ? "Sync failed: $lastErrorMsg"
-            : "Sync failed for $failedCount records. Please check connection.";
+            ? "Could not save: $lastErrorMsg"
+            : "Could not save $failedCount records. Please check your internet connection.";
       } else {
-        message = "All data is already in sync with server.";
+        message = "Everything is already saved.";
       }
 
       if (context != null && context.mounted) {
@@ -228,13 +228,13 @@ class OfflineSyncService {
             duration: const Duration(seconds: 4),
             action: failedCount > 0 
                 ? SnackBarAction(
-                    label: "DISCARD",
+                    label: "REMOVE",
                     textColor: Colors.yellowAccent,
                     onPressed: () async {
                       await clearAllPending();
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Pending records cleared.")),
+                          const SnackBar(content: Text("Unsaved records removed.")),
                         );
                       }
                     },

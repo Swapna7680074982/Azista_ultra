@@ -29,7 +29,7 @@ class _DailyTabState extends State<DailyTab> {
   Widget build(BuildContext context) {
     return Consumer<ProductivityProvider>(
       builder: (context, provider, child) {
-        return provider.isLoading
+        return provider.isDailyLoading
             ? const Center(child: CircularProgressIndicator())
             : Padding(
           padding: const EdgeInsets.all(16.0),
