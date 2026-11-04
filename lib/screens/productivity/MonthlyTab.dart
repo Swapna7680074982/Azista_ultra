@@ -103,9 +103,9 @@ class _MonthlyTabState extends State<MonthlyTab> {
               _buildMonthFilter(),
               const SizedBox(height: 12),
 
-              // Monthly Summary Metrics Card
-              _buildSummaryHeader(totalTargetCalls, totalProductiveCalls, totalSales),
-              const SizedBox(height: 14),
+              // // Monthly Summary Metrics Card
+              // _buildSummaryHeader(totalTargetCalls, totalProductiveCalls, totalSales),
+              // const SizedBox(height: 14),
 
               // Attendance Legend
               Container(
