@@ -56,18 +56,6 @@ class DailyActivitiesScreen extends StatelessWidget {
                 ),
               ),
 
-              // Legend
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildLegend(Icons.flag, Colors.green, "Attendance"),
-                    _buildLegend(Icons.flag, Colors.red, "No Attendance"),
-                  ],
-                ),
-              ),
-
               // Activities List
               Expanded(
                 child: ListView.builder(
@@ -103,12 +91,6 @@ class DailyActivitiesScreen extends StatelessWidget {
                                 Text(
                                   activity["date"],
                                   style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(width: 5),
-                                Icon(
-                                  Icons.flag,
-                                  color: activity["hasAttendance"] ? Colors.green : Colors.red,
-                                  size: 18,
                                 ),
                                 const Spacer(),
                                 Text(
@@ -155,16 +137,6 @@ class DailyActivitiesScreen extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-
-  Widget _buildLegend(IconData icon, Color color, String label) {
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(width: 5),
-        Text(label, style: const TextStyle(fontSize: 12)),
-      ],
     );
   }
 }

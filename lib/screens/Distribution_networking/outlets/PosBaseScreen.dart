@@ -179,11 +179,11 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
         widget.outlet.longitude,
       );
 
-      if (distance > 50) {
+      if (distance > 250) {
         if (mounted) {
           setState(() {
             isLocationValid = false;
-            locationError = "You are ${distance.toStringAsFixed(0)} meters away from the outlet. You must be within 50 meters to access POB.";
+            locationError = "You are ${distance.toStringAsFixed(0)} meters away from the outlet. You must be within 250 meters to access POB.";
             _buildTabViews();
           });
         }
@@ -228,41 +228,35 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       barrierDismissible: true,
       builder: (BuildContext ctx) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          elevation: 8,
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          elevation: 6,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.location_on,
+                    Icons.location_on_rounded,
                     color: AppColors.primary,
-                    size: 32,
+                    size: 26,
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 const Text(
                   "Select Visit Type",
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 17,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.black,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  "Please choose visit type to proceed with check-in at ${widget.outlet.name}",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey.shade600,
+                    color: Colors.black87,
+                    letterSpacing: 0.3,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -271,47 +265,36 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                   onTap: () => Navigator.pop(ctx, "INDIVIDUAL"),
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    padding: const EdgeInsets.all(14),
+                    height: 54,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade50.withValues(alpha: 0.7),
+                      color: const Color(0xFFF0F7FF),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue.shade300, width: 1.5),
+                      border: Border.all(color: const Color(0xFFC8E0FF), width: 1.2),
                     ),
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade100,
+                          width: 34,
+                          height: 34,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFD6E8FF),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.person, color: Colors.blue, size: 24),
+                          child: const Icon(Icons.person, color: Color(0xFF1E88E5), size: 20),
                         ),
                         const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Individual Visit",
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                "Solo visit to outlet",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
+                        const Expanded(
+                          child: Text(
+                            "Individual Visit",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.blue),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 15, color: Color(0xFF1E88E5)),
                       ],
                     ),
                   ),
@@ -322,47 +305,36 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                   onTap: () => Navigator.pop(ctx, "COMBINE"),
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    padding: const EdgeInsets.all(14),
+                    height: 54,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
-                      color: Colors.deepOrange.shade50.withValues(alpha: 0.7),
+                      color: const Color(0xFFFFF6ED),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.deepOrange.shade300, width: 1.5),
+                      border: Border.all(color: const Color(0xFFFFDEC0), width: 1.2),
                     ),
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.deepOrange.shade100,
+                          width: 34,
+                          height: 34,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFFE8D1),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.groups, color: Colors.deepOrange, size: 24),
+                          child: const Icon(Icons.groups_rounded, color: Color(0xFFE65100), size: 20),
                         ),
                         const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Combine Visit",
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                "Joint visit with Area Manager / Team",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
+                        const Expanded(
+                          child: Text(
+                            "Combine Visit",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.deepOrange),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 15, color: Color(0xFFE65100)),
                       ],
                     ),
                   ),
@@ -983,9 +955,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => VisitsScreen(
-                              initialOutletId: int.tryParse(widget.outlet.id),
-                            ),
+                            builder: (_) => const VisitsScreen(),
                           ),
                         );
                       },

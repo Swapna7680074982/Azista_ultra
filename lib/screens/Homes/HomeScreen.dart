@@ -1156,7 +1156,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 children: [
                   // Status Info Container
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: hasPending
@@ -1180,8 +1180,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     child: Row(
                       children: [
                         Container(
-                          width: 44,
-                          height: 44,
+                          width: 38,
+                          height: 38,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: _isSyncing
@@ -1195,8 +1195,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: (hasPending ? Colors.deepOrange : Colors.green).withValues(alpha: 0.25),
-                                blurRadius: 6,
+                                color: (hasPending ? Colors.deepOrange : Colors.green).withValues(alpha: 0.2),
+                                blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),
                             ],
@@ -1205,46 +1205,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             child: _isSyncing
                                 ? RotationTransition(
                                     turns: _syncAnimController,
-                                    child: const Icon(Icons.sync, color: Colors.white, size: 22),
+                                    child: const Icon(Icons.sync, color: Colors.white, size: 20),
                                   )
                                 : Icon(
                                     hasPending ? Icons.cloud_upload_outlined : Icons.cloud_done_rounded,
                                     color: Colors.white,
-                                    size: 22,
+                                    size: 20,
                                   ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _isSyncing
-                                    ? "Saving your entries online..."
-                                    : hasPending
-                                        ? "$_pendingOfflineCount entries not yet saved online"
-                                        : "All your data is saved",
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                _isSyncing
-                                    ? "Please keep the app open while saving..."
-                                    : hasPending
-                                        ? "You have orders or visits on this phone. Tap Sync Now to save."
-                                        : "Your orders and visits are safely saved online.",
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey.shade700,
-                                  height: 1.25,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            _isSyncing
+                                ? "Saving your entries online..."
+                                : hasPending
+                                    ? "$_pendingOfflineCount entries not yet saved online"
+                                    : "All your data is saved",
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
                           ),
                         ),
                       ],

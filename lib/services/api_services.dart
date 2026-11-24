@@ -651,7 +651,11 @@ class ApiServices {
   }
 
   static Future<Map<String, dynamic>?> getOutletVisitsHistory({
-    required String visitDate,
+    String? visitDate,
+    int? month,
+    int? year,
+    String? fromDate,
+    String? toDate,
   }) async {
     try {
       final token = await SessionManager.getToken();
@@ -660,9 +664,12 @@ class ApiServices {
         return null;
       }
 
-      final payload = {
-        "visit_date": visitDate,
-      };
+      final payload = <String, dynamic>{};
+      if (visitDate != null) payload["visit_date"] = visitDate;
+      if (month != null) payload["month"] = month;
+      if (year != null) payload["year"] = year;
+      if (fromDate != null) payload["from_date"] = fromDate;
+      if (toDate != null) payload["to_date"] = toDate;
 
       AppLogger.info("Outlet Visits History API called: ${AppUrls.outletVisitsHistory}");
       AppLogger.info("Payload: ${jsonEncode(payload)}");

@@ -107,52 +107,7 @@ class _MonthlyTabState extends State<MonthlyTab> {
               // _buildSummaryHeader(totalTargetCalls, totalProductiveCalls, totalSales),
               // const SizedBox(height: 14),
 
-              // Attendance Legend
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Row(
-                      children: const [
-                        Icon(Icons.flag, color: Colors.green, size: 18),
-                        SizedBox(width: 6),
-                        Text(
-                          "ATTENDANCE",
-                          style: TextStyle(
-                            color: Colors.black87,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(width: 1, height: 16, color: Colors.grey.shade300),
-                    Row(
-                      children: [
-                        Icon(Icons.flag, color: AppColors.primary, size: 18),
-                        const SizedBox(width: 6),
-                        const Text(
-                          "NO ATTENDANCE",
-                          style: TextStyle(
-                            color: Colors.black87,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
+
 
               // List of monthly productivity entries
               Expanded(
@@ -179,7 +134,6 @@ class _MonthlyTabState extends State<MonthlyTab> {
                         itemCount: monthlyList.length,
                         itemBuilder: (context, index) {
                           final data = monthlyList[index];
-                          final isAttended = data["attendance"] == true;
 
                           return Card(
                             color: Colors.white,
@@ -258,23 +212,13 @@ class _MonthlyTabState extends State<MonthlyTab> {
                                             ),
                                           ),
                                           const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              Text(
-                                                DateFormatter.formatDateOnly(data["date"]),
-                                                style: const TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.black87,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 6),
-                                              Icon(
-                                                Icons.flag,
-                                                color: isAttended ? Colors.green : AppColors.primary,
-                                                size: 18,
-                                              ),
-                                            ],
+                                          Text(
+                                            DateFormatter.formatDateOnly(data["date"]),
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.black87,
+                                            ),
                                           ),
                                         ],
                                       ),

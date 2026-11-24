@@ -19,7 +19,23 @@ class VisitsScreen extends StatefulWidget {
 }
 
 class _VisitsScreenState extends State<VisitsScreen> {
-  late DateTime _selectedDate;
+  static const List<String> _months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  late int _selectedMonth;
+  late int _selectedYear;
   bool _isLoading = true;
   List<dynamic> _visits = [];
   String _searchQuery = "";
@@ -28,11 +44,9 @@ class _VisitsScreenState extends State<VisitsScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedDate = widget.initialDate ?? DateTime.now();
-    if (widget.initialOutletId != null) {
-      _searchController.text = widget.initialOutletId.toString();
-      _searchQuery = widget.initialOutletId.toString();
-    }
+    final initial = widget.initialDate ?? DateTime.now();
+    _selectedMonth = initial.month;
+    _selectedYear = initial.year;
     _fetchVisits();
   }
 
@@ -48,11 +62,32 @@ class _VisitsScreenState extends State<VisitsScreen> {
     });
 
     try {
-      final dateStr = DateFormat("yyyy-MM-dd").format(_selectedDate);
-      final response = await ApiServices.getOutletVisitsHistory(visitDate: dateStr);
-      if (response != null && (response['status'] == true || response['status'] == 'success')) {
+      final lastDay = DateTime(_selectedYear, _selectedMonth + 1, 0).day;
+      final monthStr = _selectedMonth.toString().padLeft(2, '0');
+      final fromDateStr = "$_selectedYear-$monthStr-01";
+      final toDateStr = "$_selectedYear-$monthStr-$lastDay";
+      final monthYearStr = "$_selectedYear-$monthStr";
+
+      final response = await ApiServices.getOutletVisitsHistory(
+        month: _selectedMonth,
+        year: _selectedYear,
+        fromDate: fromDateStr,
+        toDate: toDateStr,
+        visitDate: monthYearStr,
+      );
+
+      if (response != null &&
+          (response['status'] == true ||
+              response['status'] == 'success' ||
+              response['visits'] != null ||
+              response['data'] != null ||
+              response['visit_history'] != null)) {
+        final list = response['visits'] ??
+            response['data'] ??
+            response['visit_history'] ??
+            [];
         setState(() {
-          _visits = response['visits'] as List<dynamic>? ?? [];
+          _visits = list is List ? List<dynamic>.from(list) : [];
         });
       } else {
         setState(() {
@@ -73,19 +108,26 @@ class _VisitsScreenState extends State<VisitsScreen> {
     }
   }
 
-  String _formatDateHeader(DateTime date) {
-    final now = DateTime.now();
-    final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
-    final formatted = DateFormat("dd MMM yyyy").format(date).toUpperCase();
-    if (isToday) {
-      return "TODAY, $formatted";
+  bool _isCombinedVisit(Map<String, dynamic> visit) {
+    final rawType = (visit['visit_type'] ?? visit['type'] ?? visit['visitType'] ?? '').toString().trim().toUpperCase();
+    if (rawType.contains('COMBIN') ||
+        rawType.contains('JOINT') ||
+        rawType.contains('TEAM') ||
+        rawType == '2') {
+      return true;
     }
-    final yesterday = now.subtract(const Duration(days: 1));
-    final isYesterday = date.year == yesterday.year && date.month == yesterday.month && date.day == yesterday.day;
-    if (isYesterday) {
-      return "YESTERDAY, $formatted";
+    if (visit['is_combined'] == true ||
+        visit['is_combined'] == 1 ||
+        visit['is_combined'] == '1' ||
+        visit['is_combined'] == 'true' ||
+        visit['is_combine'] == true ||
+        visit['is_combine'] == 1 ||
+        visit['is_combine'] == '1' ||
+        visit['is_combine'] == 'true' ||
+        visit['is_joint'] == true) {
+      return true;
     }
-    return formatted;
+    return false;
   }
 
   String _formatTime(String? dateTimeStr) {
@@ -103,14 +145,21 @@ class _VisitsScreenState extends State<VisitsScreen> {
   List<dynamic> get _filteredVisits {
     if (_searchQuery.isEmpty) return _visits;
     return _visits.where((v) {
-      final name = (v['outlet_name'] ?? '').toString().toLowerCase();
-      final id = (v['outlet_id'] ?? '').toString().toLowerCase();
-      final user = (v['fullname'] ?? '').toString().toLowerCase();
-      final visitType = (v['visit_type'] ?? '').toString().toLowerCase();
+      if (v is! Map) return false;
+      final vMap = Map<String, dynamic>.from(v);
+      final name = (vMap['outlet_name'] ?? '').toString().toLowerCase();
+      final id = (vMap['outlet_id'] ?? '').toString().toLowerCase();
+      final user = (vMap['fullname'] ?? vMap['user_name'] ?? '').toString().toLowerCase();
+      final rawType = (vMap['visit_type'] ?? vMap['type'] ?? '').toString().toLowerCase();
+      final date = (vMap['visit_date'] ?? vMap['checkin_time'] ?? '').toString().toLowerCase();
+      final isComb = _isCombinedVisit(vMap);
       return name.contains(_searchQuery) ||
           id.contains(_searchQuery) ||
           user.contains(_searchQuery) ||
-          visitType.contains(_searchQuery);
+          rawType.contains(_searchQuery) ||
+          date.contains(_searchQuery) ||
+          (isComb && "combined".contains(_searchQuery)) ||
+          (!isComb && "single".contains(_searchQuery));
     }).toList();
   }
 
@@ -133,86 +182,116 @@ class _VisitsScreenState extends State<VisitsScreen> {
       ),
       body: Column(
         children: [
-          // Visit Date Selector Card
+          // Month Selector Card
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _selectedDate,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now().add(const Duration(days: 365)),
-                );
-                if (picked != null && picked != _selectedDate) {
-                  setState(() {
-                    _selectedDate = picked;
-                  });
-                  _fetchVisits();
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEE),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEBEE),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.calendar_month,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
+                    child: const Icon(
+                      Icons.calendar_month,
+                      color: AppColors.primary,
+                      size: 20,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "VISIT DATE",
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey.shade500,
-                              letterSpacing: 0.5,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: _selectedMonth,
+                        isExpanded: true,
+                        icon: const Icon(Icons.arrow_drop_down, color: AppColors.primary),
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        items: List.generate(
+                          12,
+                          (index) => DropdownMenuItem(
+                            value: index + 1,
+                            child: Text(
+                              "${_months[index].toUpperCase()} $_selectedYear",
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _formatDateHeader(_selectedDate),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
+                        ),
+                        onChanged: (val) {
+                          if (val != null && val != _selectedMonth) {
+                            setState(() {
+                              _selectedMonth = val;
+                            });
+                            _fetchVisits();
+                          }
+                        },
                       ),
                     ),
-                    Icon(
-                      Icons.arrow_drop_down,
-                      color: Colors.grey.shade700,
-                      size: 26,
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _selectedYear--;
+                          });
+                          _fetchVisits();
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(Icons.chevron_left, size: 20, color: AppColors.primary),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _selectedYear++;
+                          });
+                          _fetchVisits();
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(Icons.chevron_right, size: 20, color: AppColors.primary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -238,12 +317,23 @@ class _VisitsScreenState extends State<VisitsScreen> {
                         });
                       },
                       style: const TextStyle(fontSize: 13),
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.search, color: Colors.grey, size: 20),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
                         hintText: "Search visits by outlet name or ID...",
-                        hintStyle: TextStyle(color: Colors.grey, fontSize: 13),
+                        hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchQuery = "";
+                                  });
+                                },
+                              )
+                            : null,
                       ),
                     ),
                   ),
@@ -286,7 +376,7 @@ class _VisitsScreenState extends State<VisitsScreen> {
                             Icon(Icons.history_toggle_off, size: 54, color: Colors.grey.shade400),
                             const SizedBox(height: 10),
                             Text(
-                              "No visits recorded for ${_formatDateHeader(_selectedDate)}",
+                              "No visits recorded for ${_months[_selectedMonth - 1]} $_selectedYear",
                               style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                             ),
                           ],
@@ -299,10 +389,11 @@ class _VisitsScreenState extends State<VisitsScreen> {
                           padding: const EdgeInsets.only(bottom: 24),
                           itemCount: filtered.length,
                           itemBuilder: (context, index) {
-                            final visit = filtered[index];
+                            final visit = filtered[index] is Map ? Map<String, dynamic>.from(filtered[index]) : <String, dynamic>{};
                             final outletName = (visit['outlet_name'] ?? 'UNKNOWN OUTLET').toString().toUpperCase();
                             final outletId = visit['outlet_id']?.toString() ?? '-';
-                            final visitType = (visit['visit_type'] ?? 'INDIVIDUAL').toString().toUpperCase();
+                            final isCombined = _isCombinedVisit(visit);
+                            final displayVisitType = isCombined ? "COMBINED" : "SINGLE";
                             final outletCategory = (visit['outlet_category'] ?? visit['category_name'] ?? 'OUTLET').toString().toUpperCase();
 
                             final checkinTime = _formatTime(visit['checkin_time']?.toString());
@@ -324,7 +415,7 @@ class _VisitsScreenState extends State<VisitsScreen> {
                                 border: Border.all(color: const Color(0xFFE2E8F0)),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.04),
+                                    color: Colors.black.withValues(alpha: 0.04),
                                     blurRadius: 6,
                                     offset: const Offset(0, 2),
                                   ),
@@ -348,7 +439,7 @@ class _VisitsScreenState extends State<VisitsScreen> {
                                       children: [
                                         Row(
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.center,
                                           children: [
                                             Expanded(
                                               child: Text(
@@ -361,20 +452,36 @@ class _VisitsScreenState extends State<VisitsScreen> {
                                               ),
                                             ),
                                             const SizedBox(width: 8),
+                                            // Single vs Combined representation badge
                                             Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFF1976D2),
+                                                color: isCombined ? const Color(0xFFFFF3E0) : const Color(0xFFE3F2FD),
                                                 borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Text(
-                                                visitType,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 11,
-                                                  letterSpacing: 0.5,
+                                                border: Border.all(
+                                                  color: isCombined ? const Color(0xFFFFB74D) : const Color(0xFF90CAF9),
+                                                  width: 1,
                                                 ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    isCombined ? Icons.groups_rounded : Icons.person,
+                                                    size: 13,
+                                                    color: isCombined ? const Color(0xFFE65100) : const Color(0xFF1565C0),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    displayVisitType,
+                                                    style: TextStyle(
+                                                      color: isCombined ? const Color(0xFFE65100) : const Color(0xFF1565C0),
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 11,
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                           ],

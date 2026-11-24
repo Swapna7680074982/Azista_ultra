@@ -139,6 +139,8 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
     }
   }
   Future<void> submitOutlet() async {
+    if (isSubmitting) return;
+
     if (nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Outlet Name is mandatory")),
@@ -188,100 +190,127 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
       return;
     }
 
-    double lat = currentPosition.latitude;
-    double lng = currentPosition.longitude;
+    if (!mounted) return;
+    setState(() => isSubmitting = true);
+    LoadingDialog.show(context, message: "Registering Outlet...");
+    bool isDialogShown = true;
 
-    if (marker != null) {
-      lat = marker!.position.latitude;
-      lng = marker!.position.longitude;
-
-      try {
-        final coords = await LocationService.getCoordinates();
-        final currentLat = double.parse(coords[0]);
-        final currentLng = double.parse(coords[1]);
-
-        final distance = Geolocator.distanceBetween(
-          currentLat,
-          currentLng,
-          lat,
-          lng,
-        );
-
-        if (distance > 50) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Selected location is ${distance.toStringAsFixed(0)}m away. You must be within 50 meters to register an outlet.")),
-          );
-          return;
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to verify location. Please check GPS and try again.")),
-        );
-        return;
-      }
-    } else {
-      // Default to current GPS coordinates if available, otherwise fallback to currentPosition
-      try {
-        final coords = await LocationService.getCoordinates();
-        lat = double.parse(coords[0]);
-        lng = double.parse(coords[1]);
-      } catch (_) {
-        lat = currentPosition.latitude;
-        lng = currentPosition.longitude;
+    void hideLoading() {
+      if (isDialogShown && mounted) {
+        LoadingDialog.hide(context);
+        isDialogShown = false;
       }
     }
 
-    if (!mounted || isSubmitting) return;
+    try {
+      double lat = currentPosition.latitude;
+      double lng = currentPosition.longitude;
 
-    setState(() => isSubmitting = true);
+      if (marker != null) {
+        lat = marker!.position.latitude;
+        lng = marker!.position.longitude;
 
-    final payload = {
-      "beat_id": widget.routeId,
-      "outlet_category": int.tryParse(selectedCategory!.categoryId) ?? 0,
-      "outlet_name": nameController.text.trim(),
-      "owner_name": contactController.text.trim(),
-      "mobile": phoneController.text.trim(),
-      "whatsapp_mobile": whatsappController.text.trim(),
-      "date_of_birth": dobController.text,
-      "gender": gender,
-      "address": addressController.text.trim(),
-      "landmark": landmarkController.text.trim(),
-      "email": emailController.text.trim(),
-      "opening_time": _formatTime(openingTime),
-      "closing_time": _formatTime(closingTime),
-      "gst": gstController.text.trim(),
-      "area": areaController.text.trim(),
-      "vicinity_type": vicinityType,
-      "outlet_shape": outletShape,
-      "stock_position": stockPosition,
-      "store_year_launched": yearLaunchedController.text,
-      "daily_foot_traffic":
-      int.tryParse(footTrafficController.text) ?? 0,
-      "latitude": lat,
-      "longitude": lng,
-      "alt_name": altNameController.text.trim(),
-      "alt_mobile": altMobileController.text.trim(),
-      "alt_position": altPositionController.text.trim(),
-      "alt_email": altEmailController.text.trim(),
-    };
+        try {
+          final coords = await LocationService.getCoordinates();
+          final currentLat = double.parse(coords[0]);
+          final currentLng = double.parse(coords[1]);
 
-    final res = await ApiServices.registerOutlet(payload: payload);
+          final distance = Geolocator.distanceBetween(
+            currentLat,
+            currentLng,
+            lat,
+            lng,
+          );
 
-    if (!mounted) return;
-    setState(() => isSubmitting = false);
-
-    final message = res?["message"]?.toString() ?? "Registration failed";
-    final status = res?["status"] == true;
-
-    if (status) {
-      SuccessDialog.show(context, message: message, onDismiss: () {
-        if (mounted) {
-          Navigator.pop(context, true);
+          if (distance > 250) {
+            hideLoading();
+            if (mounted) setState(() => isSubmitting = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  "Selected location is ${distance.toStringAsFixed(0)}m away. You must be within 250 meters to register an outlet.",
+                ),
+              ),
+            );
+            return;
+          }
+        } catch (e) {
+          hideLoading();
+          if (mounted) setState(() => isSubmitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Failed to verify location. Please check GPS and try again."),
+            ),
+          );
+          return;
         }
-      });
-    } else {
+      } else {
+        // Default to current GPS coordinates if available, otherwise fallback to currentPosition
+        try {
+          final coords = await LocationService.getCoordinates();
+          lat = double.parse(coords[0]);
+          lng = double.parse(coords[1]);
+        } catch (_) {
+          lat = currentPosition.latitude;
+          lng = currentPosition.longitude;
+        }
+      }
+
+      final payload = {
+        "beat_id": widget.routeId,
+        "outlet_category": int.tryParse(selectedCategory!.categoryId) ?? 0,
+        "outlet_name": nameController.text.trim(),
+        "owner_name": contactController.text.trim(),
+        "mobile": phoneController.text.trim(),
+        "whatsapp_mobile": whatsappController.text.trim(),
+        "date_of_birth": dobController.text,
+        "gender": gender,
+        "address": addressController.text.trim(),
+        "landmark": landmarkController.text.trim(),
+        "email": emailController.text.trim(),
+        "opening_time": _formatTime(openingTime),
+        "closing_time": _formatTime(closingTime),
+        "gst": gstController.text.trim(),
+        "area": areaController.text.trim(),
+        "vicinity_type": vicinityType,
+        "outlet_shape": outletShape,
+        "stock_position": stockPosition,
+        "store_year_launched": yearLaunchedController.text,
+        "daily_foot_traffic":
+            int.tryParse(footTrafficController.text) ?? 0,
+        "latitude": lat,
+        "longitude": lng,
+        "alt_name": altNameController.text.trim(),
+        "alt_mobile": altMobileController.text.trim(),
+        "alt_position": altPositionController.text.trim(),
+        "alt_email": altEmailController.text.trim(),
+      };
+
+      final res = await ApiServices.registerOutlet(payload: payload);
+
+      hideLoading();
+      if (!mounted) return;
+      setState(() => isSubmitting = false);
+
+      final message = res?["message"]?.toString() ?? "Registration failed";
+      final status = res?["status"] == true;
+
+      if (status) {
+        SuccessDialog.show(context, message: message, onDismiss: () {
+          if (mounted) {
+            Navigator.pop(context, true);
+          }
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (e) {
+      hideLoading();
+      if (mounted) setState(() => isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
+        SnackBar(content: Text("Error: ${e.toString()}")),
       );
     }
   }
@@ -560,13 +589,30 @@ class _NewOutletScreenState extends State<NewOutletScreen> {
           Padding(
             padding: const EdgeInsets.all(12),
             child: GestureDetector(
-              onTap: submitOutlet,
+              onTap: isSubmitting ? null : submitOutlet,
               child: Container(
                 height: 50,
-                color: AppColors.button,
-                child: const Center(
-                  child: Text("CONFIRM",
-                      style: TextStyle(color: Colors.white)),
+                color: isSubmitting
+                    ? AppColors.button.withOpacity(0.7)
+                    : AppColors.button,
+                child: Center(
+                  child: isSubmitting
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : const Text(
+                          "CONFIRM",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
             ),

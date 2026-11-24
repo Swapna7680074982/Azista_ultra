@@ -71,11 +71,11 @@ class _PobBodyState extends State<PobBody> {
           widget.outletLng,
         );
 
-        if (distance > 50) {
+        if (distance > 250) {
           if (mounted) {
             setState(() {
               isLocationValid = false;
-              locationError = "You are ${distance.toStringAsFixed(0)} meters away from the outlet. You must be within 50 meters to add POB.";
+              locationError = "You are ${distance.toStringAsFixed(0)} meters away from the outlet. You must be within 250 meters to add POB.";
             });
           }
           return;
