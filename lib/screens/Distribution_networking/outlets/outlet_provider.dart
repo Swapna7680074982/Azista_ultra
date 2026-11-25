@@ -86,6 +86,7 @@ class OutletProvider extends ChangeNotifier {
   int? _checkedInOutletId;
   String? _checkInTimeAndDate;
   int? _checkedInVisitId;
+  String? _checkedInVisitType;
 
   final Map<int, int> _outletVisitsCount = {};
   final Map<int, Map<String, dynamic>> _outletLastVisit = {};
@@ -93,6 +94,7 @@ class OutletProvider extends ChangeNotifier {
   int? get checkedInOutletId => _checkedInOutletId;
   String? get checkInTimeAndDate => _checkInTimeAndDate;
   int? get checkedInVisitId => _checkedInVisitId;
+  String? get checkedInVisitType => _checkedInVisitType;
 
   int getOutletVisitsCount(int outletId) => _outletVisitsCount[outletId] ?? 0;
   Map<String, dynamic>? getOutletLastVisit(int outletId) => _outletLastVisit[outletId];
@@ -111,6 +113,7 @@ class OutletProvider extends ChangeNotifier {
     _checkedInOutletId = outletId;
     _checkedInVisitId = visitId;
     _checkInTimeAndDate = checkInTime;
+    _checkedInVisitType = visitType;
     notifyListeners();
   }
 
@@ -118,6 +121,7 @@ class OutletProvider extends ChangeNotifier {
     _checkedInOutletId = null;
     _checkedInVisitId = null;
     _checkInTimeAndDate = null;
+    _checkedInVisitType = null;
     notifyListeners();
   }
 
@@ -183,7 +187,12 @@ class OutletProvider extends ChangeNotifier {
                 final List histVisits = hist['visit_history'] as List? ?? [];
                 _outletVisitsCount[outletId] = histVisits.length;
                 if (histVisits.isNotEmpty) {
-                  _outletLastVisit[outletId] = Map<String, dynamic>.from(histVisits.first);
+                  final firstMap = Map<String, dynamic>.from(histVisits.first);
+                  // Preserve visit_type from existing _outletLastVisit if API didn't return it
+                  if (firstMap['visit_type'] == null && _outletLastVisit[outletId]?['visit_type'] != null) {
+                    firstMap['visit_type'] = _outletLastVisit[outletId]!['visit_type'];
+                  }
+                  _outletLastVisit[outletId] = firstMap;
                 }
 
                 final active = histVisits.firstWhere(
@@ -197,6 +206,10 @@ class OutletProvider extends ChangeNotifier {
                 if (active != null) {
                   final activeMap = Map<String, dynamic>.from(active);
                   activeMap['outlet_id'] = outletId;
+                  // Preserve visit_type if already known from getOutletVisitsHistory
+                  if (activeMap['visit_type'] == null && activeVisit?['visit_type'] != null) {
+                    activeMap['visit_type'] = activeVisit!['visit_type'];
+                  }
                   activeVisit = activeMap;
                 }
               }
@@ -214,7 +227,8 @@ class OutletProvider extends ChangeNotifier {
       final outletId = int.tryParse(activeVisit!['outlet_id']?.toString() ?? '') ?? 0;
       final visitId = int.tryParse(activeVisit!['visit_id']?.toString() ?? '') ?? 0;
       final checkinTime = activeVisit!['checkin_time']?.toString() ?? '';
-      final visitType = activeVisit!['visit_type']?.toString();
+      final localVisitType = await SessionManager.getOutletCheckInVisitType();
+      final visitType = activeVisit!['visit_type']?.toString() ?? localVisitType ?? 'INDIVIDUAL';
       final parsedTime = DateTime.tryParse(checkinTime);
 
       await SessionManager.saveOutletCheckIn(
@@ -227,16 +241,19 @@ class OutletProvider extends ChangeNotifier {
       _checkedInOutletId = outletId;
       _checkedInVisitId = visitId;
       _checkInTimeAndDate = checkinTime;
+      _checkedInVisitType = visitType;
       notifyListeners();
       return;
     } else {
       final localOutletId = await SessionManager.getOutletCheckInOutletId();
       final localVisitId = await SessionManager.getOutletCheckInVisitId();
       final localTime = await SessionManager.getOutletCheckInTime();
+      final localVisitType = await SessionManager.getOutletCheckInVisitType();
       if (localOutletId != null && localVisitId != null) {
         _checkedInOutletId = localOutletId;
         _checkedInVisitId = localVisitId;
         _checkInTimeAndDate = localTime?.toIso8601String();
+        _checkedInVisitType = localVisitType ?? 'INDIVIDUAL';
         notifyListeners();
         return;
       }
@@ -245,6 +262,7 @@ class OutletProvider extends ChangeNotifier {
       _checkedInOutletId = null;
       _checkedInVisitId = null;
       _checkInTimeAndDate = null;
+      _checkedInVisitType = null;
       notifyListeners();
       return;
     }

@@ -656,6 +656,7 @@ class ApiServices {
     int? year,
     String? fromDate,
     String? toDate,
+    int? outletId,
   }) async {
     try {
       final token = await SessionManager.getToken();
@@ -670,6 +671,7 @@ class ApiServices {
       if (year != null) payload["year"] = year;
       if (fromDate != null) payload["from_date"] = fromDate;
       if (toDate != null) payload["to_date"] = toDate;
+      if (outletId != null) payload["outlet_id"] = outletId;
 
       AppLogger.info("Outlet Visits History API called: ${AppUrls.outletVisitsHistory}");
       AppLogger.info("Payload: ${jsonEncode(payload)}");

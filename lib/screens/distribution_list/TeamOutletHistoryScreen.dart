@@ -180,7 +180,10 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
     }).toList();
   }
 
+  bool _showAllMonthVisits = false;
+
   List<dynamic> get filteredVisits {
+    if (_showAllMonthVisits) return _visitHistory;
     return _visitHistory.where((visit) {
       final dateStr = visit["visit_date"]?.toString() ?? visit["checkin_time"]?.toString() ?? "";
       if (dateStr.isEmpty) return false;
@@ -512,10 +515,31 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
 
     final filteredList = filteredVisits;
     if (filteredList.isEmpty) {
-      return const Center(
-        child: Text(
-          "No visits logged for this period",
-          style: TextStyle(color: Colors.grey, fontSize: 13),
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.history_toggle_off, size: 48, color: Colors.grey),
+              const SizedBox(height: 10),
+              Text(
+                "No visits logged for ${DateFormat('dd MMM yyyy').format(selectedDate)}",
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+              if (_visitHistory.isNotEmpty && !_showAllMonthVisits) ...[
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() => _showAllMonthVisits = true);
+                  },
+                  icon: const Icon(Icons.visibility, size: 16, color: Colors.white),
+                  label: Text("Show All ${_visitHistory.length} Month Visits", style: const TextStyle(color: Colors.white, fontSize: 12)),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                ),
+              ],
+            ],
+          ),
         ),
       );
     }
@@ -546,7 +570,11 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
               ? "${(durationMins / 60.0).toStringAsFixed(1)} Hours"
               : "$durationMins Mins";
           final remarks = visit["remarks"]?.toString() ?? "N/A";
-          final activities = visit["activities"] as List<dynamic>? ?? [];
+          final activities = (visit["activity_history"] ?? visit["activities"]) as List<dynamic>? ?? [];
+          final rawType = (visit["visit_type"] ?? visit["type"] ?? "").toString().trim().toUpperCase();
+          final isCombine = rawType.contains("COMBIN") || visit["is_combined"] == 1 || visit["is_combined"] == true || rawType == "2";
+          final displayType = isCombine ? "COMBINE" : "INDIVIDUAL";
+          final visitorName = (visit["fullname"] ?? visit["user_name"] ?? "").toString();
 
           return Card(
             color: Colors.white,
@@ -571,17 +599,41 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
                           ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: Text(
-                          durationStr,
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black54),
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isCombine ? const Color(0xFFFFF3E0) : const Color(0xFFE3F2FD),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: isCombine ? const Color(0xFFFFB74D) : const Color(0xFF90CAF9),
+                              ),
+                            ),
+                            child: Text(
+                              displayType,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: isCombine ? const Color(0xFFE65100) : const Color(0xFF1565C0),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Text(
+                              durationStr,
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black54),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -589,6 +641,10 @@ class _TeamOutletHistoryScreenState extends State<TeamOutletHistoryScreen>
                     padding: EdgeInsets.symmetric(vertical: 8.0),
                     child: Divider(height: 1, thickness: 0.5),
                   ),
+                  if (visitorName.isNotEmpty && visitorName != "null") ...[
+                    _buildVisitRow(Icons.person, "Visited by", visitorName),
+                    const SizedBox(height: 6),
+                  ],
                   _buildVisitRow(Icons.login, "Check In", checkin.isNotEmpty ? DateFormatter.formatDateTime(checkin) : "N/A"),
                   const SizedBox(height: 6),
                   _buildVisitRow(Icons.logout, "Check Out", checkout.isNotEmpty ? DateFormatter.formatDateTime(checkout) : "Active (In progress)"),

@@ -43,6 +43,28 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   int _totalVisits = 0;
   String? _lastVisitText;
   bool _isCardExpanded = true;
+  final ScrollController _tabsScrollController = ScrollController();
+
+  void _scrollTabs(bool forward) {
+    if (!_tabsScrollController.hasClients) return;
+    final currentOffset = _tabsScrollController.offset;
+    final maxScroll = _tabsScrollController.position.maxScrollExtent;
+    final targetOffset = forward
+        ? (currentOffset + 120).clamp(0.0, maxScroll)
+        : (currentOffset - 120).clamp(0.0, maxScroll);
+
+    _tabsScrollController.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _tabsScrollController.dispose();
+    super.dispose();
+  }
 
   void _buildTabViews() {
     _tabViews = dynamicTabs.map((tab) => _getModuleBody(tab['module_code'], selectedTab)).toList();
@@ -86,6 +108,10 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       _isCheckedIn = true;
       _visitId = outletProvider.checkedInVisitId;
       _checkInTime = outletProvider.checkInTimeAndDate != null ? DateTime.tryParse(outletProvider.checkInTimeAndDate!) : null;
+      final localType = outletProvider.checkedInVisitType ?? await SessionManager.getOutletCheckInVisitType();
+      if (localType != null && localType.isNotEmpty) {
+        _visitType = localType.toUpperCase();
+      }
       isLoadingCheckIn = false;
       _buildTabViews();
     }
@@ -100,7 +126,8 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
             if (visits.isNotEmpty) {
               final last = visits.first;
               final dateStr = last['visit_date'] ?? last['checkin_time'];
-              final type = (last['visit_type'] ?? 'INDIVIDUAL').toString().toUpperCase();
+              final cachedLast = outletProvider.getOutletLastVisit(currentOutletId);
+              final type = (last['visit_type'] ?? cachedLast?['visit_type'] ?? 'INDIVIDUAL').toString().toUpperCase();
               if (dateStr != null) {
                 try {
                   final dt = DateTime.parse(dateStr.toString()).toLocal();
@@ -121,7 +148,8 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
           final visitId = int.tryParse(activeVisit['visit_id']?.toString() ?? "") ?? 0;
           final checkInTimeStr = activeVisit['checkin_time']?.toString() ?? "";
           final checkInTime = DateTime.tryParse(checkInTimeStr);
-          final activeType = (activeVisit['visit_type'] ?? 'INDIVIDUAL').toString().toUpperCase();
+          final savedType = outletProvider.checkedInVisitType ?? await SessionManager.getOutletCheckInVisitType();
+          final activeType = (activeVisit['visit_type'] ?? savedType ?? 'INDIVIDUAL').toString().toUpperCase();
 
           await SessionManager.saveOutletCheckIn(
             outletId: currentOutletId,
@@ -591,164 +619,180 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
       ),
       body: (isLoadingTabs || isLoadingCheckIn || isLocationValid == null)
           ? const Center(child: LogoProgressIndicator()) 
-          : Column(
-        children: [
-          outletCard(widget.outlet),
-          if (_isCheckedIn) ...[
-            Container(
-              color: Colors.green.shade50,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Row(
+          : NestedScrollView(
+              headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+                return [
+                  SliverToBoxAdapter(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                "Checked-in ($_visitType)",
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              if (_checkInTime != null)
-                                Text(
-                                  DateFormatter.formatDateTime(_checkInTime!.toIso8601String()),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: Colors.green.shade800,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
+                        outletCard(widget.outlet),
+                        if (_isCheckedIn) _buildCheckInBanner(),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text("Confirm Check-Out"),
-                          content: Text("Are you sure you want to check out of ${widget.outlet.name}? This will lock the POB features."),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text("CANCEL"),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                _handleCheckOut();
-                              },
-                              child: const Text("CHECK-OUT", style: TextStyle(color: Colors.red)),
-                            ),
-                          ],
+                  if ((_isCheckedIn || isLocationValid == false) && dynamicTabs.isNotEmpty)
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _SliverTabsDelegate(
+                        child: Container(
+                          color: Colors.grey[300],
+                          child: _tabs(),
                         ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.button,
-                        borderRadius: BorderRadius.circular(4),
+                        height: 48.0,
                       ),
+                    ),
+                ];
+              },
+              body: _buildBodyContent(),
+            ),
+    );
+  }
+
+  Widget _buildCheckInBanner() {
+    return Container(
+      color: Colors.green.shade50,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "Checked-in ($_visitType)",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      if (_checkInTime != null)
+                        Text(
+                          DateFormatter.formatDateTime(_checkInTime!.toIso8601String()),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.green.shade800,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text("Confirm Check-Out"),
+                  content: Text(
+                      "Are you sure you want to check out of ${widget.outlet.name}? This will lock the POB features."),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text("CANCEL"),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _handleCheckOut();
+                      },
+                      child: const Text("CHECK-OUT", style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.button,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                "CHECK-OUT",
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBodyContent() {
+    if (_isCheckedIn || isLocationValid == false) {
+      if (_tabViews.isNotEmpty && selectedTab < _tabViews.length) {
+        return _tabViews[selectedTab];
+      }
+      return const SizedBox.shrink();
+    } else {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.storefront, size: 64, color: AppColors.primary),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Welcome to ${widget.outlet.name.toUpperCase()}",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "You must check in to this outlet to access POB features and submit sales, stock, POB, or marketing activities.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 45,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      onPressed: _handleCheckIn,
                       child: const Text(
-                        "CHECK-OUT",
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                        "CHECK-IN",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            _tabs(),
-            Expanded(
-              child: IndexedStack(
-                index: selectedTab,
-                children: _tabViews,
-              ),
-            ),
-          ] else ...[
-            if (isLocationValid == false) ...[
-              _tabs(),
-              Expanded(
-                child: IndexedStack(
-                  index: selectedTab,
-                  children: _tabViews,
-                ),
-              ),
-            ] else
-              Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.storefront, size: 64, color: AppColors.primary),
-                            const SizedBox(height: 16),
-                            Text(
-                              "Welcome to ${widget.outlet.name.toUpperCase()}",
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              "You must check in to this outlet to access POB features and submit sales, stock, POB, or marketing activities.",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 13, color: Colors.grey),
-                            ),
-                            const SizedBox(height: 24),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 45,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                ),
-                                onPressed: _handleCheckIn,
-                                child: const Text(
-                                  "CHECK-IN",
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ],
-      ),
-    );
+          ),
+        ),
+      );
+    }
   }
+
   Widget outletCard(Outlet outlet) {
     final outletProvider = context.watch<OutletProvider>();
     final outletIdNum = int.tryParse(outlet.id) ?? 0;
@@ -955,7 +999,9 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const VisitsScreen(),
+                            builder: (_) => VisitsScreen(
+                              initialOutletId: int.tryParse(widget.outlet.id),
+                            ),
                           ),
                         );
                       },
@@ -1081,41 +1127,83 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
   }
   Widget _tabs() {
     if (dynamicTabs.isEmpty) return const SizedBox.shrink();
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    return Container(
+      color: Colors.grey[300],
+      height: 48,
       child: Row(
-        children: List.generate(dynamicTabs.length, (index) {
-          final isSelected = index == selectedTab;
-          final tabName = dynamicTabs[index]['module_name'] ?? 'UNKNOWN';
-
-          return GestureDetector(
-            onTap: () {
-              if (selectedTab != index) {
-                Provider.of<OutletActivityProvider>(context, listen: false).clearQuantities();
-                setState(() {
-                  selectedTab = index;
-                  _buildTabViews();
-                });
-              }
-            },
+        children: [
+          // Left scroll arrow
+          InkWell(
+            onTap: () => _scrollTabs(false),
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                vertical: 12,
-                horizontal: 25,
-              ),
-              color: isSelected ? Colors.white : Colors.grey[300],
-              child: Center(
-                child: Text(
-                  tabName,
-                  style: TextStyle(
-                    color: isSelected ? AppColors.primary : Colors.black54,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              width: 32,
+              height: 48,
+              alignment: Alignment.center,
+              color: Colors.grey[300],
+              child: const Icon(
+                Icons.chevron_left,
+                color: AppColors.primary,
+                size: 26,
               ),
             ),
-          );
-        }),
+          ),
+          // Horizontally scrollable tabs
+          Expanded(
+            child: SingleChildScrollView(
+              controller: _tabsScrollController,
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: List.generate(dynamicTabs.length, (index) {
+                  final isSelected = index == selectedTab;
+                  final tabName = dynamicTabs[index]['module_name'] ?? 'UNKNOWN';
+
+                  return GestureDetector(
+                    onTap: () {
+                      if (selectedTab != index) {
+                        Provider.of<OutletActivityProvider>(context, listen: false).clearQuantities();
+                        setState(() {
+                          selectedTab = index;
+                          _buildTabViews();
+                        });
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 20,
+                      ),
+                      color: isSelected ? Colors.white : Colors.grey[300],
+                      child: Center(
+                        child: Text(
+                          tabName,
+                          style: TextStyle(
+                            color: isSelected ? AppColors.primary : Colors.black54,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ),
+          // Right scroll arrow
+          InkWell(
+            onTap: () => _scrollTabs(true),
+            child: Container(
+              width: 32,
+              height: 48,
+              alignment: Alignment.center,
+              color: Colors.grey[300],
+              child: const Icon(
+                Icons.chevron_right,
+                color: AppColors.primary,
+                size: 26,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1237,5 +1325,31 @@ class RestrictedModuleView extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _SliverTabsDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final double height;
+
+  _SliverTabsDelegate({required this.child, this.height = 48.0});
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox(
+      height: height,
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _SliverTabsDelegate oldDelegate) {
+    return oldDelegate.child != child || oldDelegate.height != height;
   }
 }

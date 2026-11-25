@@ -66,34 +66,65 @@ class _VisitsScreenState extends State<VisitsScreen> {
       final monthStr = _selectedMonth.toString().padLeft(2, '0');
       final fromDateStr = "$_selectedYear-$monthStr-01";
       final toDateStr = "$_selectedYear-$monthStr-$lastDay";
-      final monthYearStr = "$_selectedYear-$monthStr";
 
+      // 1. Fetch with month, year, and date range (without sending a YYYY-MM visit_date string)
       final response = await ApiServices.getOutletVisitsHistory(
         month: _selectedMonth,
         year: _selectedYear,
         fromDate: fromDateStr,
         toDate: toDateStr,
-        visitDate: monthYearStr,
+        outletId: widget.initialOutletId,
       );
 
+      List<dynamic> list = [];
       if (response != null &&
           (response['status'] == true ||
               response['status'] == 'success' ||
               response['visits'] != null ||
               response['data'] != null ||
               response['visit_history'] != null)) {
-        final list = response['visits'] ??
+        final raw = response['visits'] ??
             response['data'] ??
             response['visit_history'] ??
             [];
-        setState(() {
-          _visits = list is List ? List<dynamic>.from(list) : [];
-        });
-      } else {
-        setState(() {
-          _visits = [];
-        });
+        if (raw is List) list = List<dynamic>.from(raw);
       }
+
+      // 2. If empty and current month/year is selected, fallback to fetching with today's full date
+      final now = DateTime.now();
+      if (list.isEmpty && _selectedMonth == now.month && _selectedYear == now.year) {
+        final todayStr = DateFormat("yyyy-MM-dd").format(now);
+        final todayResponse = await ApiServices.getOutletVisitsHistory(
+          visitDate: todayStr,
+          outletId: widget.initialOutletId,
+        );
+        if (todayResponse != null &&
+            (todayResponse['status'] == true || todayResponse['status'] == 'success')) {
+          final todayVisits = todayResponse['visits'] ?? todayResponse['data'] ?? [];
+          if (todayVisits is List && todayVisits.isNotEmpty) {
+            list = List<dynamic>.from(todayVisits);
+          }
+        }
+      }
+
+      // 3. Fallback: If still empty and navigated for a specific outlet, fetch outlet history directly
+      if (list.isEmpty && widget.initialOutletId != null) {
+        final outletHist = await ApiServices.getOutletHistory(outletId: widget.initialOutletId!);
+        if (outletHist != null && outletHist['visit_history'] is List) {
+          final histVisits = outletHist['visit_history'] as List;
+          if (histVisits.isNotEmpty) {
+            list = histVisits.map((v) {
+              final vMap = Map<String, dynamic>.from(v as Map);
+              vMap['outlet_id'] = widget.initialOutletId;
+              return vMap;
+            }).toList();
+          }
+        }
+      }
+
+      setState(() {
+        _visits = list;
+      });
     } catch (e) {
       debugPrint("Error fetching outlet visits: $e");
       setState(() {
@@ -130,6 +161,16 @@ class _VisitsScreenState extends State<VisitsScreen> {
     return false;
   }
 
+  String _getVisitTypeText(Map<String, dynamic> visit) {
+    final rawType = (visit['visit_type'] ?? visit['type'] ?? visit['visitType'] ?? '').toString().trim().toUpperCase();
+    if (rawType.isNotEmpty && rawType != 'NULL') {
+      if (rawType.contains('COMBIN')) return 'COMBINE';
+      if (rawType.contains('INDIVID')) return 'INDIVIDUAL';
+      return rawType;
+    }
+    return _isCombinedVisit(visit) ? 'COMBINE' : 'INDIVIDUAL';
+  }
+
   String _formatTime(String? dateTimeStr) {
     if (dateTimeStr == null || dateTimeStr.isEmpty || dateTimeStr == 'null' || dateTimeStr == 'N/A' || dateTimeStr == '-') {
       return "-";
@@ -142,9 +183,20 @@ class _VisitsScreenState extends State<VisitsScreen> {
     }
   }
 
+  bool _filterOnlyThisOutlet = false;
+
   List<dynamic> get _filteredVisits {
-    if (_searchQuery.isEmpty) return _visits;
-    return _visits.where((v) {
+    var source = _visits;
+    if (_filterOnlyThisOutlet && widget.initialOutletId != null) {
+      source = source.where((v) {
+        if (v is! Map) return false;
+        final id = (v['outlet_id'] ?? '').toString();
+        return id == widget.initialOutletId.toString();
+      }).toList();
+    }
+
+    if (_searchQuery.isEmpty) return source;
+    return source.where((v) {
       if (v is! Map) return false;
       final vMap = Map<String, dynamic>.from(v);
       final name = (vMap['outlet_name'] ?? '').toString().toLowerCase();
@@ -158,8 +210,8 @@ class _VisitsScreenState extends State<VisitsScreen> {
           user.contains(_searchQuery) ||
           rawType.contains(_searchQuery) ||
           date.contains(_searchQuery) ||
-          (isComb && "combined".contains(_searchQuery)) ||
-          (!isComb && "single".contains(_searchQuery));
+          (isComb && ("combined".contains(_searchQuery) || "combine".contains(_searchQuery))) ||
+          (!isComb && ("individual".contains(_searchQuery) || "single".contains(_searchQuery)));
     }).toList();
   }
 
@@ -296,6 +348,43 @@ class _VisitsScreenState extends State<VisitsScreen> {
             ),
           ),
 
+          // Outlet Filter Chips (when opened from a specific outlet)
+          if (widget.initialOutletId != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              child: Row(
+                children: [
+                  ChoiceChip(
+                    label: Text("All Visits (${_visits.length})"),
+                    selected: !_filterOnlyThisOutlet,
+                    onSelected: (val) {
+                      setState(() => _filterOnlyThisOutlet = false);
+                    },
+                    selectedColor: AppColors.primary.withValues(alpha: 0.15),
+                    labelStyle: TextStyle(
+                      color: !_filterOnlyThisOutlet ? AppColors.primary : Colors.black87,
+                      fontWeight: !_filterOnlyThisOutlet ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: Text("Outlet ID: ${widget.initialOutletId}"),
+                    selected: _filterOnlyThisOutlet,
+                    onSelected: (val) {
+                      setState(() => _filterOnlyThisOutlet = true);
+                    },
+                    selectedColor: AppColors.primary.withValues(alpha: 0.15),
+                    labelStyle: TextStyle(
+                      color: _filterOnlyThisOutlet ? AppColors.primary : Colors.black87,
+                      fontWeight: _filterOnlyThisOutlet ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Search and Count Bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -393,8 +482,10 @@ class _VisitsScreenState extends State<VisitsScreen> {
                             final outletName = (visit['outlet_name'] ?? 'UNKNOWN OUTLET').toString().toUpperCase();
                             final outletId = visit['outlet_id']?.toString() ?? '-';
                             final isCombined = _isCombinedVisit(visit);
-                            final displayVisitType = isCombined ? "COMBINED" : "SINGLE";
+                            final displayVisitType = _getVisitTypeText(visit);
                             final outletCategory = (visit['outlet_category'] ?? visit['category_name'] ?? 'OUTLET').toString().toUpperCase();
+                            final userName = (visit['fullname'] ?? visit['user_name'] ?? visit['user']?['fullname'] ?? visit['user']?['name'] ?? '').toString();
+                            final remarks = visit['remarks']?.toString();
 
                             final checkinTime = _formatTime(visit['checkin_time']?.toString());
                             final rawCheckout = visit['checkout_time']?.toString();
@@ -517,6 +608,23 @@ class _VisitsScreenState extends State<VisitsScreen> {
                                             ],
                                           ],
                                         ),
+                                        if (userName.isNotEmpty && userName != 'null') ...[
+                                          const SizedBox(height: 5),
+                                          Row(
+                                            children: [
+                                              const Icon(Icons.person_pin, size: 14, color: Color(0xFF1976D2)),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                "Visited by: $userName",
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF1976D2),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),
@@ -642,6 +750,26 @@ class _VisitsScreenState extends State<VisitsScreen> {
                                             ),
                                           ],
                                         ),
+                                        if (remarks != null && remarks.isNotEmpty && remarks != 'null') ...[
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Icon(Icons.notes, size: 14, color: Colors.grey),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  remarks,
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.grey.shade700,
+                                                    fontStyle: FontStyle.italic,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),
