@@ -9,6 +9,7 @@ class QtyBox extends StatelessWidget {
   final bool isEditable;
   final String? label;
   final bool isRed;
+  final bool isGreen;
 
   const QtyBox({
     super.key,
@@ -17,6 +18,7 @@ class QtyBox extends StatelessWidget {
     this.isEditable = true,
     this.label,
     this.isRed = false,
+    this.isGreen = false,
   });
 
   @override
@@ -58,15 +60,30 @@ class QtyBox extends StatelessWidget {
           hintText: "0",
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(4),
-            borderSide: BorderSide(color: isRed ? AppColors.primary : AppColors.border),
+            borderSide: BorderSide(
+              color: isGreen
+                  ? Colors.green
+                  : (isRed ? AppColors.primary : AppColors.border),
+              width: isGreen ? 1.5 : 1.0,
+            ),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(4),
-            borderSide: BorderSide(color: isRed ? AppColors.primary : AppColors.border),
+            borderSide: BorderSide(
+              color: isGreen
+                  ? Colors.green
+                  : (isRed ? AppColors.primary : AppColors.border),
+              width: isGreen ? 1.5 : 1.0,
+            ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(4),
-            borderSide: BorderSide(color: isRed ? AppColors.primary : AppColors.primary, width: 2),
+            borderSide: BorderSide(
+              color: isGreen
+                  ? Colors.green.shade700
+                  : (isRed ? AppColors.primary : AppColors.primary),
+              width: 2,
+            ),
           ),
         ),
       ),

@@ -283,6 +283,26 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
     );
   }
 
+  bool _isItemFocusedBrand(dynamic item) {
+    if (item == null) return false;
+    final name = (item['product_name'] ?? item['name'] ?? item['sku_name'] ?? item['brand_name'] ?? '').toString().toUpperCase();
+    return item['focused_brand'] == true ||
+        item['focused_brand'] == 1 ||
+        item['focused_brand'] == '1' ||
+        item['focused_brand'] == 'true' ||
+        item['is_focused_brand'] == true ||
+        item['is_focus'] == true ||
+        item['focus_brand'] == true ||
+        name.contains('DASUTRA') ||
+        name.contains('AZIFINE') ||
+        name.contains('PANTOVISTA');
+  }
+
+  bool _pobHasFocusedBrands(dynamic pob) {
+    final items = pob['items'] as List<dynamic>? ?? [];
+    return items.any(_isItemFocusedBrand);
+  }
+
   Widget _tabs() {
     return Container(
       decoration: BoxDecoration(
@@ -296,12 +316,13 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
           _tabItem(0, "All POBs"),
           _tabItem(1, "Pending"),
           _tabItem(2, "Supplied"),
+          _tabItem(3, "Focus Brands", isFocusTab: true),
         ],
       ),
     );
   }
 
-  Widget _tabItem(int index, String title) {
+  Widget _tabItem(int index, String title, {bool isFocusTab = false}) {
     final isSelected = selectedTab == index;
     return Expanded(
       child: GestureDetector(
@@ -311,8 +332,13 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
+            color: isSelected
+                ? (isFocusTab ? const Color(0xFFE8F5E9) : Colors.white)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
+            border: isSelected && isFocusTab
+                ? Border.all(color: Colors.green.shade600, width: 1.2)
+                : null,
             boxShadow: isSelected
                 ? [
                     BoxShadow(
@@ -324,13 +350,31 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                 : null,
           ),
           child: Center(
-            child: Text(
-              title,
-              style: TextStyle(
-                color: isSelected ? AppColors.primary : Colors.grey.shade700,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 12,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isFocusTab) ...[
+                  Icon(
+                    Icons.stars,
+                    size: 13,
+                    color: isSelected ? const Color(0xFF2E7D32) : Colors.amber.shade700,
+                  ),
+                  const SizedBox(width: 3),
+                ],
+                Flexible(
+                  child: Text(
+                    title,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isSelected
+                          ? (isFocusTab ? const Color(0xFF1B5E20) : AppColors.primary)
+                          : Colors.grey.shade700,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -437,6 +481,32 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                       ),
                       const SizedBox(width: 8),
                       _buildPobTypeBadge(pob),
+                      if (_pobHasFocusedBrands(pob)) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E9),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.green.shade400),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.stars, color: Color(0xFF2E7D32), size: 11),
+                              SizedBox(width: 3),
+                              Text(
+                                "FOCUS",
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1B5E20),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -458,6 +528,41 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                 _buildStatusBadge(status),
               ],
             ),
+            if (items.any(_isItemFocusedBrand)) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F8E9),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.stars, size: 12, color: Color(0xFF2E7D32)),
+                        SizedBox(width: 4),
+                        Text(
+                          "FOCUSED BRANDS IN THIS ORDER:",
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF1B5E20)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    ...items.where(_isItemFocusedBrand).map((fi) {
+                      final pName = fi['product_name'] ?? fi['sku_displayname'] ?? 'Focus Brand';
+                      final qty = fi['quantity']?.toString() ?? '0';
+                      return Text(
+                        "• $pName ($qty pcs)",
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF2E7D32)),
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+            ],
             if (!isSupplied) ...[
               const SizedBox(height: 6),
               const Divider(height: 1, thickness: 0.5),
@@ -631,12 +736,241 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                     ? _buildList(allFiltered, "No POBs found for this month")
                     : selectedTab == 1
                         ? _buildList(filteredPending, "No pending POBs for this month")
-                        : _buildList(filteredSupplied, "No supplied POBs for this month"),
+                        : selectedTab == 2
+                            ? _buildList(filteredSupplied, "No supplied POBs for this month")
+                            : _buildFocusedBrandsPobSection(allFiltered),
               ),
             ],
           );
         },
       ),
+    );
+  }
+
+  Widget _buildFocusedBrandsPobSection(List<dynamic> allPobs) {
+    final filtered = _applyTypeFilter(allPobs);
+    final focusPobs = filtered.where(_pobHasFocusedBrands).toList();
+
+    int totalFocusUnits = 0;
+    double totalFocusValue = 0.0;
+    final Map<String, int> brandBreakdown = {};
+
+    for (var pob in focusPobs) {
+      final items = pob['items'] as List<dynamic>? ?? [];
+      for (var item in items) {
+        if (_isItemFocusedBrand(item)) {
+          final qty = int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
+          final price = double.tryParse(item['pts']?.toString() ?? item['ptr_incl_gst_price']?.toString() ?? item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '0.0') ?? 0.0;
+          totalFocusUnits += qty;
+          totalFocusValue += (qty * price);
+          final bName = item['product_name']?.toString() ?? 'Focus Brand';
+          brandBreakdown[bName] = (brandBreakdown[bName] ?? 0) + qty;
+        }
+      }
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        // Hero Performance Card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFF1B5E20),
+                Color(0xFF2E7D32),
+                Color(0xFF388E3C),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.green.withOpacity(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.stars, color: Colors.amber, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        "FOCUSED BRANDS POB DATA",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      "${focusPobs.length} Orders",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "TOTAL UNITS",
+                          style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "$totalFocusUnits Units",
+                          style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "TOTAL VALUE",
+                          style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "₹${totalFocusValue.toStringAsFixed(2)}",
+                          style: const TextStyle(color: Colors.amber, fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "BRANDS BOOKED",
+                          style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "${brandBreakdown.length} Brands",
+                          style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        if (brandBreakdown.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "BRAND-WISE QUANTITY BREAKDOWN",
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                ),
+                const SizedBox(height: 8),
+                ...brandBreakdown.entries.map((e) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.check_circle, size: 14, color: Color(0xFF2E7D32)),
+                            const SizedBox(width: 6),
+                            Text(e.key, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        Text("${e.value} units", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1B5E20))),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              "POB ORDERS WITH FOCUSED BRANDS",
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
+            Text(
+              "${focusPobs.length} found",
+              style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        if (focusPobs.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(30.0),
+              child: Column(
+                children: [
+                  const Icon(Icons.stars_outlined, size: 48, color: Colors.grey),
+                  const SizedBox(height: 10),
+                  Text(
+                    "No focused brand POB orders recorded for this date.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    "Book orders for Dasutra Tablets or other priority brands to view them here.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ...focusPobs.map((pob) => _buildPobCard(pob)).toList(),
+      ],
     );
   }
 }

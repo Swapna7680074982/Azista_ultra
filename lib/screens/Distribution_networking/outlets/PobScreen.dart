@@ -11,6 +11,7 @@ import 'outlet_activity_provider.dart';
 import 'PobHistoryScreen.dart';
 import '../../../permissions/AppStateProvider.dart';
 import '../../../utilities/common_widgets.dart';
+import 'focused_brands_dialog.dart';
 
 import 'package:geolocator/geolocator.dart';
 import '../../../services/location_service.dart';
@@ -284,6 +285,15 @@ class _PobBodyState extends State<PobBody> {
                           ),
                         ],
                       ),
+                    ),
+                    // Focused Brands Banner for quick scheme reminder
+                    FocusedBrandsBannerWidget(
+                      onTap: () {
+                        FocusedBrandsDialog.show(
+                          context,
+                          isAlreadyCheckedIn: true,
+                        );
+                      },
                     ),
                     const SizedBox(height: 4),
                     Container(
@@ -572,41 +582,117 @@ class _PobBodyState extends State<PobBody> {
 
     if (skus.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Center(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: Colors.black87,
-              ),
+    final bool isFocused = product['focused_brand'] == true ||
+        product['focused_brand'] == 1 ||
+        product['focused_brand'] == '1' ||
+        product['focused_brand'] == 'true' ||
+        product['is_focused_brand'] == true ||
+        product['is_focus'] == true ||
+        product['focus_brand'] == true ||
+        (title.toString().toUpperCase().contains('DASUTRA'));
+
+    return Container(
+      margin: isFocused ? const EdgeInsets.symmetric(horizontal: 6, vertical: 8) : EdgeInsets.zero,
+      decoration: isFocused
+          ? BoxDecoration(
+              color: const Color(0xFFE8F5E9),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.green.shade400, width: 1.5),
+            )
+          : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isFocused) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2E7D32),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.stars, color: Colors.amber, size: 13),
+                        SizedBox(width: 4),
+                        Text(
+                          "FOCUSED BRAND",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Flexible(
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: isFocused ? const Color(0xFF1B5E20) : Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-        ...skus.map((sku) => _buildSkuRow(productId, sku, provider)).toList(),
-      ],
+          ...skus.map((sku) => _buildSkuRow(productId, sku, provider, isProductFocused: isFocused)).toList(),
+          if (isFocused) const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 
-  Widget _buildSkuRow(dynamic productId, dynamic sku, OutletActivityProvider provider) {
+  Widget _buildSkuRow(dynamic productId, dynamic sku, OutletActivityProvider provider, {bool isProductFocused = false}) {
     final skuName = sku['sku_displayname'] ?? sku['sku_name'] ?? 'Unknown SKU';
     final skuId = sku['sku_id'];
     final currentQty = provider.pobQuantities["${productId}_$skuId"]?.toString() ?? "";
     final dsaQty = provider.distributorStock["${productId}_$skuId"] ?? 0;
 
-    return Padding(
+    final bool isSkuFocused = isProductFocused ||
+        sku['focused_brand'] == true ||
+        sku['focused_brand'] == 1 ||
+        sku['focused_brand'] == '1' ||
+        sku['focused_brand'] == 'true' ||
+        sku['is_focused_brand'] == true ||
+        sku['is_focus'] == true;
+
+    return Container(
+      margin: isSkuFocused ? const EdgeInsets.symmetric(horizontal: 6, vertical: 3) : EdgeInsets.zero,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: isSkuFocused
+          ? BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+              border: Border(left: BorderSide(color: Colors.green.shade600, width: 3.5)),
+            )
+          : null,
       child: Row(
         children: [
+          if (isSkuFocused) ...[
+            const Icon(Icons.star, size: 14, color: Color(0xFF2E7D32)),
+            const SizedBox(width: 6),
+          ],
           Expanded(
             child: Text(
               skuName,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSkuFocused ? FontWeight.bold : FontWeight.w500,
+                color: isSkuFocused ? const Color(0xFF1B5E20) : Colors.black87,
+              ),
             ),
           ),
           // Non-editable DSA Qty display box
@@ -615,16 +701,18 @@ class _PobBodyState extends State<PobBody> {
             height: 38,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: isSkuFocused ? const Color(0xFFE8F5E9) : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(
+                color: isSkuFocused ? Colors.green.shade300 : Colors.grey.shade300,
+              ),
             ),
             child: Text(
               "$dsaQty",
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: dsaQty > 0 ? Colors.black87 : Colors.grey.shade500,
+                color: dsaQty > 0 ? (isSkuFocused ? const Color(0xFF1B5E20) : Colors.black87) : Colors.grey.shade500,
               ),
             ),
           ),
@@ -633,7 +721,8 @@ class _PobBodyState extends State<PobBody> {
           SizedBox(
             width: 60,
             child: QtyBox(
-              isRed: true,
+              isRed: !isSkuFocused,
+              isGreen: isSkuFocused,
               initialValue: currentQty,
               onChanged: (val) {
                 provider.updatePobQuantity(productId, skuId, val);
