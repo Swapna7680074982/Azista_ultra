@@ -2462,6 +2462,47 @@ class ApiServices {
     }
   }
 
+  static Future<Map<String, dynamic>?> getOutletFocusedProducts({required int outletId}) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        AppLogger.warning("No token found for getOutletFocusedProducts");
+        return null;
+      }
+
+      final body = {
+        "outlet_id": outletId,
+      };
+
+      AppLogger.info("Outlet Focused Products API called: ${AppUrls.outletFocusedProducts}");
+      AppLogger.info("Payload: ${jsonEncode(body)}");
+
+      final response = await _dio.post(
+        AppUrls.outletFocusedProducts,
+        data: body,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+
+      final parsed = _safeParseJson(response.data);
+      AppLogger.info("Outlet Focused Products response: ${response.statusCode} - $parsed");
+
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error("Outlet Focused Products error", e);
+      return null;
+    }
+  }
+
   static Future<Map<String, dynamic>?> getTeamMembersSummary({
     required int month,
     required int year,

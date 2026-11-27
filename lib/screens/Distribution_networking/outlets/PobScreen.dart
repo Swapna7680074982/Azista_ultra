@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -11,7 +10,6 @@ import 'outlet_activity_provider.dart';
 import 'PobHistoryScreen.dart';
 import '../../../permissions/AppStateProvider.dart';
 import '../../../utilities/common_widgets.dart';
-import 'focused_brands_dialog.dart';
 
 import 'package:geolocator/geolocator.dart';
 import '../../../services/location_service.dart';
@@ -135,6 +133,9 @@ class _PobBodyState extends State<PobBody> {
       isLocationValid = true;
     }
     Future.microtask(() async {
+      if (mounted) {
+        Provider.of<OutletActivityProvider>(context, listen: false).fetchOutletFocusedProducts(widget.outletId);
+      }
       if (!widget.isTelePob) {
         try {
           final coords = await LocationService.getCoordinates();
@@ -285,15 +286,6 @@ class _PobBodyState extends State<PobBody> {
                           ),
                         ],
                       ),
-                    ),
-                    // Focused Brands Banner for quick scheme reminder
-                    FocusedBrandsBannerWidget(
-                      onTap: () {
-                        FocusedBrandsDialog.show(
-                          context,
-                          isAlreadyCheckedIn: true,
-                        );
-                      },
                     ),
                     const SizedBox(height: 4),
                     Container(
@@ -582,14 +574,14 @@ class _PobBodyState extends State<PobBody> {
 
     if (skus.isEmpty) return const SizedBox.shrink();
 
-    final bool isFocused = product['focused_brand'] == true ||
+    final bool isFocused = provider.isProductFocused(productId) ||
+        product['focused_brand'] == true ||
         product['focused_brand'] == 1 ||
         product['focused_brand'] == '1' ||
         product['focused_brand'] == 'true' ||
         product['is_focused_brand'] == true ||
         product['is_focus'] == true ||
-        product['focus_brand'] == true ||
-        (title.toString().toUpperCase().contains('DASUTRA'));
+        product['focus_brand'] == true;
 
     return Container(
       margin: isFocused ? const EdgeInsets.symmetric(horizontal: 6, vertical: 8) : EdgeInsets.zero,
@@ -661,7 +653,7 @@ class _PobBodyState extends State<PobBody> {
     final currentQty = provider.pobQuantities["${productId}_$skuId"]?.toString() ?? "";
     final dsaQty = provider.distributorStock["${productId}_$skuId"] ?? 0;
 
-    final bool isSkuFocused = isProductFocused ||
+    final bool isSkuFocused = provider.isSkuFocused(skuId, productId: productId) ||
         sku['focused_brand'] == true ||
         sku['focused_brand'] == 1 ||
         sku['focused_brand'] == '1' ||

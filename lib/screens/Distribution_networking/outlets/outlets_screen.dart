@@ -12,6 +12,7 @@ import 'PobScreen.dart';
 import 'PosBaseScreen.dart';
 import 'outlet_provider.dart';
 import 'outlet_visit_history_sheet.dart';
+import 'focused_brands_dialog.dart';
 import '../../../utilities/date_formatter.dart';
 import '../../../services/api_services.dart';
 import '../../../utilities/common_widgets.dart';
@@ -514,13 +515,55 @@ class _OutletsScreenState extends State<OutletsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
-                  outlet.name.toUpperCase(),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: Colors.black,
-                  ),
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        outlet.name.toUpperCase(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                    if (outlet.isFocused) ...[
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          FocusedBrandsDialog.show(
+                            context,
+                            outletId: int.tryParse(outlet.id),
+                            outletName: outlet.name,
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1B5E20),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.stars, color: Colors.amber, size: 12),
+                              SizedBox(width: 3),
+                              Text(
+                                "FOCUS",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               if (isCheckedIn)

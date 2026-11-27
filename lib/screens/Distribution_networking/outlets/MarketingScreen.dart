@@ -55,6 +55,7 @@ class _MarketingBodyState extends State<MarketingBody>
           final provider = Provider.of<OutletActivityProvider>(context, listen: false);
           provider.fetchProductsWithSkus();
           provider.fetchActivityTypes();
+          provider.fetchOutletFocusedProducts(widget.outletId);
         }
       });
     }

@@ -8,6 +8,7 @@ import 'SaleItem.dart';
 import '../services/api_services.dart';
 import '../permissions/AppStateProvider.dart';
 import '../utilities/date_formatter.dart';
+import '../screens/Distribution_networking/outlets/outlet_activity_provider.dart';
 
 class TransactionDetailsScreen extends StatefulWidget {
   final int outletId;
@@ -555,16 +556,43 @@ class _TransactionDetailsScreenState
                   child: SingleChildScrollView(
                     child: Column(
                       children: grouped.entries.map((entry) {
+                        OutletActivityProvider? actProv;
+                        try {
+                          actProv = Provider.of<OutletActivityProvider>(context, listen: false);
+                        } catch (_) {}
+
+                        final bool isProductFocused = entry.value.any((item) {
+                          final pid = item['product_id'];
+                          final sid = item['sku_id'];
+                          return (actProv != null && (actProv.isProductFocused(pid) || actProv.isSkuFocused(sid))) ||
+                              item['focused_brand'] == true ||
+                              item['focused_brand'] == 1 ||
+                              item['focused_brand'] == '1' ||
+                              item['focused_brand'] == 'true' ||
+                              item['is_focused_brand'] == true ||
+                              item['is_focus'] == true ||
+                              item['focus_brand'] == true;
+                        });
+
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Center(
-                              child: Text(
-                                entry.key.toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              child: Wrap(
+                                alignment: WrapAlignment.center,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 8,
+                                children: [
+                                  Text(
+                                    entry.key.toUpperCase(),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: isProductFocused ? const Color(0xFF1B5E20) : Colors.black87,
+                                    ),
+                                  ),
+                                  if (isProductFocused) const FocusedBrandTag(),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -573,7 +601,16 @@ class _TransactionDetailsScreenState
                               String sku = item['sku_name'] ?? item['sku_displayname'] ?? item['sku_id']?.toString() ?? 'N/A';
                               final subtotal = double.tryParse(item['pts_subtotal']?.toString() ?? item['ptr_incl_gst_subtotal']?.toString() ?? '');
                               final unitPrice = double.tryParse(item['pts']?.toString() ?? item['ptr_incl_gst_price']?.toString() ?? item['sku_retailerprice']?.toString() ?? item['price']?.toString() ?? '');
-                              return _skuRow(sku, qty, unitPrice: unitPrice, subtotal: subtotal);
+                              final bool isSkuFocused = isProductFocused ||
+                                  (actProv != null && (actProv.isProductFocused(item['product_id']) || actProv.isSkuFocused(item['sku_id']))) ||
+                                  item['focused_brand'] == true ||
+                                  item['focused_brand'] == 1 ||
+                                  item['focused_brand'] == '1' ||
+                                  item['focused_brand'] == 'true' ||
+                                  item['is_focused_brand'] == true ||
+                                  item['is_focus'] == true ||
+                                  item['focus_brand'] == true;
+                              return _skuRow(sku, qty, unitPrice: unitPrice, subtotal: subtotal, isFocused: isSkuFocused);
                             }).toList(),
                             const SizedBox(height: 20),
                           ],
@@ -644,18 +681,26 @@ class _TransactionDetailsScreenState
     }
   }
 
-  Widget _skuRow(String sku, String qty, {double? unitPrice, double? subtotal}) {
+  Widget _skuRow(String sku, String qty, {double? unitPrice, double? subtotal, bool isFocused = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
+          if (isFocused) ...[
+            const Icon(Icons.star, size: 14, color: Color(0xFF2E7D32)),
+            const SizedBox(width: 6),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   sku,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: isFocused ? FontWeight.bold : FontWeight.w500,
+                    color: isFocused ? const Color(0xFF1B5E20) : Colors.black87,
+                  ),
                 ),
                 if (unitPrice != null && unitPrice > 0)
                   Text(
@@ -671,13 +716,17 @@ class _TransactionDetailsScreenState
             height: 38,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.lightBlue.shade50,
-              border: Border.all(color: Colors.grey.shade400),
+              color: isFocused ? const Color(0xFFE8F5E9) : Colors.lightBlue.shade50,
+              border: Border.all(color: isFocused ? Colors.green.shade400 : Colors.grey.shade400),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
               qty,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isFocused ? const Color(0xFF1B5E20) : Colors.black87,
+              ),
             ),
           ),
         ],

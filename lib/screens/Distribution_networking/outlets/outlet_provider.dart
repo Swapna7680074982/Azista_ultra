@@ -83,6 +83,7 @@ class Outlet {
   final int totalActivities;
   final int totalPobs;
   final double saleValue;
+  final bool isFocused;
 
   Outlet({
     required this.name,
@@ -101,6 +102,7 @@ class Outlet {
     this.totalActivities = 0,
     this.totalPobs = 0,
     this.saleValue = 0.0,
+    this.isFocused = false,
   });
 
   VisitHistoryItem? get latestVisit =>
@@ -123,6 +125,7 @@ class Outlet {
     int? totalActivities,
     int? totalPobs,
     double? saleValue,
+    bool? isFocused,
   }) {
     return Outlet(
       name: name ?? this.name,
@@ -141,6 +144,7 @@ class Outlet {
       totalActivities: totalActivities ?? this.totalActivities,
       totalPobs: totalPobs ?? this.totalPobs,
       saleValue: saleValue ?? this.saleValue,
+      isFocused: isFocused ?? this.isFocused,
     );
   }
 
@@ -285,6 +289,9 @@ class Outlet {
     final int totalPob = int.tryParse((json['total_pobs'] ?? outletData['total_pobs'] ?? '').toString()) ?? 0;
     final double saleVal = double.tryParse((json['sale_value'] ?? outletData['sale_value'] ?? '').toString()) ?? 0.0;
 
+    final rawFocused = outletData['outlet_focused'] ?? json['outlet_focused'];
+    final bool isFocusedOutlet = rawFocused != null && rawFocused.toString().trim().toUpperCase() == 'YES';
+
     return Outlet(
       id: (outletData['outlet_id'] ?? outletData['id'] ?? json['outlet_id'] ?? json['id'] ?? '').toString(),
       name: (outletData['outlet_name'] ?? outletData['name'] ?? 'Unknown').toString(),
@@ -302,6 +309,7 @@ class Outlet {
       totalActivities: totalAct,
       totalPobs: totalPob,
       saleValue: saleVal,
+      isFocused: isFocusedOutlet,
     );
   }
 }

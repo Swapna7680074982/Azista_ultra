@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'outlet_activity_provider.dart';
 
 import '../../../constants/app_colors.dart';
 
@@ -58,26 +60,27 @@ class SuppliedProductListScreen extends StatelessWidget {
         child: ListView.builder(
           itemCount: items.length,
           itemBuilder: (context, index) {
-            return _productItem(items[index]);
+            return _productItem(context, items[index]);
           },
         ),
       ),
     );
   }
 
-  Widget _productItem(dynamic item) {
+  Widget _productItem(BuildContext context, dynamic item) {
     final title = "${item['product_name']} - ${item['sku_displayname']}";
     final raisedQty = item['quantity']?.toString() ?? "0";
     final suppliedQty = item['supplied_qty']?.toString() ?? "0";
 
-    final bool isFocusedBrand = item['focused_brand'] == true ||
+    final activityProvider = Provider.of<OutletActivityProvider>(context, listen: false);
+    final bool isFocusedBrand = activityProvider.isSkuFocused(item['sku_id'], productId: item['product_id']) ||
+        item['focused_brand'] == true ||
         item['focused_brand'] == 1 ||
         item['focused_brand'] == '1' ||
         item['focused_brand'] == 'true' ||
         item['is_focused_brand'] == true ||
         item['is_focus'] == true ||
-        item['focus_brand'] == true ||
-        (title.toUpperCase().contains('DASUTRA'));
+        item['focus_brand'] == true;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),

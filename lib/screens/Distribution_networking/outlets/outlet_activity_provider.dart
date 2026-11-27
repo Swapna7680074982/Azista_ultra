@@ -417,4 +417,106 @@ class OutletActivityProvider extends ChangeNotifier {
     _isLoadingHistory = false;
     notifyListeners();
   }
+
+  // Outlet Focused Products
+  Map<String, dynamic>? _outletFocusedData;
+  Map<String, dynamic>? get outletFocusedData => _outletFocusedData;
+
+  List<dynamic> _focusedProducts = [];
+  List<dynamic> get focusedProducts => _focusedProducts;
+
+  final Set<int> _focusedProductIds = {};
+  Set<int> get focusedProductIds => _focusedProductIds;
+
+  final Set<int> _focusedSkuIds = {};
+  Set<int> get focusedSkuIds => _focusedSkuIds;
+
+  bool _isLoadingFocusedProducts = false;
+  bool get isLoadingFocusedProducts => _isLoadingFocusedProducts;
+
+  bool isProductFocused(dynamic productId) {
+    if (productId == null) return false;
+    final id = int.tryParse(productId.toString());
+    return id != null && _focusedProductIds.contains(id);
+  }
+
+  bool productHasTargetedSkus(dynamic productId) {
+    if (productId == null) return false;
+    final id = int.tryParse(productId.toString());
+    if (id == null) return false;
+    for (var p in _focusedProducts) {
+      if (p is Map && int.tryParse(p['product_id']?.toString() ?? '') == id) {
+        final skus = p['skus'] as List<dynamic>? ?? [];
+        return skus.isNotEmpty;
+      }
+    }
+    return false;
+  }
+
+  bool isSkuFocused(dynamic skuId, {dynamic productId}) {
+    if (skuId != null) {
+      final sId = int.tryParse(skuId.toString());
+      if (sId != null && _focusedSkuIds.contains(sId)) {
+        return true;
+      }
+    }
+    if (productId != null && isProductFocused(productId) && !productHasTargetedSkus(productId)) {
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> fetchOutletFocusedProducts(int outletId) async {
+    _isLoadingFocusedProducts = true;
+    notifyListeners();
+
+    try {
+      final response = await ApiServices.getOutletFocusedProducts(outletId: outletId);
+      if (response != null && (response['status'] == true || response['status_code'] == 200)) {
+        final data = response['data'] is Map<String, dynamic>
+            ? response['data'] as Map<String, dynamic>
+            : (response['data'] is Map ? Map<String, dynamic>.from(response['data']) : null);
+        _outletFocusedData = data;
+        _focusedProductIds.clear();
+        _focusedSkuIds.clear();
+
+        if (data != null && data['focused_products'] is List) {
+          _focusedProducts = List<dynamic>.from(data['focused_products']);
+          for (var p in _focusedProducts) {
+            if (p is Map) {
+              final pId = int.tryParse(p['product_id']?.toString() ?? '');
+              if (pId != null) {
+                _focusedProductIds.add(pId);
+              }
+              final skus = p['skus'] as List<dynamic>? ?? [];
+              for (var s in skus) {
+                if (s is Map) {
+                  final sId = int.tryParse(s['sku_id']?.toString() ?? '');
+                  if (sId != null) {
+                    _focusedSkuIds.add(sId);
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          _focusedProducts = [];
+        }
+      } else {
+        _outletFocusedData = null;
+        _focusedProducts = [];
+        _focusedProductIds.clear();
+        _focusedSkuIds.clear();
+      }
+    } catch (e) {
+      debugPrint("Error fetching outlet focused products: $e");
+      _outletFocusedData = null;
+      _focusedProducts = [];
+      _focusedProductIds.clear();
+      _focusedSkuIds.clear();
+    } finally {
+      _isLoadingFocusedProducts = false;
+      notifyListeners();
+    }
+  }
 }

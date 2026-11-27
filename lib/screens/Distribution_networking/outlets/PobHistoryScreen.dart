@@ -29,8 +29,9 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
     Future.microtask(() {
       if (mounted) {
         final appState = Provider.of<AppStateProvider>(context, listen: false);
-        Provider.of<OutletActivityProvider>(context, listen: false)
-            .fetchPobHistory(widget.outletId, distributorId: appState.selectedDistributorId);
+        final activityProvider = Provider.of<OutletActivityProvider>(context, listen: false);
+        activityProvider.fetchPobHistory(widget.outletId, distributorId: appState.selectedDistributorId);
+        activityProvider.fetchOutletFocusedProducts(widget.outletId);
       }
     });
   }
@@ -285,17 +286,15 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
 
   bool _isItemFocusedBrand(dynamic item) {
     if (item == null) return false;
-    final name = (item['product_name'] ?? item['name'] ?? item['sku_name'] ?? item['brand_name'] ?? '').toString().toUpperCase();
-    return item['focused_brand'] == true ||
+    final activityProvider = Provider.of<OutletActivityProvider>(context, listen: false);
+    return activityProvider.isSkuFocused(item['sku_id'], productId: item['product_id']) ||
+        item['focused_brand'] == true ||
         item['focused_brand'] == 1 ||
         item['focused_brand'] == '1' ||
         item['focused_brand'] == 'true' ||
         item['is_focused_brand'] == true ||
         item['is_focus'] == true ||
-        item['focus_brand'] == true ||
-        name.contains('DASUTRA') ||
-        name.contains('AZIFINE') ||
-        name.contains('PANTOVISTA');
+        item['focus_brand'] == true;
   }
 
   bool _pobHasFocusedBrands(dynamic pob) {
@@ -960,7 +959,7 @@ class _PobHistoryScreenState extends State<PobHistoryScreen> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    "Book orders for Dasutra Tablets or other priority brands to view them here.",
+                    "Book orders for focused brands or priority products to view them here.",
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey, fontSize: 11),
                   ),

@@ -5,6 +5,7 @@ import '../../../permissions/AppStateProvider.dart';
 import 'distribution_list_provider.dart';
 import '../../../utilities/date_formatter.dart';
 import '../../../utilities/common_widgets.dart';
+import '../Distribution_networking/outlets/outlet_activity_provider.dart';
 
 class StockOnHandScreen extends StatefulWidget {
   const StockOnHandScreen({super.key});
@@ -345,21 +346,56 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
                   child: SingleChildScrollView(
                     child: Column(
                       children: grouped.entries.map((entry) {
+                        OutletActivityProvider? actProv;
+                        try {
+                          actProv = Provider.of<OutletActivityProvider>(context, listen: false);
+                        } catch (_) {}
+
+                        final bool isProductFocused = entry.value.any((item) {
+                          final pid = item['product_id'];
+                          final sid = item['sku_id'];
+                          return (actProv != null && (actProv.isProductFocused(pid) || actProv.isSkuFocused(sid))) ||
+                              item['focused_brand'] == true ||
+                              item['focused_brand'] == 1 ||
+                              item['focused_brand'] == '1' ||
+                              item['focused_brand'] == 'true' ||
+                              item['is_focused_brand'] == true ||
+                              item['is_focus'] == true ||
+                              item['focus_brand'] == true;
+                        });
+
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Center(
-                              child: Text(
-                                entry.key.toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              child: Wrap(
+                                alignment: WrapAlignment.center,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 8,
+                                children: [
+                                  Text(
+                                    entry.key.toUpperCase(),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: isProductFocused ? const Color(0xFF1B5E20) : Colors.black87,
+                                    ),
+                                  ),
+                                  if (isProductFocused) const FocusedBrandTag(),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 10),
                             ...entry.value.map((sku) {
-                              return _skuRow(sku['sku_name'] ?? 'N/A', sku['qty'] ?? '0');
+                              final bool isSkuFocused = (actProv != null && actProv.isSkuFocused(sku['sku_id'], productId: sku['product_id'])) ||
+                                  sku['focused_brand'] == true ||
+                                  sku['focused_brand'] == 1 ||
+                                  sku['focused_brand'] == '1' ||
+                                  sku['focused_brand'] == 'true' ||
+                                  sku['is_focused_brand'] == true ||
+                                  sku['is_focus'] == true ||
+                                  sku['focus_brand'] == true;
+                              return _skuRow(sku['sku_name'] ?? 'N/A', sku['qty'] ?? '0', isFocused: isSkuFocused);
                             }).toList(),
                             const SizedBox(height: 20),
                           ],
@@ -386,15 +422,23 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
     );
   }
 
-  Widget _skuRow(String sku, String qty) {
+  Widget _skuRow(String sku, String qty, {bool isFocused = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
+          if (isFocused) ...[
+            const Icon(Icons.star, size: 14, color: Color(0xFF2E7D32)),
+            const SizedBox(width: 6),
+          ],
           Expanded(
             child: Text(
               sku,
-              style: const TextStyle(fontSize: 14),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isFocused ? FontWeight.bold : FontWeight.normal,
+                color: isFocused ? const Color(0xFF1B5E20) : Colors.black87,
+              ),
             ),
           ),
           Container(
@@ -402,13 +446,17 @@ class _StockOnHandScreenState extends State<StockOnHandScreen> {
             height: 40,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.lightBlue.shade50,
-              border: Border.all(color: Colors.grey.shade400),
+              color: isFocused ? const Color(0xFFE8F5E9) : Colors.lightBlue.shade50,
+              border: Border.all(color: isFocused ? Colors.green.shade400 : Colors.grey.shade400),
               borderRadius: BorderRadius.circular(2),
             ),
             child: Text(
               qty,
-              style: const TextStyle(fontSize: 14),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isFocused ? FontWeight.bold : FontWeight.normal,
+                color: isFocused ? const Color(0xFF1B5E20) : Colors.black87,
+              ),
             ),
           ),
         ],

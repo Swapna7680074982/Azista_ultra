@@ -116,14 +116,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
     final remainingVal = int.tryParse(remainingQty) ?? 0;
     final controller = _controllers.putIfAbsent(index, () => TextEditingController());
 
-    final bool isFocusedBrand = item['focused_brand'] == true ||
+    final activityProvider = Provider.of<OutletActivityProvider>(context, listen: false);
+    final bool isFocusedBrand = activityProvider.isSkuFocused(item['sku_id'], productId: item['product_id']) ||
+        item['focused_brand'] == true ||
         item['focused_brand'] == 1 ||
         item['focused_brand'] == '1' ||
         item['focused_brand'] == 'true' ||
         item['is_focused_brand'] == true ||
         item['is_focus'] == true ||
-        item['focus_brand'] == true ||
-        (title.toUpperCase().contains('DASUTRA'));
+        item['focus_brand'] == true;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),

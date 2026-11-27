@@ -91,14 +91,54 @@ class QtyBox extends StatelessWidget {
   }
 }
 
+class FocusedBrandTag extends StatelessWidget {
+  final double fontSize;
+  final double iconSize;
+
+  const FocusedBrandTag({
+    super.key,
+    this.fontSize = 10,
+    this.iconSize = 13,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2E7D32),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.stars, color: Colors.amber, size: iconSize),
+          const SizedBox(width: 4),
+          Text(
+            "FOCUSED BRAND",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: fontSize,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class ProductCard extends StatelessWidget {
   final String title;
   final List<Widget> children;
+  final bool isFocused;
 
   const ProductCard({
     super.key,
     required this.title,
     required this.children,
+    this.isFocused = false,
   });
 
   @override
@@ -107,12 +147,17 @@ class ProductCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: isFocused ? const Color(0xFFE8F5E9) : AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withValues(alpha:0.1)),
+        border: Border.all(
+          color: isFocused ? Colors.green.shade500 : AppColors.primary.withValues(alpha: 0.1),
+          width: isFocused ? 1.5 : 1.0,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha:0.03),
+            color: isFocused
+                ? Colors.green.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -122,14 +167,26 @@ class ProductCard extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              title.toUpperCase(),
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: AppColors.primary,
-                letterSpacing: 1.1,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isFocused) ...[
+                  const FocusedBrandTag(),
+                  const SizedBox(width: 8),
+                ],
+                Flexible(
+                  child: Text(
+                    title.toUpperCase(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: isFocused ? const Color(0xFF1B5E20) : AppColors.primary,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           ...children,

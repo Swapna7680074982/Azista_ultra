@@ -1,94 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../constants/app_colors.dart';
+import 'outlet_activity_provider.dart';
 
-class FocusedBrandItem {
-  final String name;
-  final String category;
-  final String description;
-  final String target;
-  final String scheme;
-  final String margin;
-  final String badge;
-  final IconData icon;
-
-  const FocusedBrandItem({
-    required this.name,
-    required this.category,
-    required this.description,
-    required this.target,
-    required this.scheme,
-    required this.margin,
-    required this.badge,
-    this.icon = Icons.stars,
-  });
-
-  factory FocusedBrandItem.fromJson(Map<String, dynamic> json) {
-    return FocusedBrandItem(
-      name: json['name'] ?? json['product_name'] ?? json['brand_name'] ?? '',
-      category: json['category'] ?? json['division'] ?? 'Pharma',
-      description: json['description'] ?? json['composition'] ?? '',
-      target: json['target'] ?? json['focus_target'] ?? 'Focus Brand',
-      scheme: json['scheme'] ?? json['offer'] ?? 'Active Scheme',
-      margin: json['margin'] ?? '15% Margin',
-      badge: json['badge'] ?? 'TOP PRIORITY',
-    );
-  }
-}
-
-class FocusedBrandsData {
-  static const List<FocusedBrandItem> defaultBrands = [
-    FocusedBrandItem(
-      name: "DASUTRA TABLETS",
-      category: "Men's Health / Ultra",
-      description: "Fast-acting Sildenafil 100mg / 50mg Tablets",
-      target: "Minimum 5+ boxes per outlet visit",
-      scheme: "Buy 10 boxes, Get 2 Free (Active)",
-      margin: "18% Retailer Margin",
-      badge: "⭐ TOP PRIORITY",
-      icon: Icons.local_fire_department,
-    ),
-    FocusedBrandItem(
-      name: "AZIFINE 500",
-      category: "Anti-Infective / Antibiotic",
-      description: "Azithromycin 500mg Tablets (3s / 5s pack)",
-      target: "Target 3+ boxes per outlet",
-      scheme: "Special Scheme: Buy 20 Get 3 Free",
-      margin: "15% Retailer Margin",
-      badge: "🎯 HIGH FOCUS",
-      icon: Icons.medical_services,
-    ),
-    FocusedBrandItem(
-      name: "PANTOVISTA DSR",
-      category: "Gastroenterology",
-      description: "Pantoprazole & Domperidone Sustained Release",
-      target: "Target 5+ strips per booking",
-      scheme: "Seasonal Discount: 10% Extra Off",
-      margin: "16% Retailer Margin",
-      badge: "🔥 SEASONAL FOCUS",
-      icon: Icons.medication_liquid,
-    ),
-    FocusedBrandItem(
-      name: "CALCIVISTA XT",
-      category: "Nutritional / Supplements",
-      description: "Calcium Citrate, Vitamin D3 & Zinc Tablets",
-      target: "Target 4+ bottles/boxes",
-      scheme: "Introductory Offer: Buy 5 Get 1 Free",
-      margin: "20% Retailer Margin",
-      badge: "✨ NEW FOCUS",
-      icon: Icons.health_and_safety,
-    ),
-  ];
-}
-
-class FocusedBrandsDialog extends StatelessWidget {
+class FocusedBrandsDialog extends StatefulWidget {
   final VoidCallback? onProceed;
   final String outletName;
+  final int? outletId;
   final bool isAlreadyCheckedIn;
 
   const FocusedBrandsDialog({
     super.key,
     this.onProceed,
     this.outletName = "",
+    this.outletId,
     this.isAlreadyCheckedIn = false,
   });
 
@@ -96,6 +21,7 @@ class FocusedBrandsDialog extends StatelessWidget {
     BuildContext context, {
     VoidCallback? onProceed,
     String outletName = "",
+    int? outletId,
     bool isAlreadyCheckedIn = false,
   }) {
     return showDialog(
@@ -104,354 +30,493 @@ class FocusedBrandsDialog extends StatelessWidget {
       builder: (ctx) => FocusedBrandsDialog(
         onProceed: onProceed,
         outletName: outletName,
+        outletId: outletId,
         isAlreadyCheckedIn: isAlreadyCheckedIn,
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final brands = FocusedBrandsData.defaultBrands;
+  State<FocusedBrandsDialog> createState() => _FocusedBrandsDialogState();
+}
 
+class _FocusedBrandsDialogState extends State<FocusedBrandsDialog> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.outletId != null && mounted) {
+        final prov = Provider.of<OutletActivityProvider>(context, listen: false);
+        final currentOutletData = prov.outletFocusedData;
+        final currentOutletId = currentOutletData?['outlet']?['outlet_id'];
+        if (currentOutletData == null || currentOutletId?.toString() != widget.outletId.toString()) {
+          prov.fetchOutletFocusedProducts(widget.outletId!);
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       backgroundColor: Colors.white,
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.82,
-          maxWidth: 480,
+          maxWidth: 440,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Top Green Banner Header
-            Container(
-              padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF1B5E20), // Dark Green
-                    Color(0xFF2E7D32), // Green
-                    Color(0xFF388E3C), // Medium Green
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Consumer<OutletActivityProvider>(
+          builder: (context, provider, _) {
+            final focusedData = provider.outletFocusedData;
+            final products = provider.focusedProducts;
+            final summary = focusedData?['summary'] as Map<String, dynamic>?;
+            final apiOutlet = focusedData?['outlet'] as Map<String, dynamic>?;
+            final dateStr = focusedData?['date']?.toString() ?? '';
+
+            final effectiveOutletName = (apiOutlet?['outlet_name']?.toString().isNotEmpty ?? false)
+                ? apiOutlet!['outlet_name'].toString()
+                : widget.outletName;
+
+            final num percentNum = (summary != null && summary['percent'] != null)
+                ? (num.tryParse(summary['percent'].toString()) ?? 0)
+                : 0;
+            final double progressFraction = (percentNum / 100.0).clamp(0.0, 1.0);
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Top Emerald Header
+                Container(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF0F5132),
+                        Color(0xFF198754),
+                        Color(0xFF20C997),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white38),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.stars, color: Colors.amber, size: 16),
-                            SizedBox(width: 6),
-                            Text(
-                              "PRIORITY FOCUS",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                                letterSpacing: 0.5,
-                              ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.18),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white30),
                             ),
-                          ],
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.stars_rounded, color: Colors.amber, size: 15),
+                                SizedBox(width: 5),
+                                Text(
+                                  "PRIORITY TARGETS",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10.5,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => Navigator.pop(context),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.18),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close, color: Colors.white, size: 18),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        "FOCUSED BRANDS",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white, size: 22),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () => Navigator.pop(context),
+                      const SizedBox(height: 3),
+                      Text(
+                        effectiveOutletName.isNotEmpty
+                            ? effectiveOutletName
+                            : "Priority products for order booking",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.92),
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    "FOCUSED BRANDS",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    outletName.isNotEmpty
-                        ? "Pitch & book these priority products for $outletName today!"
-                        : "Focus products to pitch and maximize order booking today!",
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.92),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Tip Banner
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: const Color(0xFFE8F5E9),
-              child: Row(
-                children: [
-                  const Icon(Icons.lightbulb, color: Color(0xFF2E7D32), size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      "Earn extra incentive & fulfill target by booking focus brands.",
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.green.shade900,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Scrollable List of Focused Brands
-            Flexible(
-              child: ListView.separated(
-                shrinkWrap: true,
-                padding: const EdgeInsets.all(14),
-                itemCount: brands.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final brand = brands[index];
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFAFAFA),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.green.shade300, width: 1.2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.green.withOpacity(0.04),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                      if (dateStr.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.calendar_today_outlined, size: 11, color: Colors.white70),
+                              const SizedBox(width: 4),
+                              Text(
+                                "Date: $dateStr",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
+                    ],
+                  ),
+                ),
+
+                // Target Summary Box (if summary available)
+                if (summary != null)
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FCF9),
+                      border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE8F5E9),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(brand.icon, color: const Color(0xFF2E7D32), size: 20),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          brand.name,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF1B5E20),
-                                          ),
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFE8F5E9),
-                                          borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(color: Colors.green.shade300),
-                                        ),
-                                        child: Text(
-                                          brand.badge,
-                                          style: const TextStyle(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF2E7D32),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    brand.description,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            _buildSummaryMetric("TARGET", summary['target']?.toString() ?? "0", const Color(0xFF1E293B)),
+                            Container(width: 1, height: 26, color: Colors.grey.shade300),
+                            _buildSummaryMetric("ACHIEVED", summary['achieved']?.toString() ?? "0", const Color(0xFF15803D)),
+                            Container(width: 1, height: 26, color: Colors.grey.shade300),
+                            _buildSummaryMetric("COMPLETION", "${summary['percent'] ?? 0}%", const Color(0xFFD97706)),
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Divider(height: 1, thickness: 0.6, color: Colors.grey.shade300),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.check_circle, size: 14, color: Color(0xFF2E7D32)),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      brand.scheme,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black87,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.amber.shade50,
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: Colors.amber.shade300),
-                              ),
-                              child: Text(
-                                brand.margin,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.amber.shade900,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.track_changes, size: 13, color: Colors.blueGrey),
-                            const SizedBox(width: 4),
-                            Text(
-                              brand.target,
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                color: Colors.blueGrey.shade700,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ],
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: progressFraction,
+                            backgroundColor: Colors.grey.shade200,
+                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF15803D)),
+                            minHeight: 5,
+                          ),
                         ),
                       ],
                     ),
-                  );
-                },
-              ),
-            ),
+                  ),
 
-            // Action Buttons
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        side: BorderSide(color: Colors.grey.shade400),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text(
-                        "DISMISS",
-                        style: TextStyle(
-                          color: Colors.black87,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E7D32),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        elevation: 2,
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        if (onProceed != null) {
-                          onProceed!();
-                        }
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            isAlreadyCheckedIn ? Icons.shopping_bag : Icons.login,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            isAlreadyCheckedIn ? "PROCEED TO POB" : "PROCEED TO CHECK-IN",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              letterSpacing: 0.5,
+                // Content Area
+                Flexible(
+                  child: provider.isLoadingFocusedProducts
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(36),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(color: Color(0xFF15803D)),
+                                SizedBox(height: 14),
+                                Text(
+                                  "Fetching focused products...",
+                                  style: TextStyle(fontSize: 12.5, color: Colors.grey),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
+                        )
+                      : products.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.inventory_2_outlined, size: 44, color: Colors.grey.shade400),
+                                    const SizedBox(height: 10),
+                                    const Text(
+                                      "No Focused Products",
+                                      style: TextStyle(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "No priority product targets are assigned for this outlet.",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              itemCount: products.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 10),
+                              itemBuilder: (context, index) {
+                                final product = products[index] as Map<String, dynamic>;
+                                return _buildProductCard(product);
+                              },
+                            ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryMetric(String label, String value, Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 9.5,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade600,
+            letterSpacing: 0.4,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14.5,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductCard(Map<String, dynamic> product) {
+    final productName = product['product_name']?.toString() ?? 'Product';
+    final target = product['target']?.toString() ?? '0';
+    final achieved = product['achieved']?.toString() ?? '0';
+    final percent = product['percent']?.toString() ?? '0';
+    final skus = product['skus'] as List<dynamic>? ?? [];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200, width: 1.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 1.5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Product Title Row
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(9)),
+              border: Border(bottom: BorderSide(color: Colors.green.shade100, width: 0.8)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 3.5,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF15803D),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    productName,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF14532D),
                     ),
                   ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF15803D),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    "Target: $target",
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Achieved & Percentage Summary
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline, size: 13, color: Color(0xFF15803D)),
+                    const SizedBox(width: 4),
+                    Text(
+                      "Achieved: $achieved",
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFBEB),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: Text(
+                    "$percent% Complete",
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFB45309),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // SKUs List
+          if (skus.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 2, 10, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "SKUs & Validity:",
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueGrey,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  ...skus.map((skuItem) {
+                    final sku = skuItem as Map<String, dynamic>;
+                    final skuName = sku['sku_name']?.toString() ?? 'SKU';
+                    final fromDate = sku['from_date']?.toString() ?? '';
+                    final toDate = sku['to_date']?.toString() ?? '';
+                    final skuTarget = sku['target']?.toString() ?? '0';
+                    final skuAchieved = sku['achieved']?.toString() ?? '0';
+
+                    return Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  skuName,
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                "Target: $skuTarget | Ach: $skuAchieved",
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF15803D),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (fromDate.isNotEmpty && toDate.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              "Period: $fromDate to $toDate",
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 ],
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -460,108 +525,119 @@ class FocusedBrandsDialog extends StatelessWidget {
 /// Standalone full-width banner widget for PosBaseScreen and PobScreen
 class FocusedBrandsBannerWidget extends StatelessWidget {
   final VoidCallback onTap;
-  final int count;
+  final int? count;
+  final String? subtitle;
 
   const FocusedBrandsBannerWidget({
     super.key,
     required this.onTap,
-    this.count = 4,
+    this.count,
+    this.subtitle,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFFE8F5E9),
-            Color(0xFFC8E6C9),
-          ],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF81C784), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.green.withOpacity(0.08),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+    return Consumer<OutletActivityProvider>(
+      builder: (context, provider, _) {
+        final effectiveCount = count ?? provider.focusedProducts.length;
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFFE8F5E9),
+                Color(0xFFC8E6C9),
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF81C784), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.green.withOpacity(0.08),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF2E7D32),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.stars, color: Colors.amber, size: 16),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2E7D32),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.stars_rounded, color: Colors.amber, size: 16),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text(
-                            "FOCUSED BRANDS ACTIVE",
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1B5E20),
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2E7D32),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              "$count BRANDS",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
+                          Row(
+                            children: [
+                              const Text(
+                                "FOCUSED BRANDS ACTIVE",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1B5E20),
+                                  letterSpacing: 0.3,
+                                ),
                               ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2E7D32),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  effectiveCount > 0 ? "$effectiveCount PRODUCTS" : "PRIORITY",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle ??
+                                (effectiveCount > 0
+                                    ? "$effectiveCount target products assigned • Tap to view schemes & targets"
+                                    : "Focus products to pitch and maximize targets • Tap to view"),
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: Colors.green.shade900,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        "Dasutra Tablets & other priority items • Tap to view schemes",
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          color: Colors.green.shade900,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.arrow_forward_ios, size: 13, color: Color(0xFF2E7D32)),
+                  ],
                 ),
-                const SizedBox(width: 6),
-                const Icon(Icons.arrow_forward_ios, size: 13, color: Color(0xFF2E7D32)),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

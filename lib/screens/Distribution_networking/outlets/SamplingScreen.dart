@@ -19,8 +19,9 @@ class _SamplingBodyState extends State<SamplingBody> {
     super.initState();
     Future.microtask(() {
       if (mounted) {
-        Provider.of<OutletActivityProvider>(context, listen: false)
-            .fetchProductsWithSkus();
+        final provider = Provider.of<OutletActivityProvider>(context, listen: false);
+        provider.fetchProductsWithSkus();
+        provider.fetchOutletFocusedProducts(widget.outletId);
       }
     });
   }
@@ -104,28 +105,99 @@ class _SamplingBodyState extends State<SamplingBody> {
 
     if (skus.isEmpty) return const SizedBox.shrink();
 
-    return ProductCard(
-      title: title,
-      children: skus.map((sku) => _buildSkuRow(productId, sku, provider)).toList(),
+    final bool isFocused = provider.isProductFocused(productId) ||
+        product['focused_brand'] == true ||
+        product['focused_brand'] == 1 ||
+        product['focused_brand'] == '1' ||
+        product['focused_brand'] == 'true' ||
+        product['is_focused_brand'] == true ||
+        product['is_focus'] == true ||
+        product['focus_brand'] == true;
+
+    return Container(
+      margin: isFocused ? const EdgeInsets.symmetric(horizontal: 6, vertical: 8) : EdgeInsets.zero,
+      decoration: isFocused
+          ? BoxDecoration(
+              color: const Color(0xFFE8F5E9),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.green.shade400, width: 1.5),
+            )
+          : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isFocused) ...[
+                  const FocusedBrandTag(),
+                  const SizedBox(width: 8),
+                ],
+                Flexible(
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: isFocused ? const Color(0xFF1B5E20) : Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ...skus.map((sku) => _buildSkuRow(productId, sku, provider, isProductFocused: isFocused)).toList(),
+          if (isFocused) const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 
-  Widget _buildSkuRow(dynamic productId, dynamic sku, OutletActivityProvider provider) {
-    final skuName = sku['sku_displayname'] ?? 'Unknown SKU';
+  Widget _buildSkuRow(dynamic productId, dynamic sku, OutletActivityProvider provider, {bool isProductFocused = false}) {
+    final skuName = sku['sku_displayname'] ?? sku['sku_name'] ?? 'Unknown SKU';
     final skuId = sku['sku_id'];
     final currentQty = provider.samplingQuantities["${productId}_$skuId"]?.toString() ?? "";
 
-    return Padding(
+    final bool isSkuFocused = provider.isSkuFocused(skuId, productId: productId) ||
+        sku['focused_brand'] == true ||
+        sku['focused_brand'] == 1 ||
+        sku['focused_brand'] == '1' ||
+        sku['focused_brand'] == 'true' ||
+        sku['is_focused_brand'] == true ||
+        sku['is_focus'] == true;
+
+    return Container(
+      margin: isSkuFocused ? const EdgeInsets.symmetric(horizontal: 6, vertical: 3) : EdgeInsets.zero,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: isSkuFocused
+          ? BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+              border: Border(left: BorderSide(color: Colors.green.shade600, width: 3.5)),
+            )
+          : null,
       child: Row(
         children: [
+          if (isSkuFocused) ...[
+            const Icon(Icons.star, size: 14, color: Color(0xFF2E7D32)),
+            const SizedBox(width: 6),
+          ],
           Expanded(
             child: Text(
               skuName,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSkuFocused ? FontWeight.bold : FontWeight.w500,
+                color: isSkuFocused ? const Color(0xFF1B5E20) : Colors.black87,
+              ),
             ),
           ),
           QtyBox(
+            isRed: !isSkuFocused,
+            isGreen: isSkuFocused,
             initialValue: currentQty,
             onChanged: (value) {
               provider.updateSamplingQuantity(productId, skuId, value);
@@ -135,4 +207,4 @@ class _SamplingBodyState extends State<SamplingBody> {
       ),
     );
   }
-}
+}

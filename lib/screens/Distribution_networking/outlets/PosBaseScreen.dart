@@ -259,6 +259,10 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
     if (mounted) {
       final actProvider = context.read<OutletActivityProvider>();
       actProvider.fetchProductsWithSkus();
+      final outletIdInt = int.tryParse(widget.outlet.id);
+      if (outletIdInt != null) {
+        actProvider.fetchOutletFocusedProducts(outletIdInt);
+      }
       final appState = context.read<AppStateProvider>();
       if (appState.selectedDistributorId != null) {
         actProvider.fetchDistributorStock(appState.selectedDistributorId!);
@@ -532,16 +536,6 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
             context,
             message: response['message'] ?? "Outlet checked-in successfully ($visitType)",
           );
-
-          Future.delayed(const Duration(milliseconds: 1400), () {
-            if (mounted) {
-              FocusedBrandsDialog.show(
-                context,
-                outletName: widget.outlet.name,
-                isAlreadyCheckedIn: true,
-              );
-            }
-          });
         }
       } else {
         final errMsg = response != null ? response['message'] : "Failed to check in";
@@ -797,29 +791,11 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                           )
                         else if (_isCheckedIn) ...[
                           _buildCheckInBanner(),
-                          FocusedBrandsBannerWidget(
-                            onTap: () {
-                              FocusedBrandsDialog.show(
-                                context,
-                                outletName: widget.outlet.name,
-                                isAlreadyCheckedIn: true,
-                              );
-                            },
-                          ),
                         ] else ...[
                           if (isLocationValid == false) ...[
                             // Restricted view will render in body
                           ] else ...[
                             _buildCheckInPromptCard(),
-                            FocusedBrandsBannerWidget(
-                              onTap: () {
-                                FocusedBrandsDialog.show(
-                                  context,
-                                  outletName: widget.outlet.name,
-                                  onProceed: _showVisitTypeSelectionDialog,
-                                );
-                              },
-                            ),
                           ],
                         ],
                       ],
@@ -944,11 +920,7 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                       ),
                     ),
                     onPressed: () {
-                      FocusedBrandsDialog.show(
-                        context,
-                        outletName: widget.outlet.name,
-                        onProceed: _showVisitTypeSelectionDialog,
-                      );
+                      _showVisitTypeSelectionDialog();
                     },
                     child: const Text(
                       "CHECK-IN",
@@ -992,11 +964,57 @@ class _PosBaseScreenState extends State<PosBaseScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        outlet.name.toUpperCase(),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              outlet.name.toUpperCase(),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Consumer<OutletActivityProvider>(
+                            builder: (context, actProv, _) {
+                              final bool hasFocus = outlet.isFocused || actProv.focusedProducts.isNotEmpty;
+                              if (!hasFocus) return const SizedBox.shrink();
+                              return GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  FocusedBrandsDialog.show(
+                                    context,
+                                    outletName: outlet.name,
+                                    outletId: int.tryParse(outlet.id),
+                                  );
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.only(left: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1B5E20),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.stars, color: Colors.amber, size: 12),
+                                      SizedBox(width: 3),
+                                      Text(
+                                        "FOCUS",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Row(
